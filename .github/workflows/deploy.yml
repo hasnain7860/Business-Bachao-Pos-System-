@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Replace with the branch you want to deploy from
+      - main  # Only deploy from the main branch
 
 jobs:
   deploy:
@@ -16,13 +16,18 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16'  # Specify the Node.js version
+          node-version: '23.3.0'  # Specify the desired Node.js version
 
       - name: Install dependencies
         run: npm install
 
       - name: Build the project
         run: npm run build
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'hasnain7860'
+          git config --global user.email 'httechnical7860@gmail.com'
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
