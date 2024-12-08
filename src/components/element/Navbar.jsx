@@ -13,6 +13,9 @@ import {
   FiShoppingCart,
   FiClipboard,
 } from "react-icons/fi";
+
+
+import handleDataSync from '../../Logic/handleDataSync.jsx'
 import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
 
@@ -72,6 +75,9 @@ const Navbar = () => {
       document.querySelector("html").classList.remove("dark");
     }
   }, [isDarkMode]);
+
+
+
 
   return (
     <div>
@@ -305,6 +311,17 @@ const Navbar = () => {
               <MdPerson className="mr-3" />
               Manage Users
             </Link>
+          </li>
+
+          {/* data sysnc */}
+          <li>
+            <button
+              onClick={handleDataSync}
+              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            >
+
+              Data sync
+            </button>
           </li>
 
           {/* Settings */}

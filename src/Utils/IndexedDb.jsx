@@ -50,3 +50,15 @@ export const deleteItem = async (storeName, id) => {
   const db = await getDB();
   await db.delete(storeName, id);
 };
+
+// Function to set multiple items in a store
+export const setItems = async (storeName, items) => {
+  const db = await getDB();
+  const tx = db.transaction(storeName, 'readwrite');
+
+  for (const item of items) {
+    await tx.store.put(item);
+  }
+
+  await tx.done;
+};

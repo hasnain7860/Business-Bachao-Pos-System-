@@ -1,18 +1,10 @@
 
-
-
-
-
-
-
-
-
-
 import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { Navigate } from "react-router-dom";
-import { db } from '../Utils/AuthViaFirebase.jsx';
+import { adminDb } from '../Utils/AuthViaFirebase.jsx';
 import { collection, getDocs } from "firebase/firestore";
+import {syncDataInRealTime} from '../Logic/syncDataInRealTime.jsx'
 import bcrypt from 'bcryptjs';
 import Cookies from 'js-cookie';
 
@@ -36,13 +28,14 @@ const Login = () => {
     }
 
     try {
-      const querySnapshot = await getDocs(collection(db, "client"));
+      const querySnapshot = await getDocs(collection(adminDb, "client"));
       let authenticated = false;
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         if (data.email === email && bcrypt.compareSync(password, data.password)) {
           authenticated = true;
+          
           Cookies.set('userName', data.name, { expires: 3 });
           Cookies.set('userRole', data.role, { expires: 3 });
           
@@ -50,7 +43,10 @@ const Login = () => {
       });
 
       if (authenticated) {
+        syncDataInRealTime()
+        
         setIsAuthenticated(true);
+        
       } else {
         setError("Invalid email or password.");
       }
