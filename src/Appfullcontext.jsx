@@ -22,16 +22,8 @@ const AppContext = createContext();
 
 // Context Provider
 export const AppContextProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // Check cookies on initial load
-  useEffect(() => {
-    const userName = Cookies.get('userName');
-    const userRole = Cookies.get('userRole');
-    
-    if (userName && userRole) {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
 
     // companyContext
   const companyContext = useCompanyContext()

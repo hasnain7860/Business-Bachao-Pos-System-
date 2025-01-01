@@ -15,7 +15,10 @@ import {
 } from "react-icons/fi";
 
 
-import handleDataSync from '../../Logic/handleDataSync.jsx'
+
+
+
+import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
 import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
 
@@ -44,8 +47,10 @@ const Navbar = () => {
   };
 
   // Handle Logout
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout =async () => {
+   await clearAllStores()
+   await setIsAuthenticated(false);
+    
     console.log("Logging out...");
     // Add your logout logic here
   };
@@ -315,13 +320,13 @@ const Navbar = () => {
 
           {/* data sysnc */}
           <li>
-            <button
-              onClick={handleDataSync}
+            <Link
+              to="/data"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
 
               Data sync
-            </button>
+            </Link>
           </li>
 
           {/* Settings */}

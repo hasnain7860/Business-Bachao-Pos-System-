@@ -10,6 +10,7 @@ import Cookies from 'js-cookie';
 
 const Login = () => {
   const { isAuthenticated, setIsAuthenticated } = useAppContext();
+  console.log(isAuthenticated)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +32,7 @@ const Login = () => {
       const querySnapshot = await getDocs(collection(adminDb, "client"));
       let authenticated = false;
       
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach(async (doc) => {
         const data = doc.data();
         if (data.email === email && bcrypt.compareSync(password, data.password)) {
           authenticated = true;
@@ -43,9 +44,9 @@ const Login = () => {
       });
 
       if (authenticated) {
-        syncDataInRealTime()
         
-        setIsAuthenticated(true);
+        
+        setIsAuthenticated(authenticated);
         
       } else {
         setError("Invalid email or password.");

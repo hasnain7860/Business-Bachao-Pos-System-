@@ -17,7 +17,7 @@ import { FiLogOut } from "react-icons/fi";
 const POSDashboard = () => {
   
   const context = useAppContext(); // Destructure context values
-  
+  console.log(context.isAuthenticated)
   const customers = context.supplierCustomerContext.customers
   const suppliers = context.supplierCustomerContext.suppliers 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
