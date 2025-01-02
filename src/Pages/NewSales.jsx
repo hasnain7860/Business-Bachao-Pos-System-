@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
@@ -6,7 +7,6 @@ const NewSales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const customers = context.supplierCustomerContext.customers;
-  console.log(customers)
   const products = context.productContext.products;
 
   const [salesRefNo, setSalesRefNo] = useState('');
@@ -17,6 +17,7 @@ const NewSales = () => {
   const [paymentMode, setPaymentMode] = useState('');
   const [amountPaid, setAmountPaid] = useState(0);
   const [credit, setCredit] = useState(0);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     generateSalesRefNo();
@@ -28,7 +29,7 @@ const NewSales = () => {
 
   const handleAddProduct = (product) => {
     const existingProduct = selectedProducts.find(p => p.id === product.id);
-    if (!existingProduct) {
+    if (!existingProduct && product.stock > 0) {
       setSelectedProducts([...selectedProducts, { ...product, quantity: 1, discount: 0 }]);
     }
   };
@@ -41,12 +42,22 @@ const NewSales = () => {
 
   const handleCalculateCredit = () => {
     const totalAmount = selectedProducts.reduce((acc, prod) => 
-      acc + (prod.price * prod.quantity * (1 - prod.discount / 100)), 0
+      acc + (prod.sellPrice * prod.quantity * (1 - prod.discount / 100)), 0
     );
     setCredit(totalAmount - amountPaid);
   };
 
   const handleSaveSales = () => {
+    if (!selectedCustomer) {
+      setMessage('Please add a customer first.');
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      setMessage('Please add at least one product to the sale.');
+      return;
+    }
+
     const salesData = {
       salesRefNo,
       customerId: selectedCustomer,
@@ -64,11 +75,15 @@ const NewSales = () => {
     setAmountPaid(0);
     setCredit(0);
     generateSalesRefNo();
+    setMessage(''); // Clear message
   };
 
   return (
     <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6 mt-10">
       <h2 className="text-2xl font-bold text-center mb-6">New Sales</h2>
+
+      {/* Message Display */}
+      {message && <div className="text-red-500 mb-4">{message}</div>}
 
       {/* Sales Reference Number */}
       <div className="form-control mb-4">
@@ -132,21 +147,37 @@ const NewSales = () => {
           placeholder="Search product"
           className="input input-bordered w-full"
         />
-        <div className="mt-2">
-          {products
-            .filter(product => product.productName.includes(searchProduct))
-            .map(product => (
-              <div key={product.id} className="flex justify-between items-center py-2">
-                <span>{product.productName}</span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  onClick={() => handleAddProduct(product)}
-                >
-                  Add
-                </button>
-              </div>
-            ))}
+        <div className="overflow-y-auto max-h-60 mt-2">
+          {products.length === 0 ? (
+            <div>No products available.</div>
+          ) : (
+            products
+              .filter(product => product.name.includes(searchProduct))
+              .map(product => (
+                <div key={product.id} className="flex justify-between items-center py-2 border-b">
+                  <span>
+                    {product.name} {product.stock <= 0 && <span className="text-red-500">(Out of Stock)</span>}
+                  </span>
+                  {product.stock > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => handleAddProduct(product)}
+                    >
+                      Add
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      disabled
+                    >
+                      Out of Stock
+                    </button>
+                  )}
+                </div>
+              ))
+          )}
         </div>
       </div>
 
@@ -184,7 +215,7 @@ const NewSales = () => {
                     className="input input-bordered w-20"
                   />
                 </td>
-                <td>{(product.price * product.quantity * (1 - product.discount / 100)).toFixed(2)}</td>
+                <td>{(product.sellPrice * product.quantity * (1 - product.discount / 100)).toFixed(2)}</td>
                 <td>
                   <button
                     type="button"

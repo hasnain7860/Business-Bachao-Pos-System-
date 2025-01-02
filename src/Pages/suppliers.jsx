@@ -1,9 +1,15 @@
+
 import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 
 const Suppliers = () => {
   const context = useAppContext();
-  
+  let idCounter = 0;
+
+  const generateUniqueId = () => {
+    return (Date.now() + idCounter++).toString(); // Generate a unique identifier using a counter
+  };
+
   const suppliers = context.supplierCustomerContext.suppliers;
   const addSupplier = context.supplierCustomerContext.addSupplier;
   const editSupplier = context.supplierCustomerContext.editSupplier;
@@ -71,6 +77,55 @@ const Suppliers = () => {
     setIsModalOpen(false);
   };
 
+  const handleVcfUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const confirmed = window.confirm(`Are you sure you want to upload the file: ${file.name}?`);
+      if (confirmed) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const vcfData = event.target.result;
+          const suppliersData = parseVcfData(vcfData);
+          suppliersData.forEach(supplier => addSupplier(supplier));
+        };
+        reader.readAsText(file);
+      } else {
+        e.target.value = null; // Reset the file input if the user cancels
+      }
+    }
+  };
+
+  const parseVcfData = (vcfData) => {
+    const suppliers = [];
+    const entries = vcfData.split("END:VCARD");
+    
+    entries.forEach(entry => {
+      if (entry.includes("BEGIN:VCARD")) {
+        const nameMatch = entry.match(/FN:(.*)/);
+        const emailMatch = entry.match(/EMAIL:(.*)/); // Assuming EMAIL might be present
+        const phoneMatch = entry.match(/TEL;CELL:(.*)/);
+        const cityMatch = entry.match(/CITY:(.*)/); // Assuming CITY might be present
+        const countryMatch = entry.match(/COUNTRY:(.*)/); // Assuming COUNTRY might be present
+        const addressMatch = entry.match(/ADR:(.*)/); // Assuming ADR might be present
+
+        const supplier = {
+          id: generateUniqueId(), // Generate unique ID
+          name: nameMatch ? nameMatch[1].trim() : "Unknown",
+          email: emailMatch ? emailMatch[1].trim() : "",
+          phone: phoneMatch ? phoneMatch[1].trim() : "",
+          city: cityMatch ? cityMatch[1].trim() : "",
+          country: countryMatch ? countryMatch[1].trim() : "",
+          address: addressMatch ? addressMatch[1].trim() : "",
+          image: null // Placeholder for image handling
+        };
+
+        suppliers.push(supplier);
+      }
+    });
+
+    return suppliers;
+  };
+
   return (
     <div className="p-4">
       {/* Header */}
@@ -85,6 +140,22 @@ const Suppliers = () => {
         >
           Add Supplier
         </button>
+      </div>
+
+      {/* VCF File Upload Section */}
+      <div className="mb-4">
+        <label className="inline-flex items-center">
+          <input
+            type="file"
+            accept=".vcf"
+            onChange={handleVcfUpload}
+            className="hidden"
+          />
+          <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            Upload Supplier Contacts
+          </span>
+        </label>
+        <span className="ml-2 text-gray-500">Upload a VCF file</span>
       </div>
 
       {/* Supplier List */}
@@ -124,7 +195,7 @@ const Suppliers = () => {
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Modal for Adding and Editing Suppliers */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">

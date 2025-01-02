@@ -6,6 +6,10 @@ const NewPurchases = () => {
   const context = useAppContext();
   const suppliers = context.supplierCustomerContext.suppliers;
   const products = context.productContext.products;
+  const companies = context.companyContext.companies;
+  const brands = context.brandContext.brands;
+  const units = context.unitContext.units;
+  const updateProduct = context.productContext.edit
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
@@ -26,13 +30,13 @@ const NewPurchases = () => {
     } else {
       const newProduct = {
         id: product.id,
-        name: product.productName,
-        company: product.companyName || '',
-        brand: product.brandName || '',
-        units: product.unitId || '',
-        sellPrice: product.sellPrice || 0,
-        retailPrice: product.retailPrice || 0,
-        purchasePrice: product.purchasePrice || 0,
+        name: product.name,
+        companyId: product.companyId || '',
+        brandId: product.brandId || '',
+        unitId: product.unitId || '',
+        sellPrice: product.sellPrice || "",
+        retailPrice: product.retailPrice || "",
+        purchasePrice: product.purchasePrice || "",
         quantity: 0,
         total: 0,
       };
@@ -72,16 +76,17 @@ const NewPurchases = () => {
       total: calculateTotalBill(),
     };
     
-    console.log(newPurchase)
+    console.log("new purchase " + newPurchase)
 
     // Update products in context
     selectedProducts.forEach(product => {
       const existingProduct = products.find(p => p.id === product.id);
       if (existingProduct) {
-        existingProduct.sellPrice = product.sellPrice || existingProduct.sellPrice;
-        existingProduct.retailPrice = product.retailPrice || existingProduct.retailPrice;
-        existingProduct.purchasePrice = product.purchasePrice || existingProduct.purchasePrice;
-        existingProduct.quantity = (existingProduct.quantity || 0) + product.quantity;
+        console.log("update product state and product new value is  " + product)
+        product.quantity = (existingProduct.quantity || 0) + product.quantity;
+        updateProduct(product.id ,product)
+
+        
       }
     });
 
@@ -92,8 +97,8 @@ const NewPurchases = () => {
 
   // Filter products based on the search input
   const filteredProducts = products.filter((product) =>
-    product.productName &&
-    product.productName.toLowerCase().includes(productSearch.toLowerCase())
+    product.name &&
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   return (
@@ -156,7 +161,7 @@ const NewPurchases = () => {
               className="p-2 border-b cursor-pointer hover:bg-gray-100"
               onClick={() => handleAddProductToTable(product)}
             >
-              {product.productName}
+              {product.name}
             </div>
           ))}
         </div>
@@ -178,33 +183,48 @@ const NewPurchases = () => {
               <th>Total</th>
             </tr>
           </thead>
-          <tbody>
-            {selectedProducts.length > 0 ? (
-              selectedProducts.map((product, index) => (
-                <tr key={product.id}>
-                  <td>{product.name}</td>
-                  <td>{product.company}</td>
-                  <td>{product.brand}</td>
-                  <td>{product.units}</td>
-                  <td>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      placeholder="Per Sell Price"
-                      value={product.sellPrice}
-                      onChange={(e) =>
-                        updateProductField(index, 'sellPrice', parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
+
+                  
+                  
+                  
+                  
+                  <tbody>
+  {selectedProducts.length > 0 ? (
+    selectedProducts.map((product, index) => {
+      const company = companies.find(c => c.id == product.companyId);
+      const brand = brands.find(b => b.id == product.brandId);
+      const unit = units.find(u => u.id == product.unitId);
+      
+      
+      return (
+        <tr key={product.id}>
+          <td>{product.name}</td>
+          <td>{company ? company.name : 'Unknown Company'}</td>
+          <td>{brand ? brand.name : 'Unknown Brand'}</td>
+          <td>{unit ? unit.name : 'Unknown Unit'}</td>
+          <td>
+            <input
+              type="number"
+              className="input input-bordered input-sm"
+              placeholder="Per Sell Price"
+              value={product.sellPrice}
+              onChange={(e) =>
+                updateProductField(index, 'sellPrice', parseFloat(e.target.value) || "")
+              }
+            />
+          </td>
+        
+
+                  
+                  
+                  
+                  <td>  <input
                       type="number"
                       className="input input-bordered input-sm"
                       placeholder="Per Retail Price"
                       value={product.retailPrice}
                       onChange={(e) =>
-                        updateProductField(index, 'retailPrice', parseFloat(e.target.value) || 0)
+                        updateProductField(index, 'retailPrice', parseFloat(e.target.value) || "")
                       }
                     />
                   </td>
@@ -215,7 +235,7 @@ const NewPurchases = () => {
                       placeholder="Per Purchase Price"
                       value={product.purchasePrice}
                       onChange={(e) =>
-                        updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || 0)
+                        updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || "")
                       }
                     />
                   </td>
@@ -226,13 +246,13 @@ const NewPurchases = () => {
                       placeholder="Purchase Quantity"
                       value={product.quantity}
                       onChange={(e) =>
-                        updateProductField(index, 'quantity', parseInt(e.target.value, 10) || 0)
+                        updateProductField(index, 'quantity', parseInt(e.target.value, 10) || "")
                       }
                     />
                   </td>
                   <td>{product.total.toFixed(2)}</td>
                 </tr>
-              ))
+              )})
             ) : (
               <tr>
                 <td colSpan="9" className="text-center text-gray-500">
@@ -265,7 +285,7 @@ const NewPurchases = () => {
           className="input input-bordered w-full mb-2"
           placeholder="Total Payment to Supplier"
           value={totalPayment}
-          onChange={(e) => setTotalPayment(parseFloat(e.target.value) || 0)}
+          onChange={(e) => setTotalPayment(parseFloat(e.target.value) || "")}
         />
         <label className="block text-gray-700 font-medium mb-2">Credit</label>
         <input

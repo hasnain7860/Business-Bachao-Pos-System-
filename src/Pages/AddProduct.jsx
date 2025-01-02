@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 
 const AddProduct = () => {
   const { id } = useParams(); // Get product ID from URL
+  console.log(id)
   const navigate = useNavigate();
   const context = useAppContext();
   const companies = context.companyContext.companies;
@@ -22,47 +23,70 @@ const AddProduct = () => {
   const [productImage, setProductImage] = useState(null);
   const [edit, setedit] = useState(false);
   const [preview, setPreview] = useState(""); // For previewing the image
-
+const [purchasePrice, setPurchasePrice] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
+  const [retailPrice, setRetailPrice] = useState("");
+  
   useEffect(() => {
+    
     if (id) {
       const product = context.productContext.products.find((p) => p.id == id);
+      console.log(
+        product)
       if (product) {
-        setProductName(product.productName);
+        setProductName(product.name);
         setSku(product.sku);
         setSelectedCompany(product.companyId);
         setSelectedBrand(product.brandId);
         setSelectedUnit(product.unitId);
+        setPurchasePrice(product.purchasePrice); // Set purchase price
+        setSellPrice(product.sellPrice); // Set sell price
+        setRetailPrice(product.retailPrice); // Set retail price
         setedit(true);
       }
+    }else{
+      generateSku()
     }
   }, [edit, id, context.productContext.products]);
 
   const generateSku = () => {
     setSku(Math.floor(100000 + Math.random() * 900000).toString());
   };
+  
+  
 
   const handleSaveProduct = () => {
-    if (!productName) {
-      alert("Product name is required.");
+    
+    if (!productName || !selectedCompany || !selectedBrand || !selectedUnit) {
+      alert("Please fill all required fields.");
       return;
     }
-
-    const productData = {
+    
+  
+const productData = {
       id: edit ? id : Date.now(),
-      productName,
+      name: productName,
       sku,
       companyId: selectedCompany,
       brandId: selectedBrand,
       unitId: selectedUnit,
       productImage,
+      purchasePrice, // Include purchase price
+      sellPrice, // Include sell price
+      retailPrice, // Include retail price
     };
+    
+    
 
     if (edit) {
       updateProduct(productData.id, productData);
       alert("Product updated successfully!");
+      navigate(-1)
     } else {
+      console.log("saveing data log" + JSON.stringify(productData))
       addProduct(productData);
       alert("Product added successfully!");
+       navigate(-1)
     }
 
     // Clear fields if not editing
@@ -73,6 +97,9 @@ const AddProduct = () => {
       setSelectedBrand("");
       setSelectedUnit("");
       setProductImage(null);
+      setPurchasePrice(""); // Clear purchase price
+      setSellPrice(""); // Clear sell price
+      setRetailPrice(""); // Clear retail price
     }
   };
 
@@ -109,7 +136,7 @@ const AddProduct = () => {
       {/* Product Name */}
       <div className="form-control mb-4">
         <label className="label">
-          <span className="label-text">Product Name:</span>
+          <span className="label-text">Product Name*:</span>
         </label>
         <input
           type="text"
@@ -125,9 +152,10 @@ const AddProduct = () => {
       <div className="form-control mb-4 flex items-center gap-2">
         <div className="w-full">
           <label className="label">
-            <span className="label-text">Product Code (SKU):</span>
+            <span className="label-text">Product Code (SKU)*:</span>
           </label>
           <input
+          required
             type="text"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
@@ -147,7 +175,7 @@ const AddProduct = () => {
       {/* Company */}
       <div className="form-control mb-4">
         <label className="label">
-          <span className="label-text">Company:</span>
+          <span className="label-text">Company*:</span>
         </label>
         <div className="flex items-center gap-2">
           <select
@@ -175,7 +203,7 @@ const AddProduct = () => {
       {/* Brand */}
       <div className="form-control mb-4">
         <label className="label">
-          <span className="label-text">Brand:</span>
+          <span className="label-text">Brand*:</span>
         </label>
         <div className="flex items-center gap-2">
           <select
@@ -203,7 +231,7 @@ const AddProduct = () => {
       {/* Unit */}
       <div className="form-control mb-4">
         <label className="label">
-          <span className="label-text">Unit:</span>
+          <span className="label-text">Unit*:</span>
         </label>
         <div className="flex items-center gap-2">
           <select
@@ -226,6 +254,47 @@ const AddProduct = () => {
             New
           </button>
         </div>
+      </div>
+  {/* Purchase Price */}
+      <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">Purchase Price:</span>
+        </label>
+        <input
+          type="number"
+          value={purchasePrice}
+          onChange={(e) => setPurchasePrice(e.target.value)}
+          placeholder="Enter purchase price"
+          className="input input-bordered w-full"
+        />
+      </div>
+
+      {/* Sell Price */}
+      <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">Sell Price:</span>
+        </label>
+        <input
+          type="number"
+          value={sellPrice}
+          onChange={(e) => setSellPrice(e.target.value)}
+          placeholder="Enter sell price"
+          className="input input-bordered w-full"
+        />
+      </div>
+
+      {/* Retail Price */}
+      <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">Retail Price:</span>
+        </label>
+        <input
+          type="number"
+          value={retailPrice}
+          onChange={(e) => setRetailPrice(e.target.value)}
+          placeholder="Enter retail price"
+          className="input input-bordered w-full"
+        />
       </div>
 
       <div className="product-image-upload">

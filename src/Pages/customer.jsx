@@ -1,15 +1,21 @@
+
 import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 
 const Customers = () => {
   const context = useAppContext();
-
   const customers = context.supplierCustomerContext.customers;
   const addCustomer = context.supplierCustomerContext.addCustomer;
   const editCustomer = context.supplierCustomerContext.editCustomer;
   const deleteCustomer = context.supplierCustomerContext.deleteCustomer;
 
-  const [form, setForm] = useState({
+  let idCounter = 0;
+
+  const generateUniqueId = () => {
+    return (Date.now() + idCounter++).toString(); // Generate a unique identifier using a counter
+  };
+
+  const [formData, setFormData] = useState({
     id: null,
     name: "",
     email: "",
@@ -18,40 +24,40 @@ const Customers = () => {
     image: null,
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isEditingMode, setIsEditingMode] = useState(false);
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setFormData({ ...formData, [name]: value });
   };
 
-  const handleImageUpload = (e) => {
-    setForm({ ...form, image: URL.createObjectURL(e.target.files[0]) });
+  const handleImageSelection = (e) => {
+    setFormData({ ...formData, image: URL.createObjectURL(e.target.files[0]) });
   };
 
-  const handleSubmit = (e) => {
+  const handleFormSubmission = (e) => {
     e.preventDefault();
-    if (isEditing) {
-      editCustomer(form.id, form);
+    if (isEditingMode) {
+      editCustomer(formData.id, formData);
     } else {
-      addCustomer({ ...form, id: Date.now() });
+      addCustomer({ ...formData, id: Date.now() });
     }
     closeModal();
   };
 
-  const handleEdit = (customer) => {
-    setForm(customer);
-    setIsEditing(true);
-    setIsModalOpen(true);
+  const initiateEdit = (customer) => {
+    setFormData(customer);
+    setIsEditingMode(true);
+    setIsModalVisible(true);
   };
 
-  const handleRemove = (id) => {
+  const removeCustomer = (id) => {
     deleteCustomer(id);
   };
 
-  const openModal = () => {
-    setForm({
+  const openCustomerModal = () => {
+    setFormData({
       id: null,
       name: "",
       email: "",
@@ -59,30 +65,91 @@ const Customers = () => {
       address: "",
       image: null,
     });
-    setIsEditing(false);
-    setIsModalOpen(true);
+    setIsEditingMode(false);
+    setIsModalVisible(true);
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
+    setIsModalVisible(false);
+  };
+
+  const handleVcfFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const confirmed = window.confirm(`Do you want to upload the file: ${file.name}?`);
+      if (confirmed) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const vcfContent = event.target.result;
+          const customersList = extractCustomersFromVcf(vcfContent);
+          customersList.forEach(customer => addCustomer(customer));
+        };
+        reader.readAsText(file);
+      } else {
+        e.target.value = null; // Reset the file input if cancelled
+      }
+    }
+  };
+
+  const extractCustomersFromVcf = (vcfContent) => {
+    const customers = [];
+    const entries = vcfContent.split("END:VCARD");
+    
+    entries.forEach(entry => {
+      if (entry.includes("BEGIN:VCARD")) {
+        const nameMatch = entry.match(/FN:(.*)/);
+        const phoneMatch = entry.match(/TEL;CELL:(.*)/);
+        const emailMatch = entry.match(/EMAIL:(.*)/);
+        const addressMatch = entry.match(/ADR:(.*)/);
+
+        const customer = {
+          id: generateUniqueId(), // Create a unique ID
+          name: nameMatch ? nameMatch[1].trim() : "Unknown",
+          email: emailMatch ? emailMatch[1].trim() : "",
+          phone: phoneMatch ? phoneMatch[1].trim() : "",
+          address: addressMatch ? addressMatch[1].trim() : "",
+          image: null // Placeholder for image handling
+        };
+
+        customers.push(customer);
+      }
+    });
+
+    return customers;
   };
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">Customers Management</h1>
+      <h1 className="text-2xl font-bold mb-2">Customer Management</h1>
       <div className="mb-4 flex justify-between items-center">
         <span className="text-lg font-medium">
           Total Customers: {customers.length}
         </span>
         <button
-          onClick={openModal}
+          onClick={openCustomerModal}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Add Customer
         </button>
       </div>
 
-      {/* Customer List */}
+      {/* VCF File Upload Section */}
+      <div className="mb-4">
+        <label className="inline-flex items-center">
+          <input
+            type="file"
+            accept=".vcf"
+            onChange={handleVcfFileUpload}
+            className="hidden"
+          />
+          <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            Upload Contact
+          </span>
+        </label>
+        <span className="ml-2 text-gray-500">Upload a VCF file</span>
+      </div>
+
+      {/* Customer List Display */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {customers.map((customer) => (
           <div
@@ -101,13 +168,13 @@ const Customers = () => {
             <p>Address: {customer.address}</p>
             <div className="flex space-x-2 mt-4">
               <button
-                onClick={() => handleEdit(customer)}
+                onClick={() => initiateEdit(customer)}
                 className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
               >
                 Edit
               </button>
               <button
-                onClick={() => handleRemove(customer.id)}
+                onClick={() => removeCustomer(customer.id)}
                 className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
               >
                 Remove
@@ -117,22 +184,22 @@ const Customers = () => {
         ))}
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
+      {/* Modal for Adding and Editing Customers */}
+      {isModalVisible && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
-              {isEditing ? "Edit Customer" : "Add Customer"}
+              {isEditingMode ? "Edit Customer" : "Add Customer"}
             </h2>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleFormSubmission}>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block font-bold">Name *</label>
                   <input
                     type="text"
                     name="name"
-                    value={form.name}
-                    onChange={handleChange}
+                    value={formData.name}
+                    onChange={handleInputChange}
                     required
                     className="w-full p-2 border rounded"
                   />
@@ -142,8 +209,8 @@ const Customers = () => {
                   <input
                     type="email"
                     name="email"
-                    value={form.email}
-                    onChange={handleChange}
+                    value={formData.email}
+                    onChange={handleInputChange}
                     className="w-full p-2 border rounded"
                   />
                 </div>
@@ -152,8 +219,8 @@ const Customers = () => {
                   <input
                     type="text"
                     name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
+                    value={formData.phone}
+                    onChange={handleInputChange}
                     required
                     className="w-full p-2 border rounded"
                   />
@@ -162,8 +229,8 @@ const Customers = () => {
                   <label className="block font-bold">Address *</label>
                   <textarea
                     name="address"
-                    value={form.address}
-                    onChange={handleChange}
+                    value={formData.address}
+                    onChange={handleInputChange}
                     required
                     className="w-full p-2 border rounded"
                   />
@@ -172,7 +239,7 @@ const Customers = () => {
                   <label className="block font-bold">Image</label>
                   <input
                     type="file"
-                    onChange={handleImageUpload}
+                    onChange={handleImageSelection}
                     className="w-full"
                   />
                 </div>
@@ -189,7 +256,7 @@ const Customers = () => {
                   type="submit"
                   className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                 >
-                  {isEditing ? "Update" : "Add"}
+                  {isEditingMode ? "Update" : "Add"}
                 </button>
               </div>
             </form>
