@@ -14,7 +14,6 @@ const Profile = () => {
     email: "john.doe@example.com",
     phone: "+123 456 7890",
     location: "New York, USA",
-    joined: "January 2022",
     profilePic: "https://via.placeholder.com/150",
   });
 
@@ -62,12 +61,7 @@ const Profile = () => {
             <span>{user.location}</span>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <MdDateRange className="text-primary" />
-            <span>Joined: {user.joined}</span>
-          </div>
-        </div>
+
       </div>
 
       {/* Action Buttons */}

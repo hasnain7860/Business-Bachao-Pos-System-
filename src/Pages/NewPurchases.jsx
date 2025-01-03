@@ -15,9 +15,9 @@ const NewPurchases = () => {
   const [productSearch, setProductSearch] = useState('');
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState('Cash');
-  const [totalPayment, setTotalPayment] = useState(0);
-  const purchases = context.purchases
-  const setPurchases = context.setPurchases
+  const [totalPayment, setTotalPayment] = useState();
+  const purchases = context.purchaseContext.purchases
+  const addPurchase = context.purchaseContext.add
   
   const handleAddSupplier = () => {
     window.location.href = '/people/suppliers';
@@ -73,7 +73,8 @@ const NewPurchases = () => {
         sellPrice: p.sellPrice,
         retailPrice: p.retailPrice,
       })),
-      total: calculateTotalBill(),
+       totalPayment,
+      totalBill: calculateTotalBill(),
     };
     
     console.log("new purchase " + newPurchase)
@@ -89,8 +90,9 @@ const NewPurchases = () => {
         
       }
     });
-
-    setPurchases([...purchases, newPurchase]);
+    
+       addPurchase(newPurchase)
+    
     setSelectedProducts([]); // Clear selected products for new purchase
     alert('Purchase added successfully!');
   };

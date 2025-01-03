@@ -5,6 +5,9 @@ import useBrandsContext from './Logic/Brands.jsx'
 import useUnitsContext from './Logic/Units.jsx'
 import useProductContext from './Logic/Product.jsx'
 import useSupplierAndCustomerContext from './Logic/SupplierAndCustomer.jsx'
+import usePurchaseContext from './Logic/Purchase.jsx'
+import useSalesContext from './Logic/Sales.jsx'
+
 
 // Utility function for updating items in an array
 const updateItem = (items, id, updatedItem) =>
@@ -38,8 +41,9 @@ const brandContext = useBrandsContext()
     // supplierCustomerContext
   const supplierCustomerContext = useSupplierAndCustomerContext()
   
-  const [purchases, setPurchases] = useState([]);
-
+  
+  const purchaseContext = usePurchaseContext()
+  const SaleContext =useSalesContext()
   return (
     <AppContext.Provider
       value={{
@@ -50,8 +54,8 @@ const brandContext = useBrandsContext()
         unitContext,
         productContext,
         supplierCustomerContext,
-        purchases,
-        setPurchases
+        purchaseContext,
+        SaleContext
       }}
     >
       {children}

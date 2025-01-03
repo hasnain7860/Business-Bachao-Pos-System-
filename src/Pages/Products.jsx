@@ -62,6 +62,7 @@ const Products = () => {
                     retailPrice: item.retailPrice ? item.retailPrice.toString() : '',
                     sellPrice: item.sellPrice ? item.sellPrice.toString() : '',
                     sku: generateSku(), // Generate SKU
+                    quantity: item.quantity ? item.quantity.toString(): '',
                     unitId: item.unitId ? item.unitId.toString() : ''
                 };
             }).filter(item => item !== null); // Remove null entries

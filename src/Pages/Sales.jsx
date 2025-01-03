@@ -1,28 +1,55 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../Appfullcontext';
 
 const Sales = () => {
   const navigate = useNavigate();
-  const [sales, setSales] = useState([
-    // Example sales data for demonstration
-    {
-      id: 1,
-      customerName: 'John Doe',
-      date: '2024-12-01',
-      totalBill: 150.00,
-      paidAmount: 140.00,
-      credit: 10.00,
-      paymentMode: 'Cash',
-    },
-    // Add more sales records as needed
-  ]);
+  const context = useAppContext();
+  const sales = context.SaleContext.Sales;
+  const customers = context.supplierCustomerContext.customers;
 
   const handleNewSale = () => {
     navigate('/sales/new');
   };
 
+  const handleCustomerNameViaId = (sale) => {
+    const existCustomer = customers.filter((customer) => customer.id === sale.customerId);
+    return existCustomer.length > 0 ? existCustomer[0].name : "name not found";
+  };
+
   const getStatus = (sale) => {
     return sale.credit === 0 ? 'Paid' : 'Pending';
+  };
+
+  const handleMenuAction = (action, saleId) => {
+    switch (action) {
+      case 'edit':
+        navigate(`/sales/edit/${saleId}`);
+        break;
+      case 'view':
+        navigate(`/sales/view/${saleId}`);
+        break;
+      case 'print':
+        // Add your print logic here
+        break;
+      case 'delete':
+        context.SaleContext.delete(saleId);
+        // Add your delete logic here
+        break;
+      default:
+        break;
+    }
+  };
+
+  // State to manage which menu is open
+  const [openMenu, setOpenMenu] = useState({});
+
+  const toggleMenu = (saleId) => {
+    setOpenMenu((prevState) => ({
+      ...prevState,
+      [saleId]: !prevState[saleId], // Toggle the specific saleId menu
+    }));
   };
 
   return (
@@ -55,15 +82,26 @@ const Sales = () => {
               {sales.map((sale) => (
                 <tr key={sale.id}>
                   <td className="border px-4 py-2">{sale.id}</td>
-                  <td className="border px-4 py-2">{sale.customerName}</td>
-                  <td className="border px-4 py-2">{sale.date}</td>
-                  <td className="border px-4 py-2">${sale.totalBill.toFixed(2)}</td>
-                  <td className="border px-4 py-2">${sale.paidAmount.toFixed(2)}</td>
-                  <td className="border px-4 py-2">${sale.credit.toFixed(2)}</td>
+                  <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
+                  <td className="border px-4 py-2">{sale.dateTime}</td>
+                  <td className="border px-4 py-2">${sale.totalBill}</td>
+                  <td className="border px-4 py-2">${sale.amountPaid}</td>
+                  <td className="border px-4 py-2">${sale.credit}</td>
                   <td className="border px-4 py-2">{sale.paymentMode}</td>
                   <td className="border px-4 py-2">{getStatus(sale)}</td>
-                  <td className="border px-4 py-2">
-                    <button className="btn btn-warning">View</button>
+                  <td className="border px-4 py-2 relative">
+                    {/* Three-dot menu */}
+                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.id)}>
+                      ⋮
+                    </button>
+                    {openMenu[sale.id] && (
+                      <div className="absolute right-1.5 mt-2 w-20 text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 block">
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.id)}>Edit</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>View</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>Print</button>
+                        <button className="text-red-600 block px-4 py-2 hover:bg-red100" onClick={() => handleMenuAction('delete', sale.id)}>Delete</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

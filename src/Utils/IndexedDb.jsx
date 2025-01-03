@@ -10,6 +10,7 @@ export const STORE_NAMES = {
   brands: 'brands',
   products: 'products',
   purchases: 'purchases',
+  sales: 'sales',
   units: 'units',
   suppliers: 'suppliers',
   customers: 'customers',

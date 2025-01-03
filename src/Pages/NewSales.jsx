@@ -13,6 +13,7 @@ const NewSales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [searchCustomer, setSearchCustomer] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  console.log(selectedProducts)
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
   const [amountPaid, setAmountPaid] = useState(0);
@@ -29,23 +30,47 @@ const NewSales = () => {
 
   const handleAddProduct = (product) => {
     const existingProduct = selectedProducts.find(p => p.id === product.id);
-    if (!existingProduct && product.stock > 0) {
-      setSelectedProducts([...selectedProducts, { ...product, quantity: 1, discount: 0 }]);
+    if (!existingProduct && product.quantity > 0) {
+      setSelectedProducts([...selectedProducts, { ...product, SellQuantity: 1, discount: 0 , newSellPrice : product.sellPrice }]);
     }
   };
 
   const handleProductChange = (id, field, value) => {
-    setSelectedProducts(selectedProducts.map(p => 
-      p.id === id ? { ...p, [field]: value } : p
-    ));
+    const updatedProducts = selectedProducts.map(p => {
+      if (p.id === id) {
+        return { ...p, [field]: value };
+      }
+      return p;
+    });
+    setSelectedProducts(updatedProducts);
   };
 
-  const handleCalculateCredit = () => {
-    const totalAmount = selectedProducts.reduce((acc, prod) => 
-      acc + (prod.sellPrice * prod.quantity * (1 - prod.discount / 100)), 0
-    );
-    setCredit(totalAmount - amountPaid);
+  const handleSellingPriceChange = (id, value) => {
+    const updatedProducts = selectedProducts.map(p => {
+      if (p.id === id) {
+        const newSellPrice = value; // Allow any value input
+        const discount = ((100 - (newSellPrice / p.sellPrice) * 100)).toFixed(2); // Calculate discount
+        return { ...p, newSellPrice: newSellPrice, discount: discount }; // Update selling price and discount
+      }
+      return p;
+    });
+    setSelectedProducts(updatedProducts);
   };
+
+  const validateSellingPrice = (product) => {
+    return product.newSellPrice < product.purchasePrice;
+  };
+const calculateTotalPayment = () => {
+  return selectedProducts.reduce((total, product) => {
+    const productTotal = product.newSellPrice * product.SellQuantity ;
+    return total + productTotal;
+  }, 0).toFixed(2); // Returns total payment formatted to two decimal places
+};const handleCalculateCredit = (e) => {
+  const paidAmount = parseFloat(e.target.value) || ""; // Parse input to float, default to 0 if NaN
+  setAmountPaid(paidAmount);
+  setCredit(calculateTotalPayment() - paidAmount); // Calculate credit based on the current total payment
+};
+  
 
   const handleSaveSales = () => {
     if (!selectedCustomer) {
@@ -59,14 +84,17 @@ const NewSales = () => {
     }
 
     const salesData = {
-      salesRefNo,
-      customerId: selectedCustomer,
-      products: selectedProducts,
-      paymentMode,
-      amountPaid,
-      credit,
-    };
-    context.salesContext.addSales(salesData);
+    salesRefNo,
+    customerId: selectedCustomer,
+    products: selectedProducts,
+    paymentMode,
+    totalBill: calculateTotalPayment(),
+    amountPaid,
+    credit,
+    dateTime: new Date().toISOString() // This will give you the date and time in ISO format
+};
+    context.SaleContext.add(salesData);
+    console.log("sales data " + JSON.stringify(salesData))
     alert('Sales saved successfully!');
     // Reset form
     setSelectedCustomer('');
@@ -76,6 +104,10 @@ const NewSales = () => {
     setCredit(0);
     generateSalesRefNo();
     setMessage(''); // Clear message
+  };
+
+  const handleCancelProduct = (id) => {
+    setSelectedProducts(selectedProducts.filter(p => p.id !== id));
   };
 
   return (
@@ -155,10 +187,8 @@ const NewSales = () => {
               .filter(product => product.name.includes(searchProduct))
               .map(product => (
                 <div key={product.id} className="flex justify-between items-center py-2 border-b">
-                  <span>
-                    {product.name} {product.stock <= 0 && <span className="text-red-500">(Out of Stock)</span>}
-                  </span>
-                  {product.stock > 0 ? (
+                  {product.name}
+                  {product.quantity > 0 ? (
                     <button
                       type="button"
                       className="btn btn-sm btn-outline"
@@ -189,9 +219,10 @@ const NewSales = () => {
               <th>Product</th>
               <th>Quantity</th>
               <th>Price</th>
+              <th>Stock</th>
               <th>Discount (%)</th>
               <th>Total</th>
-              <th>Edit</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -201,28 +232,39 @@ const NewSales = () => {
                 <td>
                   <input
                     type="number"
-                    value={product.quantity}
-                    onChange={(e) => handleProductChange(product.id, 'quantity', e.target.value)}
+                    value={product.SellQuantity}
+                    onChange={(e) => handleProductChange(product.id, 'SellQuantity', e.target.value)}
                     className="input input-bordered w-20"
                   />
                 </td>
-                <td>{product.sellPrice}</td>
+                <td>
+                  <input
+                    type="number"
+                    value={product.newSellPrice}
+                    onChange={(e) => handleSellingPriceChange(product.id, e.target.value)}
+                    className={`input input-bordered w-20 ${validateSellingPrice(product) ? 'border-red-500' : ''}`} // Red border if selling price is less than purchase price
+                  />
+                  {validateSellingPrice(product) && (
+                    <div className="text-red-500 text-sm">Selling price cannot be less than purchase price.</div>
+                  )}
+                </td>
+                <td>{product.quantity - product.SellQuantity} (In Stock)</td>
                 <td>
                   <input
                     type="number"
                     value={product.discount}
-                    onChange={(e) => handleProductChange(product.id, 'discount', e.target.value)}
+                    readOnly
                     className="input input-bordered w-20"
                   />
                 </td>
-                <td>{(product.sellPrice * product.quantity * (1 - product.discount / 100)).toFixed(2)}</td>
+                <td>{(product.sellPrice * product.SellQuantity * (1 - (product.discount / 100 || 0))).toFixed(2)}</td>
                 <td>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline"
-                    onClick={() => handleProductChange(product.id, 'edit', true)}
+                    onClick={() => handleCancelProduct(product.id)}
                   >
-                    Edit
+                    Cancel
                   </button>
                 </td>
               </tr>
@@ -246,9 +288,21 @@ const NewSales = () => {
           <option value="bank">Bank</option>
           <option value="cash">Cash</option>
           <option value="cheque">Cheque</option>
-        </select>
+        </select
+        >
       </div>
-
+{/* Total Payment Display */}
+<div className="form-control mb-4">
+  <label className="label">
+    <span className="label-text">Total Payment:</span>
+  </label>
+  <input
+    type="text"
+    value={calculateTotalPayment()}
+    readOnly
+    className="input input-bordered w-full"
+  />
+</div>
       {/* Amount Paid */}
       <div className="form-control mb-4">
         <label className="label">
@@ -257,7 +311,7 @@ const NewSales = () => {
         <input
           type="number"
           value={amountPaid}
-          onChange={(e) => setAmountPaid(e.target.value)}
+          onChange={handleCalculateCredit}
           className="input input-bordered w-full"
         />
       </div>
@@ -280,7 +334,7 @@ const NewSales = () => {
         <button
           type="button"
           onClick={() => {
-            handleCalculateCredit();
+            
             handleSaveSales();
           }}
           className="btn btn-primary w-full"
