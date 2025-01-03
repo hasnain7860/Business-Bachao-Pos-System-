@@ -13,7 +13,6 @@ const NewSales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [searchCustomer, setSearchCustomer] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
-  console.log(selectedProducts)
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
   const [amountPaid, setAmountPaid] = useState(0);
@@ -32,6 +31,7 @@ const NewSales = () => {
     const existingProduct = selectedProducts.find(p => p.id === product.id);
     if (!existingProduct && product.quantity > 0) {
       setSelectedProducts([...selectedProducts, { ...product, SellQuantity: 1, discount: 0 , newSellPrice : product.sellPrice }]);
+      handleCalculateCredit(); // Update credit after adding product
     }
   };
 
@@ -43,6 +43,7 @@ const NewSales = () => {
       return p;
     });
     setSelectedProducts(updatedProducts);
+    handleCalculateCredit(); // Update credit after changing product quantity
   };
 
   const handleSellingPriceChange = (id, value) => {
@@ -55,22 +56,25 @@ const NewSales = () => {
       return p;
     });
     setSelectedProducts(updatedProducts);
+    handleCalculateCredit(); // Update credit after changing selling price
   };
 
   const validateSellingPrice = (product) => {
     return product.newSellPrice < product.purchasePrice;
   };
-const calculateTotalPayment = () => {
-  return selectedProducts.reduce((total, product) => {
-    const productTotal = product.newSellPrice * product.SellQuantity ;
-    return total + productTotal;
-  }, 0).toFixed(2); // Returns total payment formatted to two decimal places
-};const handleCalculateCredit = (e) => {
-  const paidAmount = parseFloat(e.target.value) || ""; // Parse input to float, default to 0 if NaN
-  setAmountPaid(paidAmount);
-  setCredit(calculateTotalPayment() - paidAmount); // Calculate credit based on the current total payment
-};
-  
+
+  const calculateTotalPayment = () => {
+    return selectedProducts.reduce((total, product) => {
+      const productTotal = product.newSellPrice * product.SellQuantity;
+      return total + productTotal;
+    }, 0).toFixed(2); // Returns total payment formatted to two decimal places
+  };
+
+  const handleCalculateCredit = (e) => {
+    const paidAmount = parseFloat(e ? e.target.value : amountPaid) || 0; // Parse input to float, default to 0 if NaN
+    setAmountPaid(paidAmount);
+    setCredit(calculateTotalPayment() - paidAmount); // Calculate credit based on the current total payment
+  };
 
   const handleSaveSales = () => {
     if (!selectedCustomer) {
@@ -84,17 +88,16 @@ const calculateTotalPayment = () => {
     }
 
     const salesData = {
-    salesRefNo,
-    customerId: selectedCustomer,
-    products: selectedProducts,
-    paymentMode,
-    totalBill: calculateTotalPayment(),
-    amountPaid,
-    credit,
-    dateTime: new Date().toISOString() // This will give you the date and time in ISO format
-};
+      salesRefNo,
+      customerId: selectedCustomer,
+      products: selectedProducts,
+      paymentMode,
+      totalBill: calculateTotalPayment(),
+      amountPaid,
+      credit,
+      dateTime: new Date().toISOString() // This will give you the date and time in ISO format
+    };
     context.SaleContext.add(salesData);
-    console.log("sales data " + JSON.stringify(salesData))
     alert('Sales saved successfully!');
     // Reset form
     setSelectedCustomer('');
@@ -108,6 +111,7 @@ const calculateTotalPayment = () => {
 
   const handleCancelProduct = (id) => {
     setSelectedProducts(selectedProducts.filter(p => p.id !== id));
+    handleCalculateCredit(); // Update credit after removing product
   };
 
   return (
@@ -257,7 +261,7 @@ const calculateTotalPayment = () => {
                     className="input input-bordered w-20"
                   />
                 </td>
-                <td>{(product.sellPrice * product.SellQuantity * (1 - (product.discount / 100 || 0))).toFixed(2)}</td>
+                <td>{(product.newSellPrice * product.SellQuantity * (1 - (product.discount / 100 || 0))).toFixed(2)}</td>
                 <td>
                   <button
                     type="button"
@@ -288,21 +292,22 @@ const calculateTotalPayment = () => {
           <option value="bank">Bank</option>
           <option value="cash">Cash</option>
           <option value="cheque">Cheque</option>
-        </select
-        >
+        </select>
       </div>
-{/* Total Payment Display */}
-<div className="form-control mb-4">
-  <label className="label">
-    <span className="label-text">Total Payment:</span>
-  </label>
-  <input
-    type="text"
-    value={calculateTotalPayment()}
-    readOnly
-    className="input input-bordered w-full"
-  />
-</div>
+
+      {/* Total Payment Display */}
+      <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">Total Payment:</span>
+        </label>
+        <input
+          type="text"
+          value={calculateTotalPayment()}
+          readOnly
+          className="input input-bordered w-full"
+        />
+      </div>
+
       {/* Amount Paid */}
       <div className="form-control mb-4">
         <label className="label">
@@ -333,10 +338,7 @@ const calculateTotalPayment = () => {
       <div className="form-control mt-6">
         <button
           type="button"
-          onClick={() => {
-            
-            handleSaveSales();
-          }}
+          onClick={handleSaveSales}
           className="btn btn-primary w-full"
         >
           Save Sales

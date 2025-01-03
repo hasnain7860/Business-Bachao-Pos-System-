@@ -14,6 +14,7 @@ export const STORE_NAMES = {
   units: 'units',
   suppliers: 'suppliers',
   customers: 'customers',
+  settings:'settings'
 };
 
 // Store name for tracking deleted items

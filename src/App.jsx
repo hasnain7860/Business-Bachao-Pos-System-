@@ -11,6 +11,7 @@ import Layout from "./Layout";
 import Dashboard from "./Pages/dashboard";
 import Login from "./Pages/Login.jsx";
 import Profile from "./Pages/Profile.jsx";
+import Settings from "./Pages/Settings.jsx";
 import Suppliers from "./Pages/suppliers.jsx";
 import Customer from "./Pages/customer.jsx";
 import Company from "./Pages/Company.jsx";
@@ -23,6 +24,7 @@ import NewPurchases from "./Pages/NewPurchases.jsx";
 import DataSync from "./Pages/DataSync.jsx";
 import Sales from "./Pages/Sales.jsx";
 import NewSales from "./Pages/NewSales.jsx";
+import SalesView from "./Pages/SalesView.jsx";
 import ProtectedRoute from "./components/element/ProtectedRoute";
 // import eruda from 'eruda';
 
@@ -52,6 +54,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Profile />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Settings />
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -173,6 +185,27 @@ function App() {
                             <Layout>
                                 <NewSales />
                             </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                     <Route
+                    path="/sales/view/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <SalesView />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                     <Route
+                  
+                    path="/sales/view/:id/print"
+                    element={
+                        <ProtectedRoute>
+                          
+                                <SalesView />
+                            
                         </ProtectedRoute>
                     }
                 />

@@ -8,7 +8,7 @@ const Sales = () => {
   const context = useAppContext();
   const sales = context.SaleContext.Sales;
   const customers = context.supplierCustomerContext.customers;
-
+console.log(sales)
   const handleNewSale = () => {
     navigate('/sales/new');
   };
