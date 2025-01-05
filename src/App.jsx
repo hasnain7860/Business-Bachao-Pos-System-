@@ -189,7 +189,7 @@ function App() {
                     }
                 />
                      <Route
-                    path="/sales/view/:id"
+                    path="/sales/view/:salesRefNo"
                     element={
                         <ProtectedRoute>
                             <Layout>
@@ -200,7 +200,7 @@ function App() {
                 />
                      <Route
                   
-                    path="/sales/view/:id/print"
+                    path="/sales/view/:salesRefNo/print"
                     element={
                         <ProtectedRoute>
                           

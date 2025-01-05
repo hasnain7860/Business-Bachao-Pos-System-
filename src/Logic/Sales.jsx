@@ -24,9 +24,9 @@ const addSale = async (newSale) => {
     }]);
   };
   
-  const deleteSale = async (id) => {
-    await deleteFromDB(STORE_NAMES.sales, id);
-    setSales((prev) => deleteItem(prev, id));
+  const deleteSale = async (salesRefNo) => {
+    await deleteFromDB(STORE_NAMES.sales, salesRefNo);
+    setSales((prev) => deleteItem(prev, salesRefNo));
     
   };
   

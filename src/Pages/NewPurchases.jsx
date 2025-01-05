@@ -43,7 +43,7 @@ const NewPurchases = () => {
       setSelectedProducts([...selectedProducts, newProduct]);
     }
   };
-
+console.log(selectedProducts)
   const updateProductField = (index, field, value) => {
     const newProducts = [...selectedProducts];
     newProducts[index][field] = value;
@@ -78,19 +78,20 @@ const NewPurchases = () => {
     };
     
     console.log("new purchase " + newPurchase)
-
-    // Update products in context
-    selectedProducts.forEach(product => {
-      const existingProduct = products.find(p => p.id === product.id);
-      if (existingProduct) {
-        console.log("update product state and product new value is  " + product)
-        product.quantity = (existingProduct.quantity || 0) + product.quantity;
-        updateProduct(product.id ,product)
-
-        
-      }
-    });
     
+selectedProducts.forEach(product => {
+  const existingProduct = products.find(p => p.id === product.id);
+  if (existingProduct) {
+    console.log("update product state and product new value is  " + product);
+    product.quantity = (existingProduct.quantity || 0) + product.quantity;
+    
+    // Remove product.total
+    delete product.total;
+
+    updateProduct(product.id, product);
+  }
+});
+
        addPurchase(newPurchase)
     
     setSelectedProducts([]); // Clear selected products for new purchase

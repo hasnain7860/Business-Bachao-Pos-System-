@@ -50,8 +50,13 @@ const NewSales = () => {
     const updatedProducts = selectedProducts.map(p => {
       if (p.id === id) {
         const newSellPrice = value; // Allow any value input
-        const discount = ((100 - (newSellPrice / p.sellPrice) * 100)).toFixed(2); // Calculate discount
+        
+        
+        const discount = ((100 - ((newSellPrice * 100) / p.sellPrice)));
+
         return { ...p, newSellPrice: newSellPrice, discount: discount }; // Update selling price and discount
+        
+    
       }
       return p;
     });
@@ -261,7 +266,7 @@ const NewSales = () => {
                     className="input input-bordered w-20"
                   />
                 </td>
-                <td>{(product.newSellPrice * product.SellQuantity * (1 - (product.discount / 100 || 0))).toFixed(2)}</td>
+                <td>{(product.newSellPrice * product.SellQuantity).toFixed(2)}</td>
                 <td>
                   <button
                     type="button"

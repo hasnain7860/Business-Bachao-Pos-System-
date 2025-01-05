@@ -11,7 +11,7 @@ const Purchases = () => {
   console.log(purchasesData)
   const handleDelete = context.purchaseContext.delete
   const [menuOpen, setMenuOpen] = useState(null); // Track which menu is open
-
+const userAndBusinessDetail = context.settingContext.settings;
   const handleAddPurchase = () => {
     navigate('/purchases/new');
   };

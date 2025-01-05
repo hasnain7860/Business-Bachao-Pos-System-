@@ -8,14 +8,16 @@ import { useNavigate } from 'react-router-dom';
 const SalesView = () => {
   const context = useAppContext();
   const salesData = context.SaleContext.Sales;
-  const { id } = useParams();
+  const { salesRefNo } = useParams();
   const location = useLocation();
   const navigate = useNavigate(); 
   const userAndBusinessDetail = context.settingContext.settings;
 
+console.log(salesData)
   // Find the sale by ID
-  const sale = salesData.find(sale => sale.id === parseInt(id));
+  const sale = salesData.find(sale => sale.salesRefNo === salesRefNo);
 
+console.log(sale)
   if (!sale) {
     return <div className="text-center text-red-500">Sale not found</div>;
   }
@@ -31,12 +33,16 @@ const SalesView = () => {
       // Optionally navigate back after printing
       // navigate(`/sales/view/${id}`); // Uncomment if needed
     }
-  }, [isPrintMode, id]);
+  }, [isPrintMode, salesRefNo]);
 
   const handlePrint = () => {
     // Navigate to the print route
-    navigate(`/sales/view/${id}/print`);
+    navigate(`/sales/view/${salesRefNo}/print`);
   };
+  
+  
+  
+
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -64,22 +70,39 @@ const SalesView = () => {
             </tr>
           </thead>
           <tbody>
-            {sale.products.map(product => (
-              <tr key={product.id} className="hover:bg-gray-50">
-                <td className="border border-gray-200 p-2">{product.name}</td>
-                <td className="border border-gray-200 p-2">{userAndBusinessDetail[0].business.currency} {product.sellPrice}</td>
-                <td className="border border-gray-200 p-2">{product.SellQuantity}</td>
-                <td className="border border-gray-200 p-2">{product.discount} %</td>
-                <td className="border border-gray-200 p-2">{userAndBusinessDetail[0].business.currency} {product.total}</td>
-              </tr>
-            ))}
+
+{sale.products.map(product => {
+  const sellingPrice = product.sellPrice;
+  const quantity = parseInt(product.SellQuantity, 10);
+  const discountPercentage = product.discount;
+
+  // Calculate total selling price
+  const totalSellingPrice = sellingPrice * quantity;
+
+  // Calculate discount amount
+  const discountAmount = totalSellingPrice * (discountPercentage / 100);
+
+  // Calculate final total
+  const finalTotal = totalSellingPrice - discountAmount;
+
+  return (
+    <tr key={product.id} className="hover:bg-gray-50">
+      <td className="border border-gray-200 p-2">{product.name}</td>
+      <td className="border border-gray-200 p-2">{userAndBusinessDetail[0].business.currency} {sellingPrice}</td>
+      <td className="border border-gray-200 p-2">{quantity}</td>
+      <td className="border border-gray-200 p-2">{discountPercentage} %</td>
+      <td className="border border-gray-200 p-2">{userAndBusinessDetail[0].business.currency} {finalTotal.toFixed(2)}</td>
+    </tr>
+  );
+})}
+
           </tbody>
         </table>
       </div>
 
       <div className="flex justify-between mt-4 font-bold">
         <span className="text-lg">Grand Total:</span>
-        <span>{userAndBusinessDetail[0].business.currency} {grandTotal}</span>
+        <span>{userAndBusinessDetail[0].business.currency} {sale.totalBill}</span>
       </div>
 
       <div className="flex justify-between items-center mt-6">

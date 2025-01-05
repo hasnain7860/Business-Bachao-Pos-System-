@@ -22,7 +22,7 @@ const POSDashboard = () => {
   const suppliers = context.supplierCustomerContext.suppliers 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-
+const userAndBusinessDetail = context.settingContext.settings;
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -33,10 +33,10 @@ const POSDashboard = () => {
   };
 
   return (
-    <div className={`flex ${darkMode ? "dark" : ""}`}>
+    <div className={`flex {userAndBusinessDetail[0].business.currency}{darkMode ? "dark" : ""}`}>
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full bg-base-200 shadow-lg z-40 transform ${
+        className={`fixed top-0 left-0 h-full bg-base-200 shadow-lg z-40 transform {userAndBusinessDetail[0].business.currency}{
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } transition-transform duration-300 w-64`}
       >
@@ -101,7 +101,7 @@ const POSDashboard = () => {
               <FaShoppingCart />
               <span>Total Sales</span>
             </h2>
-            <p className="text-2xl font-bold mt-2">$25,000</p>
+            <p className="text-2xl font-bold mt-2">{userAndBusinessDetail[0].business.currency}25,000</p>
           </div>
           <div className="card bg-accent text-accent-content p-4 shadow-md">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
@@ -144,7 +144,7 @@ const POSDashboard = () => {
               <FaMoneyBillWave />
               <span>Total Revenue</span>
             </h2>
-            <p className="text-2xl font-bold mt-2">$75,000</p>
+            <p className="text-2xl font-bold mt-2">{userAndBusinessDetail[0].business.currency}75,000</p>
           </div>
           <div className="card bg-danger text-danger-content p-4 shadow-md">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
@@ -158,7 +158,7 @@ const POSDashboard = () => {
               <FaFileInvoice />
               <span>Expenses</span>
             </h2>
-            <p className="text-2xl font-bold mt-2">$12,500</p>
+            <p className="text-2xl font-bold mt-2">{userAndBusinessDetail[0].business.currency}12,500</p>
           </div>
         </div>
       </div>

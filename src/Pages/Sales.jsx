@@ -8,7 +8,8 @@ const Sales = () => {
   const context = useAppContext();
   const sales = context.SaleContext.Sales;
   const customers = context.supplierCustomerContext.customers;
-console.log(sales)
+  const userAndBusinessDetail = context.settingContext.settings;
+
   const handleNewSale = () => {
     navigate('/sales/new');
   };
@@ -22,19 +23,20 @@ console.log(sales)
     return sale.credit === 0 ? 'Paid' : 'Pending';
   };
 
-  const handleMenuAction = (action, saleId) => {
+  const handleMenuAction = (action, salesRefNo) => {
     switch (action) {
       case 'edit':
-        navigate(`/sales/edit/${saleId}`);
+        navigate(`/sales/edit/${salesRefNo}`);
         break;
       case 'view':
-        navigate(`/sales/view/${saleId}`);
+        navigate(`/sales/view/${salesRefNo}`);
         break;
       case 'print':
+        navigate(`/sales/view/${salesRefNo}/print`);
         // Add your print logic here
         break;
       case 'delete':
-        context.SaleContext.delete(saleId);
+        context.SaleContext.delete(salesRefNo);
         // Add your delete logic here
         break;
       default:
@@ -45,10 +47,10 @@ console.log(sales)
   // State to manage which menu is open
   const [openMenu, setOpenMenu] = useState({});
 
-  const toggleMenu = (saleId) => {
+  const toggleMenu = (salesRefNo) => {
     setOpenMenu((prevState) => ({
       ...prevState,
-      [saleId]: !prevState[saleId], // Toggle the specific saleId menu
+      [salesRefNo]: !prevState[salesRefNo], // Toggle the specific saleId menu
     }));
   };
 
@@ -79,27 +81,27 @@ console.log(sales)
               </tr>
             </thead>
             <tbody>
-              {sales.map((sale) => (
-                <tr key={sale.id}>
-                  <td className="border px-4 py-2">{sale.id}</td>
+              {sales.map((sale ,index) => (
+                <tr key={index}>
+                  <td className="border px-4 py-2">{index + 1}</td>
                   <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
                   <td className="border px-4 py-2">{sale.dateTime}</td>
-                  <td className="border px-4 py-2">${sale.totalBill}</td>
-                  <td className="border px-4 py-2">${sale.amountPaid}</td>
-                  <td className="border px-4 py-2">${sale.credit}</td>
+                  <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency}{sale.totalBill}</td>
+                  <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency}{sale.amountPaid}</td>
+                  <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency}{sale.credit}</td>
                   <td className="border px-4 py-2">{sale.paymentMode}</td>
                   <td className="border px-4 py-2">{getStatus(sale)}</td>
                   <td className="border px-4 py-2 relative">
                     {/* Three-dot menu */}
-                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.id)}>
+                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.salesRefNo)}>
                       ⋮
                     </button>
-                    {openMenu[sale.id] && (
+                    {openMenu[sale.salesRefNo] && (
                       <div className="absolute right-1.5 mt-2 w-20 text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 block">
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.id)}>Edit</button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>View</button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>Print</button>
-                        <button className="text-red-600 block px-4 py-2 hover:bg-red100" onClick={() => handleMenuAction('delete', sale.id)}>Delete</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.salesRefNo)}>Edit</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.salesRefNo)}>View</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.salesRefNo)}>Print</button>
+                        <button className="text-red-600 block px-4 py-2 hover:bg-red100" onClick={() => handleMenuAction('delete', sale.salesRefNo)}>Delete</button>
                       </div>
                     )}
                   </td>

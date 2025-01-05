@@ -5,9 +5,9 @@ import { useAppContext } from '../Appfullcontext';
 const Settings = () => {
   const context = useAppContext();
   const { settings, add, edit, delete: deleteSetting, selectedSetting, select } = context.settingContext;
-console.log(settings)
+
   const [formData, setFormData] = useState({
-    id: null,
+    
     user: {
       name: '',
       phoneNo: '',
@@ -47,6 +47,8 @@ console.log(settings)
     }
   }, [selectedSetting]);
 
+
+console.log(selectedSetting)
   const handleChange = (e) => {
     const { name, value } = e.target;
     const [type, field] = name.split('.');
@@ -73,6 +75,7 @@ console.log(settings)
   };
 
   const saveData = async () => {
+    console.log(JSON.stringify(formData )+  "savedata")
     if (formData.id) {
       await edit(formData.id, formData); // Update existing setting
     } else {
