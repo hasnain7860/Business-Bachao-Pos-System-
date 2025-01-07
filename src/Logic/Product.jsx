@@ -5,7 +5,7 @@ import { addItem, getItems, deleteAndTrackItem as deleteFromDB, putItem, STORE_N
 const useProductContext = () => {
     // Product context
   const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  
   
   
     // Load units from IndexedDB when the component mounts
@@ -20,7 +20,7 @@ const useProductContext = () => {
 
 
 const addProduct = async (newProduct) => {
-    const id = await addItem(STORE_NAMES.products, newProduct);
+     await addItem(STORE_NAMES.products, newProduct);
     setProducts((prev) => [...prev, { ...newProduct
     }]);
   };
@@ -29,10 +29,10 @@ const addProduct = async (newProduct) => {
   
   
   const editProduct = async (id, updatedProduct) => {
-    setProducts((prev) => updateItem(prev, id, updatedProduct));
     // Use putItem to update the unit in IndexedDB
     await putItem(STORE_NAMES.products, { ...updatedProduct, id });
-    if (selectedProduct?.id === id) setSelectedProduct(null);
+    setProducts((prev) => updateItem(prev, id, updatedProduct));
+
   };
   
   
@@ -40,16 +40,15 @@ const addProduct = async (newProduct) => {
   const deleteProduct = async (id) => {
     await deleteFromDB(STORE_NAMES.products, id);
     setProducts((prev) => deleteItem(prev, id));
-    if (selectedProduct?.id === id) setSelectedProduct(null);
+    
     
   };
   const productContext = {
     products,
-    selectedProduct,
+    
     add: addProduct,
     edit: editProduct,
-    delete: deleteProduct,
-    select: (id) => setSelectedProduct(products.find((p) => p.id === id) || null),
+    delete: deleteProduct
   };
 
   return productContext;

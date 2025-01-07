@@ -6,6 +6,9 @@ import { getDatabase } from "firebase/database";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+
+
+
 const clientFirebaseConfig = {
   apiKey: "AIzaSyCVuIf8XI7ZybWsOYPLUQ6XZbtF5b8Bn8g",
   authDomain: "my-business-bachao.firebaseapp.com",

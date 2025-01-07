@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
-
+import { v4 as uuidv4 } from 'uuid';
 const Suppliers = () => {
   const context = useAppContext();
   let idCounter = 0;
@@ -11,6 +11,7 @@ const Suppliers = () => {
   };
 
   const suppliers = context.supplierCustomerContext.suppliers;
+  console.log(suppliers)
   const addSupplier = context.supplierCustomerContext.addSupplier;
   const editSupplier = context.supplierCustomerContext.editSupplier;
   const deleteSupplier = context.supplierCustomerContext.deleteSupplier;
@@ -43,7 +44,7 @@ const Suppliers = () => {
     if (isEditing) {
       editSupplier(form.id, form);
     } else {
-      addSupplier({ ...form, id: Date.now() });
+      addSupplier({ ...form, id: uuidv4() });
     }
     closeModal();
   };
@@ -109,7 +110,7 @@ const Suppliers = () => {
         const addressMatch = entry.match(/ADR:(.*)/); // Assuming ADR might be present
 
         const supplier = {
-          id: generateUniqueId(), // Generate unique ID
+          id: uuidv4(), // Generate unique ID
           name: nameMatch ? nameMatch[1].trim() : "Unknown",
           email: emailMatch ? emailMatch[1].trim() : "",
           phone: phoneMatch ? phoneMatch[1].trim() : "",

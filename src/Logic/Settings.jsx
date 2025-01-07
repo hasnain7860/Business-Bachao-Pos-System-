@@ -20,8 +20,8 @@ const useSettingsContext = () => {
   }, []);
 
   const addSetting = async (newSetting) => {
-    const id = await addItem(STORE_NAMES.settings, newSetting);
-    setSettings((prev) => [...prev, { ...newSetting, id }]);
+    await addItem(STORE_NAMES.settings, newSetting);
+    setSettings((prev) => [...prev, { ...newSetting }]);
   };
 
   const editSetting = async (id, updatedSetting) => {

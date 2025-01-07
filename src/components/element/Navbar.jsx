@@ -305,7 +305,16 @@ const Navbar = () => {
               </li>
             </ul>
           </li>
-
+                    {/* Credit Management */}
+          <li>
+            <Link
+              to="/CreditManagement"
+              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            >
+              <MdPerson className="mr-3" />
+              Credit Management
+            </Link>
+          </li>
 
                     {/* Manage Users */}
           <li>

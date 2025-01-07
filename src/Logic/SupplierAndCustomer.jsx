@@ -17,13 +17,14 @@ const useSupplierAndCustomerContext = () => {
   }, []);
 
   const addCustomer = async (newCustomer) => {
-    const id = await addItem(STORE_NAMES.customers, newCustomer);
-    setCustomers((prev) => [...prev, { ...newCustomer, id }]);
+    await addItem(STORE_NAMES.customers, newCustomer);
+    setCustomers((prev) => [...prev, { ...newCustomer}]);
   };
 
   const editCustomer = async (id, updatedCustomer) => {
+ await putItem(STORE_NAMES.customers, { ...updatedCustomer, id });
     setCustomers((prev) => prev.map(customer => customer.id == id ? { ...updatedCustomer, id } : customer));
-    await putItem(STORE_NAMES.customers, { ...updatedCustomer, id });
+    
   };
 
   const deleteCustomer = async (id) => {
@@ -35,12 +36,13 @@ const useSupplierAndCustomerContext = () => {
     suppliers,
     setSuppliers,
     addSupplier: async (supplier) => {
-      const id = await addItem(STORE_NAMES.suppliers, supplier);
-      setSuppliers((prev) => [...prev, { ...supplier, id }]);
+       await addItem(STORE_NAMES.suppliers, supplier);
+      setSuppliers((prev) => [...prev, { ...supplier }]);
     },
     editSupplier: async (id, supplier) => {
+   await putItem(STORE_NAMES.suppliers, { ...supplier, id });
       setSuppliers((prev) => prev.map(s => s.id === id ? { ...supplier, id } : s));
-      await putItem(STORE_NAMES.suppliers, { ...supplier, id });
+      
     },
     deleteSupplier: async (id) => {
       await deleteFromDB(STORE_NAMES.suppliers, id);

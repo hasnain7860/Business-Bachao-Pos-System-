@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Import icons for edit and delete
-
+import { v4 as uuidv4 } from 'uuid';
 const Company = () => {
   
+
+     
   
   
   const context = useAppContext(); 
   
   const companies = context.companyContext.companies
+ console.log(companies)
   const selectedCompany = context.companyContext.selectedCompany
   const addCompany = context.companyContext.add
   const editCompany = context.companyContext.edit
@@ -28,10 +31,10 @@ const Company = () => {
       setEditing(false); // Disable edit mode if no company is selected
     }
   }, [selectedCompany]);
-
+const uniqueId = uuidv4();
   const handleSubmit = (e) => {
     e.preventDefault();
-
+   
     const companyData = { name: companyName };
      console.log(companyData)
     if (editing) {
@@ -39,7 +42,8 @@ const Company = () => {
       editCompany(selectedCompany.id, companyData);
     } else {
       // Add new company
-      const newCompany = { ...companyData, id: companies.length + 1 }; // Generate new ID
+      console.log(uniqueId)
+      const newCompany = { ...companyData, id:uniqueId}; // Generate new ID
    console.log(newCompany)
       addCompany(newCompany);
     }

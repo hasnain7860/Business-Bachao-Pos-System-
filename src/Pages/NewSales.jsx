@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
+import { v4 as uuidv4 } from 'uuid';
 
 const NewSales = () => {
   const navigate = useNavigate();
@@ -91,8 +92,9 @@ const NewSales = () => {
       setMessage('Please add at least one product to the sale.');
       return;
     }
-
+const uniqueId = uuidv4();
     const salesData = {
+      id:uniqueId,
       salesRefNo,
       customerId: selectedCustomer,
       products: selectedProducts,

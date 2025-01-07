@@ -7,6 +7,7 @@ const Sales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const sales = context.SaleContext.Sales;
+  console.log(sales)
   const customers = context.supplierCustomerContext.customers;
   const userAndBusinessDetail = context.settingContext.settings;
 
@@ -23,20 +24,20 @@ const Sales = () => {
     return sale.credit === 0 ? 'Paid' : 'Pending';
   };
 
-  const handleMenuAction = (action, salesRefNo) => {
+  const handleMenuAction = (action, id) => {
     switch (action) {
       case 'edit':
-        navigate(`/sales/edit/${salesRefNo}`);
+        navigate(`/sales/edit/${id}`);
         break;
       case 'view':
-        navigate(`/sales/view/${salesRefNo}`);
+        navigate(`/sales/view/${id}`);
         break;
       case 'print':
-        navigate(`/sales/view/${salesRefNo}/print`);
+        navigate(`/sales/view/${id}/print`);
         // Add your print logic here
         break;
       case 'delete':
-        context.SaleContext.delete(salesRefNo);
+        context.SaleContext.delete(id);
         // Add your delete logic here
         break;
       default:
@@ -47,10 +48,10 @@ const Sales = () => {
   // State to manage which menu is open
   const [openMenu, setOpenMenu] = useState({});
 
-  const toggleMenu = (salesRefNo) => {
+  const toggleMenu = (id) => {
     setOpenMenu((prevState) => ({
       ...prevState,
-      [salesRefNo]: !prevState[salesRefNo], // Toggle the specific saleId menu
+      [id]: !prevState[id], // Toggle the specific saleId menu
     }));
   };
 
@@ -93,15 +94,15 @@ const Sales = () => {
                   <td className="border px-4 py-2">{getStatus(sale)}</td>
                   <td className="border px-4 py-2 relative">
                     {/* Three-dot menu */}
-                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.salesRefNo)}>
+                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.id)}>
                       ⋮
                     </button>
-                    {openMenu[sale.salesRefNo] && (
+                    {openMenu[sale.id] && (
                       <div className="absolute right-1.5 mt-2 w-20 text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 block">
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.salesRefNo)}>Edit</button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.salesRefNo)}>View</button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.salesRefNo)}>Print</button>
-                        <button className="text-red-600 block px-4 py-2 hover:bg-red100" onClick={() => handleMenuAction('delete', sale.salesRefNo)}>Delete</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.id)}>Edit</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>View</button>
+                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>Print</button>
+                        <button className="text-red-600 block px-4 py-2 hover:bg-red100" onClick={() => handleMenuAction('delete', sale.id)}>Delete</button>
                       </div>
                     )}
                   </td>

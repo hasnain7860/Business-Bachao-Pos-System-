@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaSignOutAlt } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
-
+import { v4 as uuidv4 } from 'uuid';
 const Settings = () => {
   const context = useAppContext();
   const { settings, add, edit, delete: deleteSetting, selectedSetting, select } = context.settingContext;
 
   const [formData, setFormData] = useState({
-    
+    id:uuidv4(),
     user: {
       name: '',
       phoneNo: '',
@@ -19,6 +19,8 @@ const Settings = () => {
       phoneNo: '',
       email: '',
       currency: '',
+      role: '',
+        firebaseStorePass: ''
     },
   });
 

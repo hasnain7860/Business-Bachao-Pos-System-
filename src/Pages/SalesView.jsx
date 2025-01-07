@@ -8,14 +8,14 @@ import { useNavigate } from 'react-router-dom';
 const SalesView = () => {
   const context = useAppContext();
   const salesData = context.SaleContext.Sales;
-  const { salesRefNo } = useParams();
+  const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate(); 
   const userAndBusinessDetail = context.settingContext.settings;
 
 console.log(salesData)
   // Find the sale by ID
-  const sale = salesData.find(sale => sale.salesRefNo === salesRefNo);
+  const sale = salesData.find(sale => sale.id === id);
 
 console.log(sale)
   if (!sale) {
@@ -33,11 +33,11 @@ console.log(sale)
       // Optionally navigate back after printing
       // navigate(`/sales/view/${id}`); // Uncomment if needed
     }
-  }, [isPrintMode, salesRefNo]);
+  }, [isPrintMode, id]);
 
   const handlePrint = () => {
     // Navigate to the print route
-    navigate(`/sales/view/${salesRefNo}/print`);
+    navigate(`/sales/view/${id}/print`);
   };
   
   
@@ -52,7 +52,7 @@ console.log(sale)
       <hr className="my-4" />
       
       <h3 className="text-xl font-semibold mb-2">Bill Details</h3>
-      <p><strong>Sales Reference No:</strong> {sale.salesRefNo}</p>
+      <p><strong>Sales Reference No:</strong> {sale.id}</p>
       <p><strong>Customer ID:</strong> {sale.customerId}</p>
       <p><strong>Date:</strong> {new Date(sale.dateTime).toLocaleString()}</p>
       <p><strong>Total Bill:</strong> {userAndBusinessDetail[0].business.currency} {sale.totalBill}</p>

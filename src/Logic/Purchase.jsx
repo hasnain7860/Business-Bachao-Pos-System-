@@ -18,7 +18,7 @@ const usePurchaseContext = () => {
 
 
 const addPurchase = async (newPurchase) => {
-    const id = await addItem(STORE_NAMES.purchases, newPurchase);
+     await addItem(STORE_NAMES.purchases, newPurchase);
     setPurchases((prev) => [...prev, { ...newPurchase
     }]);
   };

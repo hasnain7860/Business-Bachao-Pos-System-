@@ -4,21 +4,18 @@ import { Link } from 'react-router-dom';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
+import { v4 as uuidv4 } from 'uuid';
 
 const Products = () => {
     const context = useAppContext();
     const products = context.productContext.products;
     const addProduct = context.productContext.add;
     const handleDelete = context.productContext.delete;
-
+console.log(products)
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
 
-    let idCounter = 0;
-
-    const generateUniqueId = () => {
-        return (Date.now() + idCounter++).toString(); // Ensure uniqueness by adding a counter 
-    };
+  
 
     const generateSku = () => {
         return Math.floor(100000 + Math.random() * 900000).toString();
@@ -34,7 +31,7 @@ const Products = () => {
             }
         }
     };
-
+  
     const handleFileUpload = (file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -45,6 +42,7 @@ const Products = () => {
 
             // Process jsonData to format it as required
             const formattedData = jsonData.map((item) => {
+              const uniqueId = uuidv4();
                 const name = item.name || ""; // Default to empty string if undefined
 
                 // Check if name is present, return early if not
@@ -55,7 +53,7 @@ const Products = () => {
                 return {
                     brandId: item.brandId ? item.brandId.toString() : '',
                     companyId: item.companyId ? item.companyId.toString() : '',
-                    id: generateUniqueId(), // Generate id using Date.now()
+                    id: uniqueId, // Generate id using Date.now()
                     name: name, // Use the valid name
                     productImage: null,
                     purchasePrice: item.purchasePrice ? item.purchasePrice.toString() : '',

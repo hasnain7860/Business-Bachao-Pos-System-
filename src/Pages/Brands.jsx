@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
-
+import { v4 as uuidv4 } from 'uuid';
 const Brand = () => {
   
   const context = useAppContext(); 
@@ -11,11 +11,11 @@ const Brand = () => {
   const deleteBrand = context.brandContext.delete
   
   
-
+console.log(brands)
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [brandName, setBrandName] = useState('');
   const [editingBrandId, setEditingBrandId] = useState(null);
-
+console.log(selectedCompanyId)
   const handleAddOrEditBrand = (e) => {
     e.preventDefault();
 
@@ -29,15 +29,16 @@ const Brand = () => {
       editBrand(editingBrandId, {
         id: editingBrandId,
         name: brandName,
-        companyId: parseInt(selectedCompanyId),
+        companyId: selectedCompanyId,
       });
       setEditingBrandId(null); // Reset edit state
     } else {
       // Add mode
+      const uniqueId = uuidv4();
       const newBrand = {
-        id: brands.length + 1,
+        id: uniqueId,
         name: brandName,
-        companyId: parseInt(selectedCompanyId),
+        companyId: selectedCompanyId,
       };
       console.log(newBrand)
       addBrand(newBrand);

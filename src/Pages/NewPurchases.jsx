@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { useAppContext } from '../Appfullcontext';
+import { v4 as uuidv4 } from 'uuid';
 
 const NewPurchases = () => {
   const context = useAppContext();
@@ -16,6 +17,7 @@ const NewPurchases = () => {
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [totalPayment, setTotalPayment] = useState();
+ 
   const purchases = context.purchaseContext.purchases
   const addPurchase = context.purchaseContext.add
   
@@ -41,6 +43,7 @@ const NewPurchases = () => {
         total: 0,
       };
       setSelectedProducts([...selectedProducts, newProduct]);
+      
     }
   };
 console.log(selectedProducts)
@@ -50,19 +53,25 @@ console.log(selectedProducts)
     newProducts[index].total =
       newProducts[index].purchasePrice * newProducts[index].quantity;
     setSelectedProducts(newProducts);
+    
   };
 
   const calculateTotalBill = () => {
     return selectedProducts.reduce((total, product) => total + product.total, 0);
+ 
   };
 
   const calculateCredit = () => {
+    
     return calculateTotalBill() - totalPayment;
   };
 
   const handleAddPurchase = () => {
     const supplier = suppliers.find(s => s.id == selectedSupplier);
+    const uniqueId = uuidv4();
     const newPurchase = {
+      id: uniqueId,
+      
       supplierName: supplier ? supplier.name : '',
       date: currentDate,
       paymentMode,

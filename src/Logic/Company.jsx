@@ -15,8 +15,8 @@ const useCompanyContext = () => {
   }, []);
 
   const addCompany = async (newCompany) => {
-    const id = await addItem(STORE_NAMES.company, newCompany);
-    setCompanies((prev) => [...prev, { ...newCompany, id }]);
+    await addItem(STORE_NAMES.company, newCompany);
+    setCompanies((prev) => [...prev, { ...newCompany }]);
   };
 
   const editCompany = async (id, updatedCompany) => {

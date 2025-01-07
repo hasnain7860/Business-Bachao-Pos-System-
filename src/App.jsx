@@ -11,6 +11,7 @@ import Layout from "./Layout";
 import Dashboard from "./Pages/dashboard";
 import Login from "./Pages/Login.jsx";
 import Profile from "./Pages/Profile.jsx";
+import CreditManagement from "./Pages/CreditManagement.jsx";
 import Settings from "./Pages/Settings.jsx";
 import Suppliers from "./Pages/suppliers.jsx";
 import Customer from "./Pages/customer.jsx";
@@ -54,6 +55,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Profile />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/CreditManagement"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <CreditManagement />
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -189,7 +200,7 @@ function App() {
                     }
                 />
                      <Route
-                    path="/sales/view/:salesRefNo"
+                    path="/sales/view/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
@@ -200,7 +211,7 @@ function App() {
                 />
                      <Route
                   
-                    path="/sales/view/:salesRefNo/print"
+                    path="/sales/view/:id/print"
                     element={
                         <ProtectedRoute>
                           

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
+import { v4 as uuidv4 } from 'uuid';
 
 const Unit = () => {
   const context = useAppContext(); 
@@ -20,8 +21,9 @@ const Unit = () => {
       setEditingUnitId(null); // Reset editing state
     } else {
       // Add mode
+      const uniqueId = uuidv4();
       const newUnit = {
-        id: units.length + 1, // Generate unique ID
+        id: uniqueId, // Generate unique ID
         name: unitName,
       };
       console.log(newUnit)

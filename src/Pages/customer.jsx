@@ -1,10 +1,12 @@
 
 import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
+import { v4 as uuidv4 } from 'uuid';
 
 const Customers = () => {
   const context = useAppContext();
   const customers = context.supplierCustomerContext.customers;
+  console.log(customers)
   const addCustomer = context.supplierCustomerContext.addCustomer;
   const editCustomer = context.supplierCustomerContext.editCustomer;
   const deleteCustomer = context.supplierCustomerContext.deleteCustomer;
@@ -35,13 +37,14 @@ const Customers = () => {
   const handleImageSelection = (e) => {
     setFormData({ ...formData, image: URL.createObjectURL(e.target.files[0]) });
   };
-
+ 
   const handleFormSubmission = (e) => {
     e.preventDefault();
     if (isEditingMode) {
       editCustomer(formData.id, formData);
     } else {
-      addCustomer({ ...formData, id: Date.now() });
+        
+      addCustomer({ ...formData, id: uuidv4() });
     }
     closeModal();
   };
@@ -103,7 +106,7 @@ const Customers = () => {
         const addressMatch = entry.match(/ADR:(.*)/);
 
         const customer = {
-          id: generateUniqueId(), // Create a unique ID
+          id: uuidv4(), // Create a unique ID
           name: nameMatch ? nameMatch[1].trim() : "Unknown",
           email: emailMatch ? emailMatch[1].trim() : "",
           phone: phoneMatch ? phoneMatch[1].trim() : "",

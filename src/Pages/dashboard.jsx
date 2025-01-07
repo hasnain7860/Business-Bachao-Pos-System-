@@ -24,8 +24,10 @@ const POSDashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
 const userAndBusinessDetail = context.settingContext.settings;
   const toggleSidebar = () => {
+    
     setIsSidebarOpen(!isSidebarOpen);
   };
+  
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
@@ -33,61 +35,7 @@ const userAndBusinessDetail = context.settingContext.settings;
   };
 
   return (
-    <div className={`flex {userAndBusinessDetail[0].business.currency}{darkMode ? "dark" : ""}`}>
-      {/* Sidebar */}
-      <div
-        className={`fixed top-0 left-0 h-full bg-base-200 shadow-lg z-40 transform {userAndBusinessDetail[0].business.currency}{
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 w-64`}
-      >
-        <div className="p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">POS Menu</h2>
-          <button
-            onClick={toggleSidebar}
-            className="text-lg font-bold bg-base-300 p-1 rounded-md hover:bg-base-400"
-          >
-            <AiOutlineClose />
-          </button>
-        </div>
-        <ul className="p-4 space-y-4">
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <FaChartLine />
-              <span>Dashboard</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <FaUsers />
-              <span>Customers</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <FaShoppingCart />
-              <span>Products</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <FaFileInvoice />
-              <span>Create Invoice</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <MdInventory />
-              <span>Inventory</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" className="flex items-center space-x-2 text-base hover:font-bold">
-              <MdReport />
-              <span>Reports</span>
-            </a>
-          </li>
-        </ul>
-      </div>
+    <div className={`flex {darkMode ? "dark" : ""}`}>
 
       {/* Main Content */}
       <div className="flex-1 bg-base-100 min-h-screen p-4">

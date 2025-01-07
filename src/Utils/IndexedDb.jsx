@@ -14,7 +14,8 @@ export const STORE_NAMES = {
   units: 'units',
   suppliers: 'suppliers',
   customers: 'customers',
-  settings:'settings'
+  settings:'settings',
+  creditManagement: 'creditManagement'
 };
 
 // Store name for tracking deleted items
@@ -26,16 +27,17 @@ export const getDB = async () => {
     upgrade(db) {
       Object.values(STORE_NAMES).forEach((storeName) => {
         if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+          // Remove autoIncrement to require manual ID provision
+          db.createObjectStore(storeName, { keyPath: 'id' }); // No autoIncrement
         }
       });
       if (!db.objectStoreNames.contains(DELETED_ITEMS_STORE)) {
-        db.createObjectStore(DELETED_ITEMS_STORE, { keyPath: 'id', autoIncrement: true });
+        // Remove autoIncrement to require manual ID provision
+        db.createObjectStore(DELETED_ITEMS_STORE, { keyPath: 'id' }); // No autoIncrement
       }
     },
   });
 };
-
 // Generic function to add an item to a store
 export const addItem = async (storeName, item) => {
   const db = await getDB();
@@ -57,7 +59,8 @@ export const getItems = async (storeName) => {
 // Generic function to delete an item by ID from a store
 export const deleteItem = async (storeName, id) => {
   const db = await getDB();
-  await db.delete(storeName, id);
+ await db.delete(storeName, id);
+ console.log("delete " )
 };
 
 // Function to set multiple items in a store

@@ -7,14 +7,16 @@ import { collection, getDocs } from "firebase/firestore";
 import {syncDataInRealTime} from '../Logic/syncDataInRealTime.jsx'
 import bcrypt from 'bcryptjs';
 import Cookies from 'js-cookie';
-
+import { v4 as uuidv4 } from 'uuid';
 const Login = () => {
-  const { isAuthenticated, setIsAuthenticated } = useAppContext();
+  const context = useAppContext();
+  const { isAuthenticated, setIsAuthenticated } = context;
+  const { settings, add, edit, delete: deleteSetting, selectedSetting, select } = context.settingContext;
   console.log(isAuthenticated)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+const [formData, setFormData] = useState({})
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -39,15 +41,34 @@ const Login = () => {
           
           Cookies.set('userName', data.name, { expires: 3 });
           Cookies.set('userRole', data.role, { expires: 3 });
-          
+      
+await  setFormData((prevData) => ({
+      ...prevData,
+      id: uuidv4(),
+      user: {
+        name: data.name,
+        phoneNo: '987654321',
+        email: 'demo@demo.com',
+        signature: 'demo',
+      },
+      business: {
+        businessName: 'demo',
+        phoneNo: '987654321',
+        email: 'demo@demo.com',
+        currency: 'Rs',
+        role: data.role,
+        firebaseStorePass: data.AdminFirebaseObject,
+      },
+    }));
+  ;
+     await add(formData); 
+     setIsAuthenticated(authenticated);  
+        
         }
       });
-
       if (authenticated) {
         
-        
-        setIsAuthenticated(authenticated);
-        
+     console.log("succesful")
       } else {
         setError("Invalid email or password.");
       }

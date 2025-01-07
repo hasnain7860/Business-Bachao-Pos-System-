@@ -10,7 +10,9 @@ const useSalesContext = () => {
     // Load units from IndexedDB when the component mounts
   useEffect(() => {
     const loadSale = async () => {
+      
       const storedSale = await getItems(STORE_NAMES.sales);
+      console.log("called sales useeffect" + JSON.stringify(storedSale))
       setSales(storedSale);
     };
     loadSale();
@@ -25,9 +27,10 @@ const addSale = async (newSale) => {
   };
   
   const deleteSale = async (salesRefNo) => {
+    console.log(salesRefNo)
     await deleteFromDB(STORE_NAMES.sales, salesRefNo);
     setSales((prev) => deleteItem(prev, salesRefNo));
-    
+    console.log("delte sale succesfully")
   };
   
   
