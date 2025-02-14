@@ -64,16 +64,22 @@ export const deleteItem = async (storeName, id) => {
 };
 
 // Function to set multiple items in a store
+
 export const setItems = async (storeName, items) => {
   const db = await getDB();
   const tx = db.transaction(storeName, 'readwrite');
 
-  for (const item of items) {
-    await tx.store.put(item);
+  try {
+    for (const item of items) {
+      await tx.store.put(item); // This will overwrite if the id already exists
+    }
+    await tx.done;
+  } catch (error) {
+    console.error("Error setting items:", error);
+    // Handle the error as required
   }
-
-  await tx.done;
 };
+
 
 // Function to add a deleted item ID to the deletedItems store
 export const addDeletedItem = async (storeName, id) => {
@@ -96,7 +102,15 @@ export const deleteAndTrackItem = async (storeName, id) => {
   }
 };
 
-
+export const clearOfflineData = async (storeName) => {
+    const db = await getDB();
+    const tx = db.transaction(storeName, 'readwrite');
+    const objectStore = tx.store;
+    
+    // Clear all data
+    await objectStore.clear();
+    await tx.done;
+};
 
 
 
@@ -104,8 +118,8 @@ export const deleteItemsFromFirebase = async () => {
   const db = await getDB(); // Get the IndexedDB instance
   const deletedItems = await db.getAll(DELETED_ITEMS_STORE); // Retrieve all deleted items
   
-  console.log(deletedItems)
-await deleteItem(DELETED_ITEMS_STORE, 4);
+  
+
   for (const { storeName, id } of deletedItems) {
     const itemRef = ref(clientDatabase, `${storeName}/${id}`); // Create reference to the Firebase item
     try {

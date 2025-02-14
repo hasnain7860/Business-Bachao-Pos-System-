@@ -31,8 +31,7 @@ const [purchasePrice, setPurchasePrice] = useState("");
     
     if (id) {
       const product = context.productContext.products.find((p) => p.id == id);
-      console.log(
-        product)
+      
       if (product) {
         setProductName(product.name);
         setSku(product.sku);

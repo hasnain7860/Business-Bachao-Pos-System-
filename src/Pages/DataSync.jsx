@@ -9,6 +9,7 @@ import {
   deleteItemsFromFirebase,
   setItems,
   STORE_NAMES,
+  clearOfflineData,
 } from '../Utils/IndexedDb.jsx';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -21,10 +22,12 @@ const DataSync = () => {
     onValue(dataRef, async (snapshot) => {
       const firebaseData = [];
       snapshot.forEach((childSnapshot) => {
+      console.log("childsnapshot" + JSON.stringify(childSnapshot))
+      
         const item = { id: childSnapshot.key, ...childSnapshot.val() };
         firebaseData.push(item);
       });
-
+      await clearOfflineData(currentStore)
       await setItems(currentStore, firebaseData);
       toast.success(`Data synced from Firebase (${currentStore}) to offline storage!`, {
         className: 'bg-green-500 text-white',
@@ -38,19 +41,7 @@ const DataSync = () => {
     setOfflineData(items);
   };
 
-  const handleDelete = async () => {
-    try {
-      await deleteItemsFromFirebase();
-      toast.success('Deleted items from Firebase successfully!', {
-        className: 'bg-red-500 text-white',
-      });
-    } catch (error) {
-      console.error('Error deleting items from Firebase:', error);
-      toast.error('Failed to delete items from Firebase.', {
-        className: 'bg-orange-500 text-white',
-      });
-    }
-  };
+  
 
   const handleSyncOfflineData = async () => {
     for (const item of offlineData) {
@@ -60,6 +51,7 @@ const DataSync = () => {
     toast.success('All offline items synced to Firebase successfully!', {
       className: 'bg-blue-500 text-white',
     });
+    deleteItemsFromFirebase()();
     fetchOfflineData();
   };
 
@@ -87,10 +79,7 @@ const DataSync = () => {
       </div>
       <div className="flex flex-col md:flex-row justify-around mb-4">
         <button className="btn btn-primary mb-2 md:mb-0" onClick={fetchDataFromFirebase}>
-          <FaSync className="mr-2" /> Fetch Data from Firebase
-        </button>
-        <button className="btn btn-red mb-2 md:mb-0" onClick={handleDelete}>
-          <FaTrash className="mr-2" /> Delete Items
+          <FaSync className="mr-2" /> Fetch Data 
         </button>
         <button className="btn btn-success" onClick={handleSyncOfflineData}>
           <FaUpload className="mr-2" /> Sync Offline Data
