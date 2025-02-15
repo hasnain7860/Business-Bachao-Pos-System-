@@ -15,6 +15,10 @@ const usePurchaseContext = () => {
     loadPurchase();
   }, []);
 
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.purchases);
+    setPurchases(updatedData);
+  };
 
 
 const addPurchase = async (newPurchase) => {
@@ -34,7 +38,8 @@ const addPurchase = async (newPurchase) => {
   const purchaseContext = {
     purchases,
     add: addPurchase,
-    delete: deletePurchase
+    delete: deletePurchase,
+    refreshData
   };
 
   return purchaseContext;

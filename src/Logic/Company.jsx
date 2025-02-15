@@ -14,6 +14,11 @@ const useCompanyContext = () => {
     loadCompanies();
   }, []);
 
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.company);
+    setCompanies(updatedData);
+  };
+
   const addCompany = async (newCompany) => {
     await addItem(STORE_NAMES.company, newCompany);
     setCompanies((prev) => [...prev, { ...newCompany }]);
@@ -40,6 +45,7 @@ const useCompanyContext = () => {
     edit: editCompany,
     delete: deleteCompany,
     select: (id) => setSelectedCompany(companies.find((c) => c.id === id) || null),
+    refreshData,
   };
 
   return companyContext;

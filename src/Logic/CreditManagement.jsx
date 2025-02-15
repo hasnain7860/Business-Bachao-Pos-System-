@@ -18,6 +18,11 @@ const useCreditManagementContext = () => {
     loadCreditManagement();
   }, []);
 
+  
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.creditManagement);
+    setSubmittedRecords(updatedData);
+  };
   const addCreditManagement = async (newCreditManagement) => {
      await addItem(STORE_NAMES.creditManagement, newCreditManagement);
     setSubmittedRecords((prev) => [...prev, { ...newCreditManagement }]);
@@ -39,7 +44,8 @@ setSubmittedRecords((prev) => updateItem(prev, id, updatedCreditManagement));
     submittedRecords,
     add: addCreditManagement,
     edit: editCreditManagement,
-      delete: deletCreditManagement
+      delete: deletCreditManagement,
+      refreshData 
   };
   return creditManagementContext;
 };

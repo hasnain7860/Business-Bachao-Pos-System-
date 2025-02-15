@@ -16,6 +16,11 @@ const useUnitsContext = () => {
     loadUnits();
   }, []);
 
+  
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.units);
+    setUnits(updatedData);
+  };
   const addUnit = async (newUnit) => {
      await addItem(STORE_NAMES.units, newUnit);
     setUnits((prev) => [...prev, { ...newUnit }]);
@@ -38,7 +43,8 @@ const useUnitsContext = () => {
     
     add: addUnit,
     edit: editUnit,
-    delete: deleteUnit
+    delete: deleteUnit,
+    refreshData 
     
   };
 

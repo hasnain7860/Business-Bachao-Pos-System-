@@ -18,6 +18,10 @@ const useProductContext = () => {
   }, []);
 
 
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.products);
+    setProducts(updatedData);
+  };
 
 const addProduct = async (newProduct) => {
      await addItem(STORE_NAMES.products, newProduct);
@@ -48,7 +52,8 @@ const addProduct = async (newProduct) => {
     
     add: addProduct,
     edit: editProduct,
-    delete: deleteProduct
+    delete: deleteProduct,
+    refreshData 
   };
 
   return productContext;

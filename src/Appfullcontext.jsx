@@ -23,7 +23,7 @@ const AppContext = createContext();
 // Context Provider
 export const AppContextProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+ 
   // Contexts
   const companyContext = useCompanyContext();
   const brandContext = useBrandsContext();
@@ -37,6 +37,7 @@ export const AppContextProvider = ({ children }) => {
 
   const { settings } = settingContext;
 
+ 
   useEffect(() => {
     // Check if settings is an array and has at least one element
     if (settings && settings.length > 0 && settings[0].business && settings[0].business.firebaseStorePass) {
@@ -58,7 +59,7 @@ export const AppContextProvider = ({ children }) => {
         purchaseContext,
         SaleContext,
         settingContext,
-        creditManagementContext,
+        creditManagementContext,      
       }}
     >
       {children}

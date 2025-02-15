@@ -19,6 +19,10 @@ const useSalesContext = () => {
   }, []);
 
 
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.sales);
+    setSales(updatedData);
+  };
 
 const addSale = async (newSale) => {
     const id = await addItem(STORE_NAMES.sales, newSale);
@@ -38,7 +42,8 @@ const addSale = async (newSale) => {
   const SaleContext = {
     Sales,
     add: addSale,
-    delete: deleteSale
+    delete: deleteSale,
+    refreshData
   };
 
   return SaleContext;

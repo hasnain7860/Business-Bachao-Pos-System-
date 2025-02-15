@@ -19,6 +19,12 @@ const useSettingsContext = () => {
     loadSettings();
   }, []);
 
+  
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.settings);
+    setSettings(updatedData);
+  };
+
   const addSetting = async (newSetting) => {
     await addItem(STORE_NAMES.settings, newSetting);
     setSettings((prev) => [...prev, { ...newSetting }]);
@@ -48,6 +54,7 @@ const useSettingsContext = () => {
     edit: editSetting,
     delete: deleteSetting,
     select,
+    refreshData
   };
 };
 

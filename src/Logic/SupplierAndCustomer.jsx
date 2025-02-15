@@ -15,6 +15,15 @@ const useSupplierAndCustomerContext = () => {
     };
     loadData();
   }, []);
+  
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.suppliers);
+    const updatedData1 = await getItems(STORE_NAMES.customers);
+    setSuppliers(updatedData);
+      setCustomers(updatedData1);
+
+
+  };
 
   const addCustomer = async (newCustomer) => {
     await addItem(STORE_NAMES.customers, newCustomer);
@@ -53,6 +62,7 @@ const useSupplierAndCustomerContext = () => {
     addCustomer,
     editCustomer,
     deleteCustomer,
+    refreshData,
   };
 
   return supplierCustomerContext;

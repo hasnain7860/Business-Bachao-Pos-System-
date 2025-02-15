@@ -17,6 +17,13 @@ const useBrandsContext = () => {
     loadBrands();
   }, []);
 
+
+  
+  const refreshData = async () => {
+    const updatedData = await getItems(STORE_NAMES.brands);
+    setBrands(updatedData);
+  };
+
   const addBrand = async (newBrand) => {
      await addItem(STORE_NAMES.brands, newBrand);
     setBrands((prev) => [...prev, { ...newBrand }]);
@@ -38,7 +45,8 @@ setBrands((prev) => updateItem(prev, id, updatedBrand));
     brands,
     add: addBrand,
     edit: editBrand,
-    delete: deleteBrand
+    delete: deleteBrand,
+    refreshData
   };
   return brandContext;
 };
