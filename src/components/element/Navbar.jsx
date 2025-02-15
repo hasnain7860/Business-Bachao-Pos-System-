@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef} from "react";
 import { Link } from "react-router-dom";
 import {
   AiOutlineDown,
@@ -24,8 +24,15 @@ import { useAppContext } from '../../Appfullcontext.jsx';
 
 const Navbar = () => {
   const { setIsAuthenticated } = useAppContext();
+const [language, setLanguage] = useState('en');
 
+const toggleLanguage = () => {
+  setLanguage((prevLanguage) => (prevLanguage === 'en' ? 'ur' : 'en'));
+}; 
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const sidebarRef = useRef(null);
+  const menuButtonRef = useRef(null);
   const [collapsedSections, setCollapsedSections] = useState({
   people: true,
   inventory: true,
@@ -33,10 +40,13 @@ const Navbar = () => {
   purchases: true,
 });
   
-  const [isDarkMode, setIsDarkMode] = useState(false);
+ 
 
   // Toggle Sidebar
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+ 
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev);
+  };
 
   // Toggle Collapse for sections
   const toggleSection = (section) => {
@@ -51,62 +61,62 @@ const Navbar = () => {
    await clearAllStores()
    await setIsAuthenticated(false);
     
-    console.log("Logging out...");
+    alert("Logging out...");
     // Add your logout logic here
   };
 
-  // Handle Theme Toggle (Light/Dark)
-  const handleThemeToggle = () => {
-    setIsDarkMode((prevMode) => {
-      const newMode = !prevMode;
-      localStorage.setItem("theme", newMode ? "dark" : "light");
-      return newMode;
-    });
-  };
-
-  // Check for saved theme in localStorage
+  // Close sidebar when clicking outside
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === "dark");
-    }
-  }, []);
+    const handleClickOutside = (event) => {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(event.target)
+      ) {
+        setIsSidebarOpen(false);
+      }
+    };
 
-  useEffect(() => {
-    // Apply dark or light theme
-    if (isDarkMode) {
-      document.querySelector("html").classList.add("dark");
+    if (isSidebarOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
     } else {
-      document.querySelector("html").classList.remove("dark");
+      document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isDarkMode]);
 
-
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isSidebarOpen]);
 
 
   return (
     <div>
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex justify-between items-center">
-        <button
-          onClick={toggleSidebar}
-          className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600"
-        >
-          ☰
-        </button>
-        <h1 className="text-2xl font-bold">POS System</h1>
-        <div className="flex items-center space-x-4">
+   <nav className="fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex justify-between items-center">
+  <button
+    onClick={toggleSidebar}    ref={menuButtonRef}
+    className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600"
+  >
+    ☰
+  </button>
+  <h1 className="text-2xl font-bold">Rizwan Trader POS</h1>
+  <div className="flex items-center space-x-4">
           <button
-            onClick={handleThemeToggle}
+            onClick={toggleLanguage}
             className="p-2 bg-gray-700 rounded-full hover:bg-gray-600"
           >
-            🌗
+            {language === 'en' ? 'EN' : 'PK'}
           </button>
+          <Link
+            to="/sales/new"
+            className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+          >
+            Sales
+          </Link>
         </div>
-      </nav>
+</nav>
 
       {/* Sidebar */}
-      <div
+      <div   ref={sidebarRef}
         className={`fixed top-0 left-0 h-full bg-gray-800 text-white shadow-md z-40 transform ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } transition-transform duration-300 w-64 overflow-y-auto`}

@@ -19,14 +19,15 @@ const AddProduct = () => {
   const [selectedBrand, setSelectedBrand] = useState();
   const [selectedUnit, setSelectedUnit] = useState();
   const [productName, setProductName] = useState("");
-  const [sku, setSku] = useState("");
+
   const [productImage, setProductImage] = useState(null);
   const [edit, setedit] = useState(false);
   const [preview, setPreview] = useState(""); // For previewing the image
 const [purchasePrice, setPurchasePrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
-  
+  const [quantity, setQuantity] = useState("")
+
   useEffect(() => {
     
     if (id) {
@@ -34,7 +35,7 @@ const [purchasePrice, setPurchasePrice] = useState("");
       
       if (product) {
         setProductName(product.name);
-        setSku(product.sku);
+      
         setSelectedCompany(product.companyId);
         setSelectedBrand(product.brandId);
         setSelectedUnit(product.unitId);
@@ -42,15 +43,12 @@ const [purchasePrice, setPurchasePrice] = useState("");
         setSellPrice(product.sellPrice); // Set sell price
         setRetailPrice(product.retailPrice); // Set retail price
         setedit(true);
+        setQuantity(product.quantity)
       }
-    }else{
-      generateSku()
     }
-  }, [edit, id, context.productContext.products]);
+  }, [id, context.productContext.products]);
 
-  const generateSku = () => {
-    setSku(Math.floor(100000 + Math.random() * 900000).toString());
-  };
+
   
   
 
@@ -60,12 +58,11 @@ const [purchasePrice, setPurchasePrice] = useState("");
       alert("Please fill all required fields.");
       return;
     }
-    
+ 
   
 const productData = {
       id: edit ? id : Date.now(),
       name: productName,
-      sku,
       companyId: selectedCompany,
       brandId: selectedBrand,
       unitId: selectedUnit,
@@ -73,6 +70,7 @@ const productData = {
       purchasePrice, // Include purchase price
       sellPrice, // Include sell price
       retailPrice, // Include retail price
+      quantity,
     };
     
     
@@ -81,11 +79,13 @@ const productData = {
       updateProduct(productData.id, productData);
       alert("Product updated successfully!");
       navigate(-1)
+      return;
     } else {
       console.log("saveing data log" + JSON.stringify(productData))
       addProduct(productData);
       alert("Product added successfully!");
        navigate(-1)
+       return;
     }
 
     // Clear fields if not editing
@@ -99,6 +99,7 @@ const productData = {
       setPurchasePrice(""); // Clear purchase price
       setSellPrice(""); // Clear sell price
       setRetailPrice(""); // Clear retail price
+      setQuantity("")
     }
   };
 
@@ -147,29 +148,7 @@ const productData = {
         />
       </div>
 
-      {/* SKU */}
-      <div className="form-control mb-4 flex items-center gap-2">
-        <div className="w-full">
-          <label className="label">
-            <span className="label-text">Product Code (SKU)*:</span>
-          </label>
-          <input
-          required
-            type="text"
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-            placeholder="Generate or enter SKU"
-            className="input input-bordered w-full"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={generateSku}
-          className="btn btn-outline btn-sm mt-8"
-        >
-          <FaSyncAlt />
-        </button>
-      </div>
+    
 
       {/* Company */}
       <div className="form-control mb-4">
@@ -295,6 +274,20 @@ const productData = {
           className="input input-bordered w-full"
         />
       </div>
+
+       {/*  quantity */}
+       <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">quantity :</span>
+        </label>
+        <input
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          placeholder="Enter quantity"
+          className="input input-bordered w-full"
+        />
+      </div> 
 
       <div className="product-image-upload">
         <label className="block mb-2 text-sm font-medium">

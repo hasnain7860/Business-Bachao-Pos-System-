@@ -1,24 +1,25 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { Navigate } from "react-router-dom";
 import { adminDb } from '../Utils/AuthViaFirebase.jsx';
 import { collection, getDocs } from "firebase/firestore";
-import {syncDataInRealTime} from '../Logic/syncDataInRealTime.jsx'
 import bcrypt from 'bcryptjs';
 import Cookies from 'js-cookie';
-import { v4 as uuidv4 } from 'uuid';
+
 const Login = () => {
   const context = useAppContext();
   const { isAuthenticated, setIsAuthenticated } = context;
-  const { settings, add, edit, delete: deleteSetting, selectedSetting, select } = context.settingContext;
-  console.log(isAuthenticated)
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-const [formData, setFormData] = useState({})
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const { email, password } = formData;
 
     if (!email || !password) {
       setError("Both fields are required.");
@@ -32,46 +33,21 @@ const [formData, setFormData] = useState({})
 
     try {
       const querySnapshot = await getDocs(collection(adminDb, "client"));
-      let authenticated = false;
-      
-      querySnapshot.forEach(async (doc) => {
-        const data = doc.data();
-        if (data.email === email && bcrypt.compareSync(password, data.password)) {
-          authenticated = true;
-          
-          Cookies.set('userName', data.name, { expires: 3 });
-          Cookies.set('userRole', data.role, { expires: 3 });
-      
-await  setFormData((prevData) => ({
-      ...prevData,
-      id: uuidv4(),
-      user: {
-        name: data.name,
-        phoneNo: '987654321',
-        email: 'demo@demo.com',
-        signature: 'demo',
-      },
-      business: {
-        businessName: 'demo',
-        phoneNo: '987654321',
-        email: 'demo@demo.com',
-        currency: 'Rs',
-        role: data.role,
-        firebaseStorePass: data.AdminFirebaseObject,
-      },
-    }));
-  ;
-     await add(formData); 
-     setIsAuthenticated(authenticated);  
-        
+      const users = querySnapshot.docs.map(doc => doc.data());
+
+      for (let user of users) {
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (user.email === email && passwordMatch) {
+          Cookies.set('userName', user.name, { expires: 3 });
+          Cookies.set('userRole', user.role, { expires: 3 });
+          setIsAuthenticated(true);
+          return;
         }
-      });
-      if (authenticated) {
-        
-     console.log("succesful")
-      } else {
-        setError("Invalid email or password.");
       }
+
+      setError("Invalid email or password.");
+      setTimeout(() => setError(""), 3000); // Auto-hide error after 3 sec
+
     } catch (err) {
       console.error("Error fetching documents:", err);
       setError("Error during authentication.");
@@ -86,19 +62,16 @@ await  setFormData((prevData) => ({
     <div className="flex items-center justify-center min-h-screen bg-base-200">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
+              name="email"
               placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange}
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -107,9 +80,10 @@ await  setFormData((prevData) => ({
             <label className="block text-sm font-medium mb-1">Password</label>
             <input
               type="password"
+              name="password"
               placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>

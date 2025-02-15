@@ -110,6 +110,7 @@ const internet = await checkInternet()
       className: 'bg-blue-500 text-white',
     });
     handleDelete();
+    refreshData();
     fetchOfflineData();
   }else{
     toast.error('Internet is Not Working check Internet And try Again', {

@@ -11,15 +11,13 @@ const Products = () => {
     const products = context.productContext.products;
     const addProduct = context.productContext.add;
     const handleDelete = context.productContext.delete;
-console.log(products)
+    const userAndBusinessDetail = context.settingContext.settings;
+
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
 
   
 
-    const generateSku = () => {
-        return Math.floor(100000 + Math.random() * 900000).toString();
-    };
 
     const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -59,7 +57,7 @@ console.log(products)
                     purchasePrice: item.purchasePrice ? item.purchasePrice.toString() : '',
                     retailPrice: item.retailPrice ? item.retailPrice.toString() : '',
                     sellPrice: item.sellPrice ? item.sellPrice.toString() : '',
-                    sku: generateSku(), // Generate SKU
+                    
                     quantity: item.quantity ? item.quantity.toString(): '',
                     unitId: item.unitId ? item.unitId.toString() : ''
                 };
@@ -112,6 +110,7 @@ console.log(products)
                 <table className="table w-full table-auto border-collapse">
                     <thead>
                         <tr className="text-left">
+                        <th className="p-2 border-b">No.</th>
                             <th className="p-2 border-b">Product Name</th>
                             <th className="p-2 border-b">Image</th>
                             <th className="p-2 border-b">Stock</th>
@@ -122,8 +121,9 @@ console.log(products)
                         </tr>
                     </thead>
                     <tbody>
-                        {products && products.map((product) => (
+                        {products && products.map((product, l) => (
                             <tr key={product.id} className="hover:bg-gray-100">
+                                <td className="p-2 border-b">{l+1}</td>
                                 <td className="p-2 border-b">{product.name}</td>
                                 <td className="p-2 border-b">
                                     {product.productImage ? (
@@ -138,13 +138,13 @@ console.log(products)
                                     {product.quantity > 0 ? product.quantity : <span className="text-red-500">Out of Stock</span>}
                                 </td>
                                 <td className="p-2 border-b">
-                                    {product.purchasePrice ? `$${product.purchasePrice}` : <span className="text-gray-500">Not Available</span>}
+                                    {product.purchasePrice ? `${userAndBusinessDetail?.[0]?.business?.currency ?? '$'} ${product.purchasePrice}` : <span className="text-gray-500">Not Available</span>}
                                 </td>
                                 <td className="p-2 border-b">
-                                    {product.sellPrice ? `$${product.sellPrice}` : <span className="text-gray-500">Not Available</span>}
+                                    {product.sellPrice ? `${userAndBusinessDetail?.[0]?.business?.currency ?? '$'} ${product.sellPrice}` : <span className="text-gray-500">Not Available</span>}
                                 </td>
                                 <td className="p-2 border-b">
-                                    {product.retailPrice ? `$${product.retailPrice}` : <span className="text-gray-500">Not Available</span>}
+                                    {product.retailPrice ? `${userAndBusinessDetail?.[0]?.business?.currency ?? '$'} ${product.retailPrice}` : <span className="text-gray-500">Not Available</span>}
                                 </td>
                                 <td className="p-2 border-b">
                                     <Link to={`/inventory/edit-product/${product.id}`}>
