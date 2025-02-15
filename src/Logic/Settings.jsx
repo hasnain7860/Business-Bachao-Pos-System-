@@ -12,7 +12,9 @@ const useSettingsContext = () => {
       const storedSettings = await getItems(STORE_NAMES.settings);
       setSettings(storedSettings);
       // If loaded settings are available, set the first one as selected
+      console.log(storedSettings.length)
       if (storedSettings.length > 0) {
+
         setSelectedSetting(storedSettings[0]);
       }
     };
@@ -26,8 +28,11 @@ const useSettingsContext = () => {
   };
 
   const addSetting = async (newSetting) => {
+    console.log("addsetti")
     await addItem(STORE_NAMES.settings, newSetting);
     setSettings((prev) => [...prev, { ...newSetting }]);
+    loadSettings()
+  
   };
 
   const editSetting = async (id, updatedSetting) => {

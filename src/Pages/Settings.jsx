@@ -82,6 +82,7 @@ console.log(selectedSetting)
       await edit(formData.id, formData); // Update existing setting
     } else {
       await add(formData); // Add new setting
+      
     }
     console.log("Data saved to database:", formData);
   };
