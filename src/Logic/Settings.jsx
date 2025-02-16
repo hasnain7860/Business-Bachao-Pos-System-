@@ -40,7 +40,7 @@ const useSettingsContext = () => {
         prev && prev.id === id ? { ...prev, ...updatedSetting } : prev
       );
 
-      console.log("✅ Setting updated successfully");
+    
     } catch (error) {
       console.error("❌ Failed to edit setting:", error);
     }

@@ -24,9 +24,11 @@ import Purchases from "./Pages/Purchases.jsx";
 import NewPurchases from "./Pages/NewPurchases.jsx";
 import DataSync from "./Pages/DataSync.jsx";
 import Sales from "./Pages/Sales.jsx";
+
 import NewSales from "./Pages/NewSales.jsx";
 import SalesView from "./Pages/SalesView.jsx";
 import ProtectedRoute from "./components/element/ProtectedRoute";
+import SaleReturn from "./Pages/SaleReturn";
 // import eruda from 'eruda';
 
 function App() {
@@ -185,6 +187,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Sales />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                  <Route
+                    path="/salesReturn"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <SaleReturn/>
                             </Layout>
                         </ProtectedRoute>
                     }

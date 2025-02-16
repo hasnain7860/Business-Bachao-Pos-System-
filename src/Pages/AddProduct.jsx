@@ -59,6 +59,10 @@ const [purchasePrice, setPurchasePrice] = useState("");
       return;
     }
  
+    if (Number(sellPrice)< Number(purchasePrice)){
+      alert("selling price is not less than purchase price")
+      return
+    }
   
 const productData = {
       id: edit ? id : Date.now(),

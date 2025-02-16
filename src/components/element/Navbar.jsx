@@ -29,7 +29,7 @@ const [language, setLanguage] = useState('en');
 const businessName = settingContext?.settings[0]?.business?.businessName || "POS System"
 
 
-console.log(settingContext?.settings)
+
 const toggleLanguage = () => {
   setLanguage((prevLanguage) => (prevLanguage === 'en' ? 'ur' : 'en'));
 }; 
@@ -271,6 +271,15 @@ const toggleLanguage = () => {
             >
               <FiClipboard className="mr-3" />
               Sales
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/salesReturn"
+              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            >
+     
+              Sales Return 
             </Link>
           </li>
               <li>
