@@ -16,7 +16,7 @@ const NewSales = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [amountPaid, setAmountPaid] = useState('');
   const [credit, setCredit] = useState(0);
   const [message, setMessage] = useState('');
 
@@ -27,12 +27,14 @@ const NewSales = () => {
   const generateSalesRefNo = () => {
     setSalesRefNo(`SALE-${Math.floor(100000 + Math.random() * 900000)}`);
   };
-
+useEffect(() => {
+  handleCalculateCredit();
+}, [selectedProducts, amountPaid]);
   const handleAddProduct = (product) => {
     const existingProduct = selectedProducts.find(p => p.id === product.id);
     if (!existingProduct && product.quantity > 0) {
-      setSelectedProducts([...selectedProducts, { ...product, SellQuantity: 1, discount: 0 , newSellPrice : product.sellPrice }]);
-      handleCalculateCredit(); // Update credit after adding product
+   setSelectedProducts([...selectedProducts, { ...product, SellQuantity: 1, discount: 0 , newSellPrice : product.sellPrice }]);
+      
     }
   };
 
@@ -66,24 +68,28 @@ const NewSales = () => {
   };
 
   const validateSellingPrice = (product) => {
-    return product.newSellPrice < product.purchasePrice;
+    return Number(product.newSellPrice) < Number(product.purchasePrice);
   };
 
   const calculateTotalPayment = () => {
     return selectedProducts.reduce((total, product) => {
-      const productTotal = product.newSellPrice * product.SellQuantity;
-      return total + productTotal;
+      const productTotal = Number(product.newSellPrice) * Number(product.SellQuantity)
+      return Number(total) + Number(productTotal);
     }, 0).toFixed(2); // Returns total payment formatted to two decimal places
   };
 
-  const handleCalculateCredit = (e) => {
-    const paidAmount = parseFloat(e ? e.target.value : amountPaid) || 0; // Parse input to float, default to 0 if NaN
-    setAmountPaid(paidAmount);
-    setCredit(calculateTotalPayment() - paidAmount); // Calculate credit based on the current total payment
+
+const handleAmountPaidChange = (e) => {
+  setAmountPaid(e.target.value);
+};
+  const handleCalculateCredit = () => {
+    let amountPaidcheck = amountPaid == '' ? 0 : Number(amountPaid);
+    
+    setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck)); // Calculate credit based on the current total payment
   };
 
   const handleSaveSales = () => {
-    if (!selectedCustomer) {
+    if (credit != 0 ) {
       setMessage('Please add a customer first.');
       return;
     }
@@ -323,7 +329,7 @@ const uniqueId = uuidv4();
         <input
           type="number"
           value={amountPaid}
-          onChange={handleCalculateCredit}
+          onChange={handleAmountPaidChange}
           className="input input-bordered w-full"
         />
       </div>

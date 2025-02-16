@@ -23,9 +23,12 @@ import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
 
 const Navbar = () => {
-  const { setIsAuthenticated } = useAppContext();
+  const { setIsAuthenticated , settingContext} = useAppContext();
 const [language, setLanguage] = useState('en');
 
+const businessName = settingContext?.settings
+
+console.log(businessName)
 const toggleLanguage = () => {
   setLanguage((prevLanguage) => (prevLanguage === 'en' ? 'ur' : 'en'));
 }; 
@@ -98,7 +101,9 @@ const toggleLanguage = () => {
   >
     ☰
   </button>
-  <h1 className="text-2xl font-bold">Rizwan Trader POS</h1>
+<h1 className="text-2xl font-bold">
+  {settingContext?.settings?.business?.businessName || "POS System"}
+</h1>
   <div className="flex items-center space-x-4">
           <button
             onClick={toggleLanguage}

@@ -12,7 +12,7 @@ const useSalesContext = () => {
     const loadSale = async () => {
       
       const storedSale = await getItems(STORE_NAMES.sales);
-      console.log("called sales useeffect" + JSON.stringify(storedSale))
+      
       setSales(storedSale);
     };
     loadSale();
