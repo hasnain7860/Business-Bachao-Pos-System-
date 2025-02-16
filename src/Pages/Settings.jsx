@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaSignOutAlt } from 'react-icons/fa';
+
 import { useAppContext } from '../Appfullcontext';
-import { v4 as uuidv4 } from 'uuid';
 
 const InputField = ({ label, type, name, value, onChange, disabled }) => (
   <div className="flex items-center">
@@ -19,98 +19,52 @@ const InputField = ({ label, type, name, value, onChange, disabled }) => (
 
 const Settings = () => {
   const context = useAppContext();
-  const { settings, add, edit, delete: deleteSetting, selectedSetting, select } = context.settingContext;
-
-  const [formData, setFormData] = useState({
-    id: uuidv4(),
-    user: {
-      name: '',
-      phoneNo: '',
-      email: '',
-      signature: '',
-    },
-    business: {
-      businessName: '',
-      phoneNo: '',
-      email: '',
-      currency: '',
-      role: '',
-      firebaseStorePass: ''
-    },
-  });
-
+  const { selectedSetting, saveSetting } =  context.settingContext;
   const [isEditing, setIsEditing] = useState({ user: false, business: false });
 
-useEffect(() => {
-  const initializeFormData = async () => {
+  const [formData, setFormData] = useState({
+    user: { name: '', phoneNo: '', email: '', signature: '' },
+    business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: '' }
+  });
+
+  // 🟢 Load setting into local state
+  useEffect(() => {
     if (selectedSetting) {
-      setFormData({ ...selectedSetting });
-    } else {
-      console.log("Adding new setting for the first time");
-      const newFormData = {
-        id: uuidv4(), // Generate a new ID
-        user: {
-          name: '',
-          phoneNo: '',
-          email: '',
-          signature: '',
-        },
-        business: {
-          businessName: '',
-          phoneNo: '',
-          email: '',
-          currency: '',
-          role: '',
-          firebaseStorePass: ''
-        },
-      };
-      setFormData(newFormData);
-      await add(newFormData); // Add the new setting
+      setFormData(selectedSetting);
     }
-  };
+  }, [selectedSetting]);
 
-  initializeFormData();
-}, [selectedSetting, add]); // Ensure 'add' is included in the dependencies
-
-  
-
+  // 🟢 Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
     const [type, field] = name.split('.');
     setFormData((prevData) => ({
       ...prevData,
-      [type]: {
-        ...prevData[type],
-        [field]: value,
-      },
+      [type]: { ...prevData[type], [field]: value }
     }));
   };
 
+  // 🟢 Toggle Edit Mode
   const toggleEdit = (type) => {
     setIsEditing((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
+  // 🟢 Save Data
+  const saveData = async () => {
+    await saveSetting(formData);
+    // Disable edit mode after save
+  };
+
+  // 🟢 Handle Logout
   const handleLogout = () => {
     console.log("User logged out");
   };
-const saveData = async () => {
-  if (!formData.id) {
-    // Assign a new ID if adding a new setting
-    formData.id = uuidv4();
-    await add(formData);
-    console.log("Added new setting");
-  } else {
-    console.log(selectedSetting)
-    await edit(formData.id, formData);
-    console.log("Edited existing setting");
-  }
-};
-  
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">User Information</h2>
       <div className="space-y-4">
-        {['name', 'phoneNo', 'email', 'signature'].map((field , k) => (
+        {['name', 'phoneNo', 'email', 'signature'].map((field, k) => (
           <InputField
             key={k}
             label={field.charAt(0).toUpperCase() + field.slice(1)}
@@ -121,16 +75,14 @@ const saveData = async () => {
             disabled={!isEditing.user}
           />
         ))}
-        <div className="flex items-center">
-          <button onClick={() => { saveData(); toggleEdit('user'); }} className="btn btn-primary">
-            {isEditing.user ? <FaSave /> : <FaEdit />}
-          </button>
-        </div>
+        <button onClick={() => { saveData(); toggleEdit('user'); }} className="btn btn-primary">
+          {isEditing.user ? <FaSave /> : <FaEdit />}
+        </button>
       </div>
 
       <h2 className="text-2xl font-bold mt-8 mb-4">Business Information</h2>
       <div className="space-y-4">
-        {['businessName', 'phoneNo', 'email', 'currency'].map((field,k) => (
+        {['businessName', 'phoneNo', 'email', 'currency'].map((field, k) => (
           <InputField
             key={k}
             label={field.charAt(0).toUpperCase() + field.slice(1)}
@@ -141,18 +93,14 @@ const saveData = async () => {
             disabled={!isEditing.business}
           />
         ))}
-        <div className="flex items-center">
-          <button onClick={() => { saveData(); toggleEdit('business'); }} className="btn btn-primary">
-            {isEditing.business ? <FaSave /> : <FaEdit />}
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <button onClick={handleLogout} className="btn btn-danger flex items-center">
-          <FaSignOutAlt className="mr-2" /> Logout
+        <button onClick={() => { saveData(); toggleEdit('business'); }} className="btn btn-primary">
+          {isEditing.business ? <FaSave /> : <FaEdit />}
         </button>
       </div>
+
+      <button onClick={handleLogout} className="btn btn-danger flex items-center mt-8">
+        <FaSignOutAlt className="mr-2" /> Logout
+      </button>
     </div>
   );
 };

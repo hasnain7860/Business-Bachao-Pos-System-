@@ -26,9 +26,10 @@ const Navbar = () => {
   const { setIsAuthenticated , settingContext} = useAppContext();
 const [language, setLanguage] = useState('en');
 
-const businessName = settingContext?.settings
+const businessName = settingContext?.settings[0]?.business?.businessName || "POS System"
 
-console.log(businessName)
+
+console.log(settingContext?.settings)
 const toggleLanguage = () => {
   setLanguage((prevLanguage) => (prevLanguage === 'en' ? 'ur' : 'en'));
 }; 
@@ -102,7 +103,7 @@ const toggleLanguage = () => {
     ☰
   </button>
 <h1 className="text-2xl font-bold">
-  {settingContext?.settings?.business?.businessName || "POS System"}
+  {businessName }
 </h1>
   <div className="flex items-center space-x-4">
           <button
