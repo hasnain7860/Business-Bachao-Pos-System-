@@ -6,11 +6,16 @@ const ViewPayments = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const sales = context.SaleContext.Sales;
-  const { id } = useParams();
+  const purchases = context.purchaseContext.purchases;
+  const { id, ref } = useParams();
 
-  const sale = sales.find(sale => sale.id === id);
-  const payments = sale?.addPayment || [];
+  // Check if ref is related to sales or purchases
+  const sale = ref === 'sales' ? sales.find(sale => sale.id === id) : null;
+  const purchase = ref === 'purchases' ? purchases.find(purchase => purchase.id === id) : null;
 
+  // Set payments based on whether it's a sale or purchase
+  const payments = sale ? sale.addPayment : purchase ? purchase.addPayment : [];
+console.log(payments +"viewpayments")
   const closeModal = () => {
     navigate(-1);
   };

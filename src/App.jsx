@@ -225,7 +225,7 @@ function App() {
                     }
                 />
                  <Route
-                    path="/sales/addPayments/:id"
+                    path="/:ref/addPayments/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
@@ -235,7 +235,7 @@ function App() {
                     }
                 />
                  <Route
-                    path="/sales/viewPayments/:id"
+                    path="/:ref/viewPayments/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>

@@ -16,8 +16,11 @@ const NewPurchases = () => {
   const [productSearch, setProductSearch] = useState('');
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState('Cash');
-  const [totalPayment, setTotalPayment] = useState();
- 
+  const [totalPayment, setTotalPayment] = useState(0);
+  
+  const [credit, setCredit] = useState(0);
+  
+  
   const purchases = context.purchaseContext.purchases
   const addPurchase = context.purchaseContext.add
   
@@ -45,26 +48,35 @@ const NewPurchases = () => {
       setSelectedProducts([...selectedProducts, newProduct]);
       
     }
+    calculateCredit()
   };
 console.log(selectedProducts)
-  const updateProductField = (index, field, value) => {
+const updateProductField = (index, field, value) => {
     const newProducts = [...selectedProducts];
     newProducts[index][field] = value;
-    newProducts[index].total =
-      newProducts[index].purchasePrice * newProducts[index].quantity;
+
+    // Recalculate the total for this product
+    newProducts[index].total = newProducts[index].purchasePrice * newProducts[index].quantity;
+
     setSelectedProducts(newProducts);
-    
+    calculateCredit(); // Recalculate credit after updating
   };
 
   const calculateTotalBill = () => {
-    return selectedProducts.reduce((total, product) => total + product.total, 0);
- 
+    return selectedProducts.reduce((total, product) => total + Number(product.total), 0);
   };
 
   const calculateCredit = () => {
-    
-    return calculateTotalBill() - totalPayment;
+    setCredit(calculateTotalBill() - Number(totalPayment));
   };
+  
+
+  
+const handleTotalPaymentChange = (e) => {
+  setTotalPayment(parseFloat(e.target.value) || 0); // Update total payment
+  calculateCredit(); // Recalculate credit
+};
+
 
   const handleAddPurchase = () => {
     const supplier = suppliers.find(s => s.id == selectedSupplier);
@@ -83,6 +95,7 @@ console.log(selectedProducts)
         retailPrice: p.retailPrice,
       })),
        totalPayment,
+       credit,
       totalBill: calculateTotalBill(),
     };
     
@@ -297,14 +310,14 @@ selectedProducts.forEach(product => {
           className="input input-bordered w-full mb-2"
           placeholder="Total Payment to Supplier"
           value={totalPayment}
-          onChange={(e) => setTotalPayment(parseFloat(e.target.value) || "")}
+          onChange={handleTotalPaymentChange}
         />
         <label className="block text-gray-700 font-medium mb-2">Credit</label>
         <input
           type="number"
           className="input input-bordered w-full"
           placeholder="Credit Amount"
-          value={calculateCredit().toFixed(2)}
+          value={credit}
           readOnly
         />
       </div>

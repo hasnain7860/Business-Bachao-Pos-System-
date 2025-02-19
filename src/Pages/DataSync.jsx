@@ -55,9 +55,9 @@ const DataSync = () => {
     onValue(dataRef, async (snapshot) => {
       const firebaseData = [];
       snapshot.forEach((childSnapshot) => {
-      console.log("childsnapshot" + JSON.stringify(childSnapshot))
       
-        const item = { id: childSnapshot.key, ...childSnapshot.val() };
+      
+        const item = { id: childSnapshot.id, ...childSnapshot.val() };
         firebaseData.push(item);
       });
       await clearOfflineData(currentStore)

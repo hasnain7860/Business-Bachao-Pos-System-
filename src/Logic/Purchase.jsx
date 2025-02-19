@@ -26,7 +26,11 @@ const addPurchase = async (newPurchase) => {
     setPurchases((prev) => [...prev, { ...newPurchase
     }]);
   };
-  
+  const editPurchase = async (id, updatedPurchase) => {
+    await putItem(STORE_NAMES.purchases, { ...updatedPurchase, id });
+       setPurchases((prev) => prev.map(purchases => purchases.id == id ? { ...updatedPurchase, id } : sale));
+       
+     };
   const deletePurchase = async (id) => {
     await deleteFromDB(STORE_NAMES.purchases, id);
     setPurchases((prev) => deleteItem(prev, id));
@@ -38,6 +42,7 @@ const addPurchase = async (newPurchase) => {
   const purchaseContext = {
     purchases,
     add: addPurchase,
+    edit: editPurchase,
     delete: deletePurchase,
     refreshData
   };

@@ -32,7 +32,12 @@ const userAndBusinessDetail = context.settingContext.settings;
 
   const handleAddPayment = (purchase) => {
     // Logic for adding payment
+    navigate(`/purchases/addPayments/${purchase.id}`);
   };
+  
+ const  handleViewPayment = (purchase) => {
+    navigate(`/purchases/viewPayments/${purchase.id}`);
+  }
 
   return (
     <div className="p-4">
@@ -78,8 +83,12 @@ const userAndBusinessDetail = context.settingContext.settings;
                         <button onClick={() => handleEdit(purchase)} className="block px-4 py-2 hover:bg-gray-100">Edit</button>
                         <button onClick={() => handleDelete(purchase.id)} className="block px-4 py-2 hover:bg-gray-100">Delete</button>
                         {(purchase.totalBill -purchase.totalPayment) !== 0 && (
+                          <>
                           <button onClick={() => handleAddPayment(purchase)} className="block px-4 py-2 text-red-600 hover:bg-gray-100">Add Payment</button>
+                        
+                           </>
                         )}
+                           <button onClick={ ()=> handleViewPayment(purchase)} className="block px-4 py-2 text-red-600 hover:bg-gray-100">view Payment</button>
                       </div>
                     )}
                   </div>

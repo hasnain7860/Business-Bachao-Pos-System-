@@ -7,7 +7,9 @@ const AddPayments = () => {
   const context = useAppContext();
   
   const sales = context.SaleContext.Sales;
-  const edit = context.SaleContext.edit;
+  const purchases = context.purchaseContext.purchases;
+  const editSale = context.SaleContext.edit;
+  const editPurchase = context.purchaseContext.edit;
   const setIsOpen = context.setIsOpen;
   const isOpen = context.isOpen;
 
@@ -17,7 +19,7 @@ const AddPayments = () => {
     navigate(-1);
   };
   
-  const { id } = useParams();
+  const { id, ref } = useParams(); // 'ref' will help us distinguish between sales and purchases
   const [form, setForm] = useState({
     refNo: '',
     amount: '',
@@ -29,17 +31,19 @@ const AddPayments = () => {
   useEffect(() => {
     openModal();
     if (id) {
-      const saleToMatch = sales.find(sale => sale.id === id);
-      if (saleToMatch) {
+      const itemToMatch = ref === 'sales' 
+        ? sales.find(sale => sale.id === id) 
+        : purchases.find(purchase => purchase.id === id);
+      console.log("igar match ha too" + JSON.stringify(itemToMatch))
+      if (itemToMatch) {
         setForm({
-          saleId: saleToMatch.id,
-          refNo: saleToMatch.salesRefNo,
+          refNo: ref === 'sales' ? itemToMatch.salesRefNo : '',  // Only set refNo for sales
           amount: '',
           notes: ''
         });
       }
     }
-  }, [id, sales]);
+  }, [id, ref, sales, purchases]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,33 +52,37 @@ const AddPayments = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const saleToMatch = sales.find(sale => sale.id === id);
+    const itemToMatch = ref === 'sales' 
+      ? sales.find(sale => sale.id === id) 
+      : purchases.find(purchase => purchase.id === id);
 
-    if (!saleToMatch) return;
+    if (!itemToMatch) return;
+
     const enteredAmount = parseFloat(form.amount);
+    const totalPaidFromPayments = itemToMatch.addPayment
+      ? itemToMatch.addPayment.reduce((sum, payment) => sum + Number(payment.amount), 0)
+      : 0;
 
-
-    const totalPaidFromPayments = saleToMatch.addPayment
-    ? saleToMatch.addPayment.reduce((sum, payment) => sum + Number(payment.amount), 0)
-    : 0;
-
-
-  const updatedCredit = saleToMatch.credit - totalPaidFromPayments;
-   
+    const updatedCredit = itemToMatch.credit - totalPaidFromPayments;
 
     if (enteredAmount > updatedCredit) {
       setError(`Amount exceeds available credits (Max: ${updatedCredit})`);
       return;
     }
 
-    const updatedSale = {
-      ...saleToMatch,
-      addPayment: saleToMatch.addPayment 
-        ? [...saleToMatch.addPayment, form] 
+    const updatedItem = {
+      ...itemToMatch,
+      addPayment: itemToMatch.addPayment 
+        ? [...itemToMatch.addPayment, form] 
         : [form]
     };
 
-    edit(saleToMatch.id, updatedSale);
+    if (ref === 'sales') {
+      editSale(itemToMatch.id, updatedItem);
+    } else {
+      editPurchase(itemToMatch.id, updatedItem);
+    }
+
     closeModal();
   };
 
@@ -86,16 +94,18 @@ const AddPayments = () => {
         <h2 className="text-xl font-bold mb-4">Add Payment</h2>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block font-bold">Sale Reference No</label>
-              <input
-                type="text"
-                name="refNo"
-                value={form.refNo}
-                disabled
-                className="w-full p-2 border rounded bg-gray-200"
-              />
-            </div>
+            {ref === 'sales' && (
+              <div>
+                <label className="block font-bold">Reference No</label>
+                <input
+                  type="text"
+                  name="refNo"
+                  value={form.refNo}
+                  disabled
+                  className="w-full p-2 border rounded bg-gray-200"
+                />
+              </div>
+            )}
             <div>
               <label className="block font-bold">Amount *</label>
               <input
