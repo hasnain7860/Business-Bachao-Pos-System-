@@ -336,8 +336,16 @@ const toggleLanguage = () => {
               to="/CreditManagement"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-              <MdPerson className="mr-3" />
-              Credit Management
+               Credit Management
+            </Link>
+          </li>
+                    {/* Cost Management */}
+          <li>
+            <Link
+              to="/Cost"
+              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            >
+                Cost Management
             </Link>
           </li>
 

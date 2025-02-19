@@ -24,6 +24,7 @@ import Purchases from "./Pages/Purchases.jsx";
 import NewPurchases from "./Pages/NewPurchases.jsx";
 import DataSync from "./Pages/DataSync.jsx";
 import Sales from "./Pages/Sales.jsx";
+import Cost from "./Pages/Cost.jsx";
 
 import NewSales from "./Pages/NewSales.jsx";
 import SalesView from "./Pages/SalesView.jsx";
@@ -232,6 +233,17 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/Cost"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Cost />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+          
                 <Route
                     path="/data"
                     element={

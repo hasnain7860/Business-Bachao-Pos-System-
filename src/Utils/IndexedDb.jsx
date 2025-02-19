@@ -6,6 +6,7 @@ const DB_VERSION = 1;
 
 // Define object store names
 export const STORE_NAMES = {
+  cost: 'cost',
   company: 'company',
   brands: 'brands',
   products: 'products',

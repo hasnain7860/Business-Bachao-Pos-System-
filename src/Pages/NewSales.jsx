@@ -9,6 +9,7 @@ const NewSales = () => {
   const context = useAppContext();
   const customers = context.supplierCustomerContext.customers;
   const products = context.productContext.products;
+  const editProduct = context.productContext.edit
 
   const [salesRefNo, setSalesRefNo] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -16,7 +17,7 @@ const NewSales = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
-  const [amountPaid, setAmountPaid] = useState('');
+  const [amountPaid, setAmountPaid] = useState('0');
   const [credit, setCredit] = useState(0);
   const [message, setMessage] = useState('');
 
@@ -87,9 +88,8 @@ const handleAmountPaidChange = (e) => {
     
     setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck)); // Calculate credit based on the current total payment
   };
-
-  const handleSaveSales = () => {
-    if (credit != 0 ) {
+const handleSaveSales = async () => {
+    if (!selectedCustomer) {
       setMessage('Please add a customer first.');
       return;
     }
@@ -98,9 +98,15 @@ const handleAmountPaidChange = (e) => {
       setMessage('Please add at least one product to the sale.');
       return;
     }
-const uniqueId = uuidv4();
+
+    if (amountPaid == '') {
+      console.log("test");
+      setAmountPaid("0");
+    }
+
+    const uniqueId = uuidv4();
     const salesData = {
-      id:uniqueId,
+      id: uniqueId,
       salesRefNo,
       customerId: selectedCustomer,
       products: selectedProducts,
@@ -110,18 +116,32 @@ const uniqueId = uuidv4();
       credit,
       dateTime: new Date().toISOString() // This will give you the date and time in ISO format
     };
+
+    // Update the product quantities and save the sale
+    for (let product of selectedProducts) {
+      const updatedProduct = {
+        ...product,
+        quantity: product.quantity - product.SellQuantity, // Update quantity by reducing sold quantity
+      };
+
+      // Use the existing editProduct function to update the product in IndexedDB
+      await editProduct(product.id, updatedProduct); // Updating product quantity in IndexedDB
+    }
+
+    // Save the sale to the SaleContext
     context.SaleContext.add(salesData);
     alert('Sales saved successfully!');
+
     // Reset form
     setSelectedCustomer('');
     setSelectedProducts([]);
     setPaymentMode('');
-    setAmountPaid(0);
+    setAmountPaid('');
     setCredit(0);
     generateSalesRefNo();
     setMessage(''); // Clear message
-  };
-
+};
+  
   const handleCancelProduct = (id) => {
     setSelectedProducts(selectedProducts.filter(p => p.id !== id));
     handleCalculateCredit(); // Update credit after removing product

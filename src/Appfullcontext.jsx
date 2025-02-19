@@ -4,6 +4,7 @@ import useCompanyContext from './Logic/Company.jsx';
 import useBrandsContext from './Logic/Brands.jsx';
 import useUnitsContext from './Logic/Units.jsx';
 import useProductContext from './Logic/Product.jsx';
+import useCostContext from './Logic/Cost.jsx';
 import useSupplierAndCustomerContext from './Logic/SupplierAndCustomer.jsx';
 import usePurchaseContext from './Logic/Purchase.jsx';
 import useSalesContext from './Logic/Sales.jsx';
@@ -31,6 +32,8 @@ export const AppContextProvider = ({ children }) => {
   const productContext = useProductContext();
   const supplierCustomerContext = useSupplierAndCustomerContext();
   const settingContext = useSettingsContext();
+  const costContext = useCostContext();
+  
   const creditManagementContext = useCreditManagementContext();
   const purchaseContext = usePurchaseContext();
   const SaleContext = useSalesContext();
@@ -57,6 +60,7 @@ export const AppContextProvider = ({ children }) => {
         productContext,
         supplierCustomerContext,
         purchaseContext,
+        costContext,
         SaleContext,
         settingContext,
         creditManagementContext,      
