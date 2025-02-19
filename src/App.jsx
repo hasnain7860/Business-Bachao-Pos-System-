@@ -30,6 +30,8 @@ import NewSales from "./Pages/NewSales.jsx";
 import SalesView from "./Pages/SalesView.jsx";
 import ProtectedRoute from "./components/element/ProtectedRoute";
 import SaleReturn from "./Pages/SaleReturn";
+import AddPayments from "./Pages/AddPayments";
+import ViewPayments from "./Pages/ViewPayments";
 // import eruda from 'eruda';
 
 function App() {
@@ -218,6 +220,26 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <SalesView />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                 <Route
+                    path="/sales/addPayments/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <AddPayments />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                 <Route
+                    path="/sales/viewPayments/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <ViewPayments />
                             </Layout>
                         </ProtectedRoute>
                     }
