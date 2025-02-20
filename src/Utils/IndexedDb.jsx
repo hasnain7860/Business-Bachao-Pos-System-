@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { ref, remove } from 'firebase/database'; // Import Firebase remove function
 import { clientDatabase} from './ClientFirebaseDb'; // Adjust the import path as needed
 const DB_NAME = 'pos-system';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Define object store names
 export const STORE_NAMES = {

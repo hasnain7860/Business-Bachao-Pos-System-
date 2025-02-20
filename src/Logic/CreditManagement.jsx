@@ -24,9 +24,10 @@ const useCreditManagementContext = () => {
     setSubmittedRecords(updatedData);
   };
   const addCreditManagement = async (newCreditManagement) => {
-     await addItem(STORE_NAMES.creditManagement, newCreditManagement);
+    console.log(newCreditManagement); // Check if `id` is present
+    await addItem(STORE_NAMES.creditManagement, newCreditManagement);
     setSubmittedRecords((prev) => [...prev, { ...newCreditManagement }]);
-  };
+};
 
   const editCreditManagement = async (id, updatedCreditManagement) => {
     
