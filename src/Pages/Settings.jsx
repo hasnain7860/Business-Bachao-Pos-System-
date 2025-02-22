@@ -27,6 +27,8 @@ const Settings = () => {
     business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: '' }
   });
 
+   console.log(formData)
+
   // 🟢 Load setting into local state
   useEffect(() => {
     if (selectedSetting) {

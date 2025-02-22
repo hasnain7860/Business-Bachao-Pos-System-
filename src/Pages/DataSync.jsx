@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { clientDatabase } from '../Utils/ClientFirebaseDb.jsx';
+import { clientDatabase , ClientDatabaseInitializer } from '../Utils/ClientFirebaseDb.jsx';
 import { ref, onValue, set } from 'firebase/database';
 import { FaSync, FaTrash, FaUpload } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import { useAppContext } from "../Appfullcontext.jsx";
+
 import {
   getItems,
   deleteItemsFromFirebase,
@@ -45,7 +46,8 @@ const DataSync = () => {
     }
 };
 
-  const fetchDataFromFirebase = async () => {
+  const fetchDataFromFirebase = async () => 
+  {
     const dataRef = ref(clientDatabase, currentStore);
     
     const internet = await checkInternet()
@@ -124,7 +126,9 @@ const internet = await checkInternet()
   }, [currentStore]);
 
   return (
+
     <div className="container mx-auto p-6 bg-white shadow-lg rounded-lg">
+      <ClientDatabaseInitializer/>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} closeOnClick />
       <h1 className="text-3xl font-bold mb-6 text-center">Data Synchronization</h1>
       <div className="mb-4">

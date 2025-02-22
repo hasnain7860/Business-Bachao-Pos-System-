@@ -2,28 +2,39 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-
+import { useAppContext } from '../Appfullcontext.jsx'; // Import your context
+import { useEffect, useState } from 'react';
 
 
-const clientFirebaseConfig = {
-  apiKey: "AIzaSyCVuIf8XI7ZybWsOYPLUQ6XZbtF5b8Bn8g",
-  authDomain: "my-business-bachao.firebaseapp.com",
-  projectId: "my-business-bachao",
-  storageBucket: "my-business-bachao.firebasestorage.app",
-  messagingSenderId: "176854397063",
-  appId: "1:176854397063:web:153cbbec419db7c555c822",
-databaseURL: "https://my-business-bachao-default-rtdb.firebaseio.com"
-  
+let clientDatabase; // This will hold the initialized database instance
+let isInitialized = false; // Flag to check if initialization has occurred
+
+const initializeClientDatabase = (firebaseConfig) => {
+  if (!isInitialized) { // Check if already initialized
+    const clientApp = initializeApp(firebaseConfig);
+    clientDatabase = getDatabase(clientApp);
+    isInitialized = true; // Set the flag to true after initialization
+  }
 };
 
-// Initialize Firebase
-const clientApp = initializeApp(clientFirebaseConfig);
+// This component will handle initialization and act as a hook for external components
+const ClientDatabaseInitializer = () => {
+  const { settingContext } = useAppContext();
+  const { settings } = settingContext; // Assuming settings contains the firebaseStorePass
+ let  clientFirebaseConfig
+  useEffect(() => {
+    if (settings && settings[0].business && settings[0].business.firebaseStorePass) {
+      const clientFirebaseConfig = JSON.parse(settings[0].business.firebaseStorePass); // Assuming it's stored as a string
+      
+      initializeClientDatabase(clientFirebaseConfig);
+    }
+  }, [settings]);
 
-// Initialize Realtime Database and get a reference to the service
-const clientDatabase = getDatabase(clientApp);
+  return null
+  
+   // This component does not render anything
+};
 
-export { clientDatabase , clientApp }
+// Export the database instance and the initializer component
+export { clientDatabase, ClientDatabaseInitializer };

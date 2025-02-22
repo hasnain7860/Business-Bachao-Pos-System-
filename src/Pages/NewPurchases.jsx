@@ -10,20 +10,18 @@ const NewPurchases = () => {
   const companies = context.companyContext.companies;
   const brands = context.brandContext.brands;
   const units = context.unitContext.units;
-  const updateProduct = context.productContext.edit
+  const updateProduct = context.productContext.edit;
+  const addPurchase = context.purchaseContext.add;
+
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [totalPayment, setTotalPayment] = useState(0);
-  
   const [credit, setCredit] = useState(0);
-  
-  
-  const purchases = context.purchaseContext.purchases
-  const addPurchase = context.purchaseContext.add
-  
+  const [batchCodes, setBatchCodes] = useState({});
+
   const handleAddSupplier = () => {
     window.location.href = '/people/suppliers';
   };
@@ -33,33 +31,60 @@ const NewPurchases = () => {
     if (existingProduct) {
       alert('Product is already added to the table!');
     } else {
+      const batches = product.batchCode || [];
+      const batchInfo = batches.length ? batches[0] : {
+        batchCode: `BATCH-${String(1).padStart(3, '0')}`,
+        purchasePrice: '',
+        sellPrice: '',
+        retailPrice: '',
+        quantity: 0,
+      };
+
       const newProduct = {
         id: product.id,
         name: product.name,
         companyId: product.companyId || '',
         brandId: product.brandId || '',
         unitId: product.unitId || '',
-        sellPrice: product.sellPrice || "",
-        retailPrice: product.retailPrice || "",
-        purchasePrice: product.purchasePrice || "",
+        sellPrice: batchInfo.sellPrice,
+        retailPrice: batchInfo.retailPrice,
+        purchasePrice: batchInfo.purchasePrice,
         quantity: 0,
         total: 0,
+        batchCode: batchInfo.batchCode,
       };
-      setSelectedProducts([...selectedProducts, newProduct]);
       
+      setSelectedProducts([...selectedProducts, newProduct]);
+      setBatchCodes({ ...batchCodes, [product.id]: batches });
     }
-    calculateCredit()
+    calculateCredit();
   };
-console.log(selectedProducts)
-const updateProductField = (index, field, value) => {
-    const newProducts = [...selectedProducts];
-    newProducts[index][field] = value;
 
-    // Recalculate the total for this product
-    newProducts[index].total = newProducts[index].purchasePrice * newProducts[index].quantity;
+  const updateBatchCode = (productIndex, newBatchCode) => {
+    const newProducts = [...selectedProducts];
+    const product = newProducts[productIndex];
+    const batches = batchCodes[product.id] || [];
+    const selectedBatch = batches.find((batch) => batch.batchCode === newBatchCode) || {};
+
+    product.batchCode = newBatchCode;
+    product.sellPrice = selectedBatch.sellPrice || product.sellPrice;
+    product.retailPrice = selectedBatch.retailPrice || product.retailPrice;
+    product.purchasePrice = selectedBatch.purchasePrice || product.purchasePrice;
+    product.quantity = 0;
+    product.total = 0;
 
     setSelectedProducts(newProducts);
-    calculateCredit(); // Recalculate credit after updating
+  };
+
+  const updateProductField = (index, field, value) => {
+    const newProducts = [...selectedProducts];
+    const product = newProducts[index];
+    product[field] = value;
+
+    product.total = product.purchasePrice * product.quantity;
+
+    setSelectedProducts(newProducts);
+    calculateCredit();
   };
 
   const calculateTotalBill = () => {
@@ -69,68 +94,92 @@ const updateProductField = (index, field, value) => {
   const calculateCredit = () => {
     setCredit(calculateTotalBill() - Number(totalPayment));
   };
-  
 
-  
-const handleTotalPaymentChange = (e) => {
-  setTotalPayment(parseFloat(e.target.value) || 0); // Update total payment
-  calculateCredit(); // Recalculate credit
-};
-
+  const handleTotalPaymentChange = (e) => {
+    setTotalPayment(parseFloat(e.target.value) || 0);
+    calculateCredit();
+  };
 
   const handleAddPurchase = () => {
-    const supplier = suppliers.find(s => s.id == selectedSupplier);
+    const supplier = suppliers.find((s) => s.id == selectedSupplier);
     const uniqueId = uuidv4();
+    console.log(JSON.stringify(selectedProducts) + "selected product jk ")
     const newPurchase = {
       id: uniqueId,
-      
       supplierName: supplier ? supplier.name : '',
       date: currentDate,
       paymentMode,
-      products: selectedProducts.map(p => ({
+      products: selectedProducts.map((p) => ({
+        id: p.id || "0",
         name: p.name,
         quantity: p.quantity,
         purchasePrice: p.purchasePrice,
         sellPrice: p.sellPrice,
         retailPrice: p.retailPrice,
+        batchCode: p.batchCode,
       })),
-       totalPayment,
-       credit,
+      totalPayment,
+      credit,
       totalBill: calculateTotalBill(),
     };
-    
-    console.log("new purchase " + newPurchase)
-    
-selectedProducts.forEach(product => {
-  const existingProduct = products.find(p => p.id === product.id);
-  if (existingProduct) {
-    console.log("update product state and product new value is  " + product);
-    product.quantity = (existingProduct.quantity || 0) + product.quantity;
-    
-    // Remove product.total
-    delete product.total;
 
-    updateProduct(product.id, product);
+    selectedProducts.forEach((product) => {
+  const existingProduct = products.find((p) => p.id === product.id);
+  if (existingProduct) {
+    let batches = existingProduct.batchCode || [];
+    const currentBatch = batches.find(b => b.batchCode === product.batchCode);
+    
+    // Check for existing purchase price match
+    const purchasePriceMatch = batches.find((batch) => batch.purchasePrice === product.purchasePrice);
+    
+    if (purchasePriceMatch) {
+      // Find the index of the matched batch
+      const matchedBatchIndex = batches.findIndex(batch => batch.batchCode === purchasePriceMatch.batchCode);
+      
+      // Update the matched batch in the batches array
+      if (matchedBatchIndex !== -1) {
+        batches[matchedBatchIndex].purchasePrice = product.purchasePrice;
+        batches[matchedBatchIndex].sellPrice = product.sellPrice;
+        batches[matchedBatchIndex].retailPrice = product.retailPrice;
+        
+        console.log(batches[matchedBatchIndex].quantity + "batches quantiy ")
+        batches[matchedBatchIndex].quantity =  Number(Number(batches[matchedBatchIndex].quantity) + Number(product.quantity)) ; // Update quantity
+     console.log(batches[matchedBatchIndex].quantity + "batches quantiy ") 
+      }
+    } else {
+      // Create a new batch if no match found
+      const nextBatchNumber = batches.length + 1;
+      const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
+      const newBatch = {
+        batchCode: newBatchCode,
+        purchasePrice: product.purchasePrice,
+        sellPrice: product.sellPrice,
+        retailPrice: product.retailPrice,
+        quantity: Number(product.quantity),
+      };
+      batches = [...batches, newBatch]; // Add the new batch to the array
+    }
+
+    // Update the product with the modified batches array
+    updateProduct(product.id, { ...existingProduct, batchCode: batches });
   }
 });
 
-       addPurchase(newPurchase)
-    
-    setSelectedProducts([]); // Clear selected products for new purchase
+
+
+    addPurchase(newPurchase);
+    setSelectedProducts([]);
     alert('Purchase added successfully!');
   };
 
-  // Filter products based on the search input
   const filteredProducts = products.filter((product) =>
-    product.name &&
-    product.name.toLowerCase().includes(productSearch.toLowerCase())
+    product.name && product.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   return (
     <div className="container mx-auto p-6 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold text-center mb-6">New Purchase</h1>
 
-      {/* Supplier Section */}
       <div className="mb-4">
         <label className="block text-gray-700 font-medium mb-2">Supplier</label>
         <div className="flex items-center space-x-2">
@@ -148,28 +197,17 @@ selectedProducts.forEach(product => {
               </option>
             ))}
           </select>
-          <button
-            className="btn btn-primary btn-sm flex items-center"
-            onClick={handleAddSupplier}
-          >
+          <button className="btn btn-primary btn-sm flex items-center" onClick={handleAddSupplier}>
             <AiOutlinePlus className="mr-1" /> Add Supplier
           </button>
         </div>
       </div>
 
-      {/* Purchase Date */}
       <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">
-          Purchase Date
-        </label>
-        <input
-          type="date"
-          className="input input-bordered w-full"
-          max={currentDate}
-        />
+        <label className="block text-gray-700 font-medium mb-2">Purchase Date</label>
+        <input type="date" className="input input-bordered w-full" max={currentDate} />
       </div>
 
-      {/* Product Search Section */}
       <div className="mb-4">
         <label className="block text-gray-700 font-medium mb-2">Product</label>
         <input
@@ -192,7 +230,6 @@ selectedProducts.forEach(product => {
         </div>
       </div>
 
-      {/* Products Table */}
       <div className="overflow-x-auto mb-6">
         <table className="table w-full">
           <thead>
@@ -201,6 +238,7 @@ selectedProducts.forEach(product => {
               <th>Company</th>
               <th>Brand</th>
               <th>Units</th>
+              <th>Batch Code</th>
               <th>Per Sell Price</th>
               <th>Per Retail Price</th>
               <th>Per Purchase Price</th>
@@ -208,79 +246,84 @@ selectedProducts.forEach(product => {
               <th>Total</th>
             </tr>
           </thead>
+          <tbody>
+            {selectedProducts.length > 0 ? (
+              selectedProducts.map((product, index) => {
+                const company = companies.find((c) => c.id === product.companyId);
+                const brand = brands.find((b) => b.id === product.brandId);
+                const unit = units.find((u) => u.id === product.unitId);
+                const productBatches = batchCodes[product.id] || [];
 
-                  
-                  
-                  
-                  
-                  <tbody>
-  {selectedProducts.length > 0 ? (
-    selectedProducts.map((product, index) => {
-      const company = companies.find(c => c.id == product.companyId);
-      const brand = brands.find(b => b.id == product.brandId);
-      const unit = units.find(u => u.id == product.unitId);
-      
-      
-      return (
-        <tr key={product.id}>
-          <td>{product.name}</td>
-          <td>{company ? company.name : 'Unknown Company'}</td>
-          <td>{brand ? brand.name : 'Unknown Brand'}</td>
-          <td>{unit ? unit.name : 'Unknown Unit'}</td>
-          <td>
-            <input
-              type="number"
-              className="input input-bordered input-sm"
-              placeholder="Per Sell Price"
-              value={product.sellPrice}
-              onChange={(e) =>
-                updateProductField(index, 'sellPrice', parseFloat(e.target.value) || "")
-              }
-            />
-          </td>
-        
-
-                  
-                  
-                  
-                  <td>  <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      placeholder="Per Retail Price"
-                      value={product.retailPrice}
-                      onChange={(e) =>
-                        updateProductField(index, 'retailPrice', parseFloat(e.target.value) || "")
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      placeholder="Per Purchase Price"
-                      value={product.purchasePrice}
-                      onChange={(e) =>
-                        updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || "")
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      placeholder="Purchase Quantity"
-                      value={product.quantity}
-                      onChange={(e) =>
-                        updateProductField(index, 'quantity', parseInt(e.target.value, 10) || "")
-                      }
-                    />
-                  </td>
-                  <td>{product.total.toFixed(2)}</td>
-                </tr>
-              )})
+                return (
+                  <tr key={product.id}>
+                    <td>{product.name}</td>
+                    <td>{company ? company.name : 'Unknown Company'}</td>
+                    <td>{brand ? brand.name : 'Unknown Brand'}</td>
+                    <td>{unit ? unit.name : 'Unknown Unit'}</td>
+                    <td>
+                      <select
+                        value={product.batchCode}
+                        onChange={(e) => updateBatchCode(index, e.target.value)}
+                        className="select select-bordered input-sm"
+                      >
+                        {productBatches.map((batch) => (
+                          <option key={batch.batchCode} value={batch.batchCode}>
+                            {batch.batchCode}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="input input-bordered input-sm"
+                        placeholder="Per Sell Price"
+                        value={product.sellPrice}
+                        onChange={(e) =>
+                          updateProductField(index, 'sellPrice', parseFloat(e.target.value) || '')
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="input input-bordered input-sm"
+                        placeholder="Per Retail Price"
+                        value={product.retailPrice}
+                        onChange={(e) =>
+                          updateProductField(index, 'retailPrice', parseFloat(e.target.value) || '')
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="input input-bordered input-sm"
+                        placeholder="Per Purchase Price"
+                        value={product.purchasePrice}
+                        onChange={(e) =>
+                          updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || '')
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="input input-bordered input-sm"
+                        placeholder="Purchase Quantity"
+                        value={product.quantity}
+                        onChange={(e) =>
+                          updateProductField(index, 'quantity', parseInt(e.target.value, 10) || 0)
+                        }
+                      />
+                    </td>
+                    <td>{product.total.toFixed(2)}</td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan="9" className="text-center text-gray-500">
+                <td colSpan="10" className="text-center text-gray-500">
                   No products added yet.
                 </td>
               </tr>
@@ -289,7 +332,6 @@ selectedProducts.forEach(product => {
         </table>
       </div>
 
-      {/* Payment Mode */}
       <div className="mb-4">
         <label className="block text-gray-700 font-medium mb-2">Payment Mode</label>
         <select
@@ -302,7 +344,6 @@ selectedProducts.forEach(product => {
         </select>
       </div>
 
-      {/* Total Payment and Credit */}
       <div className="mb-6">
         <label className="block text-gray-700 font-medium mb-2">Total Payment</label>
         <input
@@ -322,12 +363,10 @@ selectedProducts.forEach(product => {
         />
       </div>
 
-      {/* Display Total Bill */}
       <div className="mb-4">
         <h2 className="text-xl font-bold">Total Bill: ${calculateTotalBill().toFixed(2)}</h2>
       </div>
 
-      {/* Add Purchase Button */}
       <button className="btn btn-success w-full" onClick={handleAddPurchase}>
         Add Purchase
       </button>

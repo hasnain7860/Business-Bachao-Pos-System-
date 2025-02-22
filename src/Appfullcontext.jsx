@@ -23,7 +23,7 @@ const AppContext = createContext();
 
 // Context Provider
 export const AppContextProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
  
   // Contexts
   const companyContext = useCompanyContext();

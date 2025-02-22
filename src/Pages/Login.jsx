@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { Navigate } from "react-router-dom";
 import { adminDb } from '../Utils/AuthViaFirebase.jsx';
@@ -6,12 +7,18 @@ import { collection, getDocs } from "firebase/firestore";
 import bcrypt from 'bcryptjs';
 import Cookies from 'js-cookie';
 
+
+
 const Login = () => {
   const context = useAppContext();
   const { isAuthenticated, setIsAuthenticated } = context;
-
+  const { saveSetting } = context.settingContext;
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    user: { name: '', phoneNo: '', email: '', signature: '' },
+    business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: '' }
+  });
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,6 +47,13 @@ const Login = () => {
         if (user.email === email && passwordMatch) {
           Cookies.set('userName', user.name, { expires: 3 });
           Cookies.set('userRole', user.role, { expires: 3 });
+
+          // Update form state
+          setForm({
+            user: { name: '', phoneNo: '', email: '', signature: '' },
+            business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: user.AdminFirebaseObject }
+          });
+
           setIsAuthenticated(true);
           return;
         }
@@ -53,6 +67,16 @@ const Login = () => {
       setError("Error during authentication.");
     }
   };
+
+  // Use useEffect to call saveSetting after form state updates
+  useEffect(() => {
+    if (form.business.firebaseStorePass) {
+      // Call saveSetting with the updated form
+      saveSetting(form).catch(err => {
+        console.error("Failed to save setting:", err);
+      });
+    }
+  }, [form, saveSetting]);
 
   if (isAuthenticated) {
     return <Navigate to="/" />;

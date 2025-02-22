@@ -11,6 +11,7 @@ const Sales = () => {
   const customers = context.supplierCustomerContext.customers;
   const userAndBusinessDetail = context.settingContext.settings;
 
+const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
   const handleNewSale = () => {
     navigate('/sales/new');
   };
@@ -103,9 +104,9 @@ const Sales = () => {
       <td className="border px-4 py-2">{index + 1}</td>
       <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
       <td className="border px-4 py-2">{sale.dateTime}</td>
-      <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency} {sale.totalBill}</td>
-      <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency} {updatedAmountPaid}</td>
-      <td className="border px-4 py-2">{userAndBusinessDetail[0].business.currency} {updatedCredit}</td>
+      <td className="border px-4 py-2">{currency} {sale.totalBill}</td>
+      <td className="border px-4 py-2">{currency} {updatedAmountPaid}</td>
+      <td className="border px-4 py-2">{currency} {updatedCredit}</td>
       <td className="border px-4 py-2">{sale.paymentMode}</td>
       <td className="border px-4 py-2">{updatedCredit === 0 ? 'Paid' : 'Pending'}</td>
       <td className="border px-4 py-2 relative">

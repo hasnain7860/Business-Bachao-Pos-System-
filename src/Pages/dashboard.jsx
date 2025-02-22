@@ -10,6 +10,7 @@ import {
 import { MdInventory, MdReport } from "react-icons/md";
 import { Link } from "react-router-dom";
 
+
 const POSDashboard = () => {
   const context = useAppContext(); 
   const customers = context.supplierCustomerContext.customers;

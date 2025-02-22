@@ -8,8 +8,11 @@ import { AppContextProvider } from './Appfullcontext.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
   <AppContextProvider>
-
+  
     <App />
+  
+ 
     </AppContextProvider>
+    
   </StrictMode>,
 )

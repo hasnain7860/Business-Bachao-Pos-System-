@@ -5,7 +5,7 @@ import { addItem, getItems, deleteAndTrackItem as deleteFromDB, putItem, STORE_N
 const useUnitsContext = () => {
   // Unit context
   const [units, setUnits] = useState([]);
-  console.log(units)
+  
 
   // Load units from IndexedDB when the component mounts
   useEffect(() => {

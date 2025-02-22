@@ -9,7 +9,7 @@ const NewSales = () => {
   const context = useAppContext();
   const customers = context.supplierCustomerContext.customers;
   const products = context.productContext.products;
-  const editProduct = context.productContext.edit
+  const editProduct = context.productContext.edit;
 
   const [salesRefNo, setSalesRefNo] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -28,44 +28,40 @@ const NewSales = () => {
   const generateSalesRefNo = () => {
     setSalesRefNo(`SALE-${Math.floor(100000 + Math.random() * 900000)}`);
   };
-useEffect(() => {
-  handleCalculateCredit();
-}, [selectedProducts, amountPaid]);
-  const handleAddProduct = (product) => {
-    const existingProduct = selectedProducts.find(p => p.id === product.id);
-    if (!existingProduct && product.quantity > 0) {
-   setSelectedProducts([...selectedProducts, { ...product, SellQuantity: 1, discount: 0 , newSellPrice : product.sellPrice }]);
-      
+
+  useEffect(() => {
+    handleCalculateCredit();
+  }, [selectedProducts, amountPaid]);
+
+  const handleAddProduct = (product, batch) => {
+    const existingProduct = selectedProducts.find(p => p.id === product.id && p.batchCode === batch.batchCode);
+    if (!existingProduct && batch.quantity > 0) {
+      setSelectedProducts([...selectedProducts, { ...product, batchCode: batch.batchCode, SellQuantity: 1, discount: 0, newSellPrice: product.sellPrice, batchQuantity: batch.quantity }]);
     }
   };
 
-  const handleProductChange = (id, field, value) => {
+  const handleProductChange = (id, batchCode, field, value) => {
     const updatedProducts = selectedProducts.map(p => {
-      if (p.id === id) {
+      if (p.id === id && p.batchCode === batchCode) {
         return { ...p, [field]: value };
       }
       return p;
     });
     setSelectedProducts(updatedProducts);
-    handleCalculateCredit(); // Update credit after changing product quantity
+    handleCalculateCredit();
   };
 
-  const handleSellingPriceChange = (id, value) => {
+  const handleSellingPriceChange = (id, batchCode, value) => {
     const updatedProducts = selectedProducts.map(p => {
-      if (p.id === id) {
-        const newSellPrice = value; // Allow any value input
-        
-        
-        const discount = ((100 - ((newSellPrice * 100) / p.sellPrice)));
-
-        return { ...p, newSellPrice: newSellPrice, discount: discount }; // Update selling price and discount
-        
-    
+      if (p.id === id && p.batchCode === batchCode) {
+        const newSellPrice = value;
+        const discount = (100 - ((newSellPrice * 100) / p.sellPrice));
+        return { ...p, newSellPrice: newSellPrice, discount: discount };
       }
       return p;
     });
     setSelectedProducts(updatedProducts);
-    handleCalculateCredit(); // Update credit after changing selling price
+    handleCalculateCredit();
   };
 
   const validateSellingPrice = (product) => {
@@ -74,87 +70,97 @@ useEffect(() => {
 
   const calculateTotalPayment = () => {
     return selectedProducts.reduce((total, product) => {
-      const productTotal = Number(product.newSellPrice) * Number(product.SellQuantity)
+      const productTotal = Number(product.newSellPrice) * Number(product.SellQuantity);
       return Number(total) + Number(productTotal);
-    }, 0).toFixed(2); // Returns total payment formatted to two decimal places
+    }, 0).toFixed(2);
   };
 
+  const handleAmountPaidChange = (e) => {
+    setAmountPaid(e.target.value);
+  };
 
-const handleAmountPaidChange = (e) => {
-  setAmountPaid(e.target.value);
-};
   const handleCalculateCredit = () => {
-    let amountPaidcheck = amountPaid == '' ? 0 : Number(amountPaid);
-    
-    setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck)); // Calculate credit based on the current total payment
+    let amountPaidcheck = amountPaid === '' ? 0 : Number(amountPaid);
+    setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck));
   };
+
 const handleSaveSales = async () => {
-    if (!selectedCustomer) {
-      setMessage('Please add a customer first.');
-      return;
-    }
+  if (!selectedCustomer) {
+    setMessage('Please add a customer first.');
+    return;
+  }
 
-    if (selectedProducts.length === 0) {
-      setMessage('Please add at least one product to the sale.');
-      return;
-    }
+  if (selectedProducts.length === 0) {
+    setMessage('Please add at least one product to the sale.');
+    return;
+  }
 
-    if (amountPaid == '') {
-      console.log("test");
-      setAmountPaid("0");
-    }
+  if (amountPaid === '') {
+    setAmountPaid("0");
+  }
 
-    const uniqueId = uuidv4();
-    const salesData = {
-      id: uniqueId,
-      salesRefNo,
-      customerId: selectedCustomer,
-      products: selectedProducts,
-      paymentMode,
-      totalBill: calculateTotalPayment(),
-      amountPaid,
-      credit,
-      dateTime: new Date().toISOString() // This will give you the date and time in ISO format
-    };
+  const uniqueId = uuidv4();
+  const salesData = {
+    id: uniqueId,
+    salesRefNo,
+    customerId: selectedCustomer,
+    products: selectedProducts,
+    paymentMode,
+    totalBill: calculateTotalPayment(),
+    amountPaid,
+    credit,
+    dateTime: new Date().toISOString()
+  };
 
-    // Update the product quantities and save the sale
-    for (let product of selectedProducts) {
+  for (let product of selectedProducts) {
+    // Find the product in the original products list
+    const originalProduct = products.find(p => p.id === product.id);
+    if (originalProduct) {
+      // Locate the correct batch in the batchCode array
+      const updatedBatchCode = originalProduct.batchCode.map(batch => {
+        if (batch.batchCode === product.batchCode) {
+          // Subtract the sold quantity from the batch's quantity
+          return { ...batch, quantity: batch.quantity - product.SellQuantity };
+        }
+        return batch;
+      });
+
+      // Create updated product with the new batchCode array
       const updatedProduct = {
-        ...product,
-        quantity: product.quantity - product.SellQuantity, // Update quantity by reducing sold quantity
+        ...originalProduct,
+        batchCode: updatedBatchCode,
       };
 
       // Use the existing editProduct function to update the product in IndexedDB
-      await editProduct(product.id, updatedProduct); // Updating product quantity in IndexedDB
+      await editProduct(product.id, updatedProduct);
     }
+  }
 
-    // Save the sale to the SaleContext
-    context.SaleContext.add(salesData);
-    alert('Sales saved successfully!');
+  context.SaleContext.add(salesData);
+  alert('Sales saved successfully!');
 
-    // Reset form
-    setSelectedCustomer('');
-    setSelectedProducts([]);
-    setPaymentMode('');
-    setAmountPaid('');
-    setCredit(0);
-    generateSalesRefNo();
-    setMessage(''); // Clear message
+  // Reset form
+  setSelectedCustomer('');
+  setSelectedProducts([]);
+  setPaymentMode('');
+  setAmountPaid('');
+  setCredit(0);
+  generateSalesRefNo();
+  setMessage('');
 };
+
   
-  const handleCancelProduct = (id) => {
-    setSelectedProducts(selectedProducts.filter(p => p.id !== id));
-    handleCalculateCredit(); // Update credit after removing product
+  const handleCancelProduct = (id, batchCode) => {
+    setSelectedProducts(selectedProducts.filter(p => !(p.id === id && p.batchCode === batchCode)));
+    handleCalculateCredit();
   };
 
   return (
     <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6 mt-10">
       <h2 className="text-2xl font-bold text-center mb-6">New Sales</h2>
 
-      {/* Message Display */}
       {message && <div className="text-red-500 mb-4">{message}</div>}
 
-      {/* Sales Reference Number */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Sales Reference Number:</span>
@@ -167,7 +173,6 @@ const handleSaveSales = async () => {
         />
       </div>
 
-      {/* Customer Selection */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Select Customer:</span>
@@ -204,7 +209,6 @@ const handleSaveSales = async () => {
         </select>
       </div>
 
-      {/* Product Selection */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Add Products:</span>
@@ -223,40 +227,46 @@ const handleSaveSales = async () => {
             products
               .filter(product => product.name.includes(searchProduct))
               .map(product => (
-                <div key={product.id} className="flex justify-between items-center py-2 border-b">
-                  {product.name}
-                  {product.quantity > 0 ? (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => handleAddProduct(product)}
-                    >
-                      Add
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      disabled
-                    >
-                      Out of Stock
-                    </button>
-                  )}
+                <div key={product.id} className="py-2 border-b">
+                  <div className="pl-4">
+                    {product.batchCode.map(batch => (
+                      <div key={batch.batchCode} className="flex justify-between items-center py-1">
+                        <span>{product.name} - Batch: {batch.batchCode} - Stock: {batch.quantity}</span>
+                        {batch.quantity > 0 ? (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-outline"
+                            onClick={() => handleAddProduct(product, batch)}
+                          >
+                            Add Batch
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-outline"
+                            disabled
+                          >
+                            Out of Stock
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))
           )}
         </div>
       </div>
 
-      {/* Selected Products Table */}
       <div className="overflow-x-auto mt-4">
         <table className="table w-full">
           <thead>
             <tr>
               <th>Product</th>
+              <th>Batch</th>
               <th>Quantity</th>
               <th>Price</th>
-              <th>Stock</th>
+              <th>In Stock</th>
               <th>Discount (%)</th>
               <th>Total</th>
               <th>Action</th>
@@ -264,13 +274,14 @@ const handleSaveSales = async () => {
           </thead>
           <tbody>
             {selectedProducts.map(product => (
-              <tr key={product.id}>
+              <tr key={`${product.id}-${product.batchCode}`}>
                 <td>{product.name}</td>
+                <td>{product.batchCode}</td>
                 <td>
                   <input
                     type="number"
                     value={product.SellQuantity}
-                    onChange={(e) => handleProductChange(product.id, 'SellQuantity', e.target.value)}
+                    onChange={(e) => handleProductChange(product.id, product.batchCode, 'SellQuantity', e.target.value)}
                     className="input input-bordered w-20"
                   />
                 </td>
@@ -278,14 +289,14 @@ const handleSaveSales = async () => {
                   <input
                     type="number"
                     value={product.newSellPrice}
-                    onChange={(e) => handleSellingPriceChange(product.id, e.target.value)}
-                    className={`input input-bordered w-20 ${validateSellingPrice(product) ? 'border-red-500' : ''}`} // Red border if selling price is less than purchase price
+                    onChange={(e) => handleSellingPriceChange(product.id, product.batchCode, e.target.value)}
+                    className={`input input-bordered w-20 ${validateSellingPrice(product) ? 'border-red-500' : ''}`}
                   />
                   {validateSellingPrice(product) && (
                     <div className="text-red-500 text-sm">Selling price cannot be less than purchase price.</div>
                   )}
                 </td>
-                <td>{product.quantity - product.SellQuantity} (In Stock)</td>
+                <td>{product.batchQuantity - product.SellQuantity} (In Stock)</td>
                 <td>
                   <input
                     type="number"
@@ -299,7 +310,7 @@ const handleSaveSales = async () => {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline"
-                    onClick={() => handleCancelProduct(product.id)}
+                    onClick={() => handleCancelProduct(product.id, product.batchCode)}
                   >
                     Cancel
                   </button>
@@ -310,7 +321,6 @@ const handleSaveSales = async () => {
         </table>
       </div>
 
-      {/* Payment Mode */}
       <div className="form-control mb-4 mt-6">
         <label className="label">
           <span className="label-text">Payment Mode:</span>
@@ -328,7 +338,6 @@ const handleSaveSales = async () => {
         </select>
       </div>
 
-      {/* Total Payment Display */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Total Payment:</span>
@@ -341,7 +350,6 @@ const handleSaveSales = async () => {
         />
       </div>
 
-      {/* Amount Paid */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Amount Paid:</span>
@@ -354,7 +362,6 @@ const handleSaveSales = async () => {
         />
       </div>
 
-      {/* Credit Display */}
       <div className="form-control mb-4">
         <label className="label">
           <span className="label-text">Credit:</span>
@@ -367,7 +374,6 @@ const handleSaveSales = async () => {
         />
       </div>
 
-      {/* Save Sales Button */}
       <div className="form-control mt-6">
         <button
           type="button"
@@ -382,3 +388,5 @@ const handleSaveSales = async () => {
 };
 
 export default NewSales;
+
+
