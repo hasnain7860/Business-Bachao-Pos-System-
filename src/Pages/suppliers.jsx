@@ -230,7 +230,7 @@ const Suppliers = () => {
                 <div>
                   <label className="block font-bold">Phone *</label>
                   <input
-                    type="text"
+                    type="number"
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}

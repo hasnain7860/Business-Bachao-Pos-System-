@@ -18,7 +18,7 @@ const POSDashboard = () => {
   const products = context.productContext.products;
   const userAndBusinessDetail = context.settingContext.settings;
   const [filter, setFilter] = useState("daily");
-
+const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
   // Mock data for sales and profit/loss (Replace with real API data)
   const salesData = {
     daily: { sales: 2000, profit: 500, loss: 100 },
@@ -44,7 +44,7 @@ const POSDashboard = () => {
               <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Sales</span>
             </h2>
             <p className="text-2xl font-bold mt-2">
-              {userAndBusinessDetail?.[0]?.business?.currency ?? '$'} {salesData[filter].sales}
+              {currency} {salesData[filter].sales}
             </p>
           </div>
           <div className="card bg-green-500 text-white p-4 shadow-lg rounded-lg">
@@ -53,7 +53,7 @@ const POSDashboard = () => {
               <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Profit</span>
             </h2>
             <p className="text-2xl font-bold mt-2">
-              {userAndBusinessDetail?.[0]?.business?.currency ?? '$'} {salesData[filter].profit}
+              {currency} {salesData[filter].profit}
             </p>
           </div>
           <div className="card bg-red-500 text-white p-4 shadow-lg rounded-lg">
@@ -62,7 +62,7 @@ const POSDashboard = () => {
               <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Loss</span>
             </h2>
             <p className="text-2xl font-bold mt-2">
-              {userAndBusinessDetail?.[0]?.business?.currency ?? '$'} {salesData[filter].loss}
+              {currency} {salesData[filter].loss}
             </p>
           </div>
         </div>

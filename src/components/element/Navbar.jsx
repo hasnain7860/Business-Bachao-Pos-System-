@@ -285,7 +285,7 @@ const toggleLanguage = () => {
               <li>
                 <Link
                   to="/sales"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
+                  className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
                 >
                   Sales Report
                 </Link>
@@ -320,14 +320,14 @@ const toggleLanguage = () => {
                   New Purchase
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link
                   to="/purchases/returns"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
                   Purchase Returns
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </li>
                     {/* Credit Management */}
@@ -350,7 +350,7 @@ const toggleLanguage = () => {
           </li>
 
                     {/* Manage Users */}
-          <li>
+          {/* <li>
             <Link
               to="/manage-users"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
@@ -358,7 +358,7 @@ const toggleLanguage = () => {
               <MdPerson className="mr-3" />
               Manage Users
             </Link>
-          </li>
+          </li> */}
 
           {/* data sysnc */}
           <li>
