@@ -51,7 +51,7 @@ const Login = () => {
           // Update form state
           setForm({
             user: { name: '', phoneNo: '', email: '', signature: '' },
-            business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: user.AdminFirebaseObject }
+            business: { businessName: '', phoneNo: '', email: '', currency: '$', role: '', firebaseStorePass: user.AdminFirebaseObject }
           });
 
           setIsAuthenticated(true);
