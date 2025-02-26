@@ -195,7 +195,7 @@ function App() {
                     }
                 />
                   <Route
-                    path="/salesReturn"
+                    path="/sales/return/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
