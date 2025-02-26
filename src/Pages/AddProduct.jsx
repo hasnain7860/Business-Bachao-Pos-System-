@@ -265,7 +265,8 @@ const AddProduct = () => {
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            onClick={() => (window.location.href = "/unit")}
+            onClick={() => navigate("/inventory/units")}
+            
           >
             New
           </button>
