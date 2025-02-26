@@ -11,7 +11,7 @@ const CreditManagement = () => {
   const salesData = context.SaleContext.Sales;
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
-
+console.log(submittedRecords)
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showPopup, setShowPopup] = useState(false);

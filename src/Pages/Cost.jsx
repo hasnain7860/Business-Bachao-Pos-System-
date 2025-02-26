@@ -8,6 +8,7 @@ const Cost = () => {
   const context = useAppContext(); 
   
   const costData = context.costContext.costData;
+  console.log(costData)
   const add = context.costContext.add
   const deleteCostData = context.costContext.delete;
   const edit = context.costContext.edit;

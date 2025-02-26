@@ -19,14 +19,83 @@ const POSDashboard = () => {
   const userAndBusinessDetail = context.settingContext.settings;
   const [filter, setFilter] = useState("daily");
   const sales = context.SaleContext.Sales;
+  const creditRecord = context.creditManagementContext.submittedRecords;
+  const costData = context.costContext.costData;
 const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
-  // Mock data for sales and profit/loss (Replace with real API data)
+ // Function to generate salesData, adjust cost, and account for credit/payment
+function generateSalesData(sales, costData, creditRecord) {
   const salesData = {
-    daily: { sales: 2000, profit: 500, loss: 100 },
-    weekly: { sales: 14000, profit: 3500, loss: 700 },
-    monthly: { sales: 60000, profit: 15000, loss: 3000 },
+    daily: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0 },
+    weekly: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0 },
+    monthly: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0 },
   };
- 
+
+  const today = new Date().toISOString().split("T")[0];
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(new Date().getDate() - 7);
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(new Date().getMonth() - 1);
+
+  let totalCost = 0;
+  let totalCredit = 0;
+  let totalPayment = 0;
+
+  sales.forEach((sale) => {
+    const saleDate = sale.dateTime.split("T")[0];
+    const totalBill = parseFloat(sale.totalBill);
+    const purchaseCost = sale.products.reduce(
+      (acc, product) => acc + parseFloat(product.purchasePrice) * product.SellQuantity,
+      0
+    );
+    let profit = totalBill - purchaseCost;
+
+    // Subtracting cost
+    costData.forEach((cost) => {
+      if (cost.date === saleDate) {
+        totalCost += parseFloat(cost.cost);
+      }
+    });
+
+    profit -= totalCost;
+
+    // Handling credit & payments
+    creditRecord.forEach((record) => {
+      if (record.date === saleDate) {
+        if (record.type === "credit") {
+          totalCredit += parseFloat(record.amount);
+        } else if (record.type === "payment") {
+          totalPayment += parseFloat(record.amount);
+        }
+      }
+    });
+
+    if (saleDate === today) {
+      salesData.daily.sales += totalBill;
+      salesData.daily.profit += profit;
+      salesData.daily.credit += totalCredit;
+      salesData.daily.payment += totalPayment;
+    }
+
+    if (new Date(saleDate) >= oneWeekAgo) {
+      salesData.weekly.sales += totalBill;
+      salesData.weekly.profit += profit;
+      salesData.weekly.credit += totalCredit;
+      salesData.weekly.payment += totalPayment;
+    }
+
+    if (new Date(saleDate) >= oneMonthAgo) {
+      salesData.monthly.sales += totalBill;
+      salesData.monthly.profit += profit;
+      salesData.monthly.credit += totalCredit;
+      salesData.monthly.payment += totalPayment;
+    }
+  });
+
+  return salesData;
+}
+
+const salesData = generateSalesData(sales, costData, creditRecord);
+console.log(salesData);
   return (
     <div className="flex">
       <div className="flex-1 bg-gray-100 min-h-screen p-6">
