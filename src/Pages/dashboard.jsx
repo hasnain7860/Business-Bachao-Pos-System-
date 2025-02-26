@@ -26,7 +26,7 @@ const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
     weekly: { sales: 14000, profit: 3500, loss: 700 },
     monthly: { sales: 60000, profit: 15000, loss: 3000 },
   };
-
+ 
   return (
     <div className="flex">
       <div className="flex-1 bg-gray-100 min-h-screen p-6">
