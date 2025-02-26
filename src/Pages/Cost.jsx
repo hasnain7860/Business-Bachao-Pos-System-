@@ -11,7 +11,8 @@ const Cost = () => {
   const add = context.costContext.add
   const deleteCostData = context.costContext.delete;
   const edit = context.costContext.edit;
- 
+  const userAndBusinessDetail = context.settingContext.settings;
+  const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
    id : uuidv4(),
@@ -147,7 +148,7 @@ const handleEdit = (id) => {
                 <div className="flex flex-col text-gray-700">
                   <p className="font-semibold">{data.date}</p>
                   <p>{data.note}</p>
-                  <p className="font-bold text-xl text-gray-800">${data.cost}</p>
+                  <p className="font-bold text-xl text-gray-800">{currency} {data.cost}</p>
                 </div>
 
                 {/* Edit and Delete Options */}
