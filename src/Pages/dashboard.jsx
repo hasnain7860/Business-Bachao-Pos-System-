@@ -18,6 +18,7 @@ const POSDashboard = () => {
   const products = context.productContext.products;
   const userAndBusinessDetail = context.settingContext.settings;
   const [filter, setFilter] = useState("daily");
+  const sales = context.SaleContext.Sales;
 const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
   // Mock data for sales and profit/loss (Replace with real API data)
   const salesData = {
@@ -96,10 +97,10 @@ const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
           <div className="card bg-teal-500 text-white p-4 shadow-lg rounded-lg">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
               <FaFileInvoice />
-              <span>Invoices</span>
+              <span>Sales </span>
             </h2>
-            <p className="text-2xl font-bold mt-2">50 Issued</p>
-            <Link to="/invoices" className="btn bg-white text-teal-500 mt-4">View Invoices</Link>
+            <p className="text-2xl font-bold mt-2">{sales.length} Issued</p>
+            <Link to="/sales" className="btn bg-white text-teal-500 mt-4">View Sales</Link>
           </div>
         </div>
       </div>
