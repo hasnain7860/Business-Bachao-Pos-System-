@@ -91,9 +91,13 @@ const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
             <tbody>
             {sales.map((sale, index) => {
   // AddPayments array se total paid amount calculate karna
-  const totalPaidFromPayments = sale.addPayment
-    ? sale.addPayment.reduce((sum, payment) => sum + Number(payment.amount), 0)
-    : 0;
+  const totalPaidFromPayments = Array.isArray(sale?.addPayment)
+  ? sale.addPayment.reduce((sum, payment) => {
+      const amount = Number(payment?.amount);
+      return !isNaN(amount) && amount >= 0 ? sum + amount : sum;
+    }, 0)
+  : 0;
+
 
   // Updated amounts
   const updatedAmountPaid = Number(sale.amountPaid)   + totalPaidFromPayments;

@@ -20,7 +20,7 @@ const NewSales = () => {
   const [amountPaid, setAmountPaid] = useState('0');
   const [credit, setCredit] = useState(0);
   const [message, setMessage] = useState('');
-
+console.log(selectedProducts)
   useEffect(() => {
     generateSalesRefNo();
   }, []);
@@ -36,7 +36,8 @@ const NewSales = () => {
   const handleAddProduct = (product, batch) => {
     const existingProduct = selectedProducts.find(p => p.id === product.id && p.batchCode === batch.batchCode);
     if (!existingProduct && batch.quantity > 0) {
-      setSelectedProducts([...selectedProducts, { ...product, batchCode: batch.batchCode, SellQuantity: 1, discount: 0, newSellPrice: product.sellPrice, batchQuantity: batch.quantity }]);
+      setSelectedProducts([...selectedProducts, { ...product, batchCode: batch.batchCode, SellQuantity: 1, discount: 0,sellPrice:batch.sellPrice, newSellPrice: batch.sellPrice,purchasePrice:batch.
+        purchasePrice, batchQuantity: batch.quantity }]);
     }
   };
 
@@ -55,7 +56,8 @@ const NewSales = () => {
     const updatedProducts = selectedProducts.map(p => {
       if (p.id === id && p.batchCode === batchCode) {
         const newSellPrice = value;
-        const discount = (100 - ((newSellPrice * 100) / p.sellPrice));
+        let discount = (100 - ((newSellPrice * 100) / p.sellPrice));
+        discount = Math.max(discount, 0); // Agar discount negative hai to 0 kar do
         return { ...p, newSellPrice: newSellPrice, discount: discount };
       }
       return p;
@@ -63,7 +65,7 @@ const NewSales = () => {
     setSelectedProducts(updatedProducts);
     handleCalculateCredit();
   };
-
+  
   const validateSellingPrice = (product) => {
     return Number(product.newSellPrice) < Number(product.purchasePrice);
   };
