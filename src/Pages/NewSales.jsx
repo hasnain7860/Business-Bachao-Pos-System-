@@ -190,7 +190,7 @@ const handleSaveSales = async () => {
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            onClick={() => navigate('people/customers')}
+            onClick={() => navigate('/people/customers')}
           >
             Add New
           </button>
