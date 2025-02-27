@@ -91,6 +91,7 @@ console.log(sales)
             <thead>
               <tr>
                 <th className="px-4 py-2">No</th>
+                <th className="px-4 py-2">Sales Ref No</th>
                 <th className="px-4 py-2">Customer Name</th>
                 <th className="px-4 py-2">Date</th>
                 <th className="px-4 py-2">Total Bill</th>
