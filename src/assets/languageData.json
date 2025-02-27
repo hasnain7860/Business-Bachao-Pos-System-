@@ -45,7 +45,11 @@
     "image": "Image",
     "no_file_chosen": "No file chosen",
     "cancel": "Cancel",
-    "add": "Add"
+    "add": "Add",
+    "suppliers_management": "Suppliers Management",
+    "total_suppliers": "Total Suppliers: ",
+    "add_supplier": "Add Supplier",
+    "upload_contacts": "Upload Supplier Contacts"
   },
   "ur": {
     "menu": "مینو",
@@ -93,7 +97,11 @@
     "image": "تصویر",
     "no_file_chosen": "کوئی فائل منتخب نہیں کی گئی",
     "cancel": "منسوخ کریں",
-    "add": "شامل کریں"
+    "add": "شامل کریں",
+    "suppliers_management": "سپلائرز مینجمنٹ",
+    "total_suppliers": "کل سپلائرز: ",
+    "add_supplier": "نیا سپلائر شامل کریں",
+    "upload_contacts": "سپلائر رابطے اپ لوڈ کریں"
   }
 }
 

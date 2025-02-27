@@ -4,14 +4,12 @@ import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
 const Suppliers = () => {
   const context = useAppContext();
-  let idCounter = 0;
 
-  const generateUniqueId = () => {
-    return (Date.now() + idCounter++).toString(); // Generate a unique identifier using a counter
-  };
+  const {language} = context;
+ 
 
   const suppliers = context.supplierCustomerContext.suppliers;
-  console.log(suppliers)
+  
   const addSupplier = context.supplierCustomerContext.addSupplier;
   const editSupplier = context.supplierCustomerContext.editSupplier;
   const deleteSupplier = context.supplierCustomerContext.deleteSupplier;

@@ -12,11 +12,9 @@ const Customers = () => {
   const editCustomer = context.supplierCustomerContext.editCustomer;
   const deleteCustomer = context.supplierCustomerContext.deleteCustomer;
   const {language} = context;
-  let idCounter = 0;
+  
 
-  const generateUniqueId = () => {
-    return (Date.now() + idCounter++).toString(); // Generate a unique identifier using a counter
-  };
+ 
 
   const [formData, setFormData] = useState({
     id: null,
