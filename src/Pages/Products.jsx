@@ -5,6 +5,7 @@ import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
+import languageData from "../assets/languageData.json";
 
 const Products = () => {
     const context = useAppContext();
@@ -13,7 +14,7 @@ const Products = () => {
     const edit = context.productContext.edit;
     const handleDelete = context.productContext.delete;
     const userAndBusinessDetail = context.settingContext.settings;
-
+    const {language} = context;
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedBatch, setSelectedBatch] = useState({});
@@ -91,106 +92,166 @@ const Products = () => {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-semibold mb-4">Products</h1>
+    <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'}`}>
+    <h1 className="text-2xl font-semibold">{languageData[language].products}</h1>
+</div>
 
-            <div className="flex items-center mb-4">
-                <input 
-                    type="file" 
-                    accept=".xlsx, .xls" 
-                    onChange={handleFileChange} 
-                    className="hidden" 
-                    id="file-upload" 
-                />
-                <label htmlFor="file-upload" className="btn btn-primary cursor-pointer">
-                    Upload Products
-                </label>
-            </div>
+<div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
+    <input 
+        type="file" 
+        accept=".xlsx, .xls" 
+        onChange={handleFileChange} 
+        className="hidden" 
+        id="file-upload" 
+    />
+    <label htmlFor="file-upload" className="btn btn-primary cursor-pointer">
+        {languageData[language].upload_products}
+    </label>
 
-            {uploadMessage && (
-                <div className="mb-4 text-green-600">
-                    {uploadMessage}
-                </div>
-            )}
+    <Link to="/inventory/addProduct">
+        <button className="btn btn-primary">
+            {languageData[language].add_product}
+        </button>
+    </Link>
+</div>
 
-            <Link to="/inventory/addProduct">
-                <button className="btn btn-primary mb-4">Add Product</button>
-            </Link>
 
+
+    
+            {/* Products Table */}
             <div className="overflow-x-auto">
-                <table className="table w-full table-auto border-collapse">
-                    <thead>
-                        <tr className="text-left">
-                            <th className="p-2 border-b">No.</th>
-                            <th className="p-2 border-b">Product Name</th>
-                            <th className="p-2 border-b">Image</th>
-                            <th className="p-2 border-b">Total Stock</th>
-                            <th className="p-2 border-b">Batch Stock</th>
-                            <th className="p-2 border-b">Purchase Price</th>
-                            <th className="p-2 border-b">Sell Price</th>
-                            <th className="p-2 border-b">Retail Price</th>
-                            <th className="p-2 border-b">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {products && products.map((product, l) => {
-                            const batchIndex = selectedBatch[product.id] || 0;
-                            const batch = product.batchCode?.[batchIndex] || {};
-                            const totalStock = calculateTotalStock(product.batchCode);
+    <table className="table w-full table-auto border-collapse">
+        <thead>
+            <tr className={language === 'ur' ? 'text-right' : 'text-left'}>
+                {language === 'ur' ? (
+                    <>
+                        <th className="p-2 border-b">{languageData[language].actions}</th>
+                        <th className="p-2 border-b">{languageData[language].retail_price}</th>
+                        <th className="p-2 border-b">{languageData[language].sell_price}</th>
+                        <th className="p-2 border-b">{languageData[language].purchase_price}</th>
+                        <th className="p-2 border-b">{languageData[language].batch_stock}</th>
+                        <th className="p-2 border-b">{languageData[language].total_stock}</th>
+                        <th className="p-2 border-b">{languageData[language].image}</th>
+                        <th className="p-2 border-b">{languageData[language].product_name}</th>
+                        <th className="p-2 border-b">{languageData[language].no}</th>
+                    </>
+                ) : (
+                    <>
+                        <th className="p-2 border-b">{languageData[language].no}</th>
+                        <th className="p-2 border-b">{languageData[language].product_name}</th>
+                        <th className="p-2 border-b">{languageData[language].image}</th>
+                        <th className="p-2 border-b">{languageData[language].total_stock}</th>
+                        <th className="p-2 border-b">{languageData[language].batch_stock}</th>
+                        <th className="p-2 border-b">{languageData[language].purchase_price}</th>
+                        <th className="p-2 border-b">{languageData[language].sell_price}</th>
+                        <th className="p-2 border-b">{languageData[language].retail_price}</th>
+                        <th className="p-2 border-b">{languageData[language].actions}</th>
+                    </>
+                )}
+            </tr>
+        </thead>
+        <tbody>
+            {products && products.map((product, l) => {
+                const batchIndex = selectedBatch[product.id] || 0;
+                const batch = product.batchCode?.[batchIndex] || {};
+                const totalStock = calculateTotalStock(product.batchCode);
 
-                            return (
-                                <tr key={product.id} className="hover:bg-gray-100">
-                                    <td className="p-2 border-b">{l + 1}</td>
-                                    <td className="p-2 border-b">{product.name}</td>
-                                    <td className="p-2 border-b">
-                                        {product.productImage ? (
-                                            <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
-                                        ) : (
-                                            <div className="w-10 h-10 flex items-center justify-center bg-gray-200">
-                                                <span className="text-gray-500">🛒</span>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="p-2 border-b">{totalStock}</td>
-                                    <td className="p-2 border-b">
-                                        <select 
-                                            onChange={(e) => handleBatchChange(product.id, e.target.value)}
-                                            value={batchIndex}
-                                            className="form-select"
-                                        >
-                                            {renderBatchOptions(product.batchCode)}
-                                        </select>
-                                        <div>{batch.quantity || "Batch Quantity Is Not Available"}</div>
-                                    </td>
-                                    <td className="p-2 border-b">
-                                        {batch.purchasePrice ? `${userAndBusinessDetail?.[0]?.business?.currency || '$'} ${batch.purchasePrice}` : <span className="text-gray-500">Not Available</span>}
-                                    </td>
-                                    <td className="p-2 border-b">
-                                        {batch.sellPrice ? `${userAndBusinessDetail?.[0]?.business?.currency || '$'} ${batch.sellPrice}` : <span className="text-gray-500">Not Available</span>}
-                                    </td>
-                                    <td className="p-2 border-b">
-                                        {batch.retailPrice ? `${userAndBusinessDetail?.[0]?.business?.currency || '$'} ${batch.retailPrice}` : <span className="text-gray-500">Not Available</span>}
-                                    </td>
-                                    <td className="p-2 border-b">
-                                        <Link to={`/inventory/edit-product/${product.id}`}>
-                                            <button className="btn btn-warning mr-2">
-                                                <FaEdit />
-                                            </button>
-                                        </Link>
-                                        <button
-                                            onClick={() => handleDelete(product.id)}
-                                            className="btn btn-danger"
-                                        >
-                                            <FaTrashAlt />
+                return (
+                    <tr key={product.id} className="hover:bg-gray-100">
+                        {language === 'ur' ? (
+                            <>
+                                <td className="p-2 border-b">
+                                    <Link to={`/inventory/edit-product/${product.id}`}>
+                                        <button className="btn btn-warning mr-2">
+                                            <FaEdit />
                                         </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDelete(product.id)}
+                                        className="btn btn-danger"
+                                    >
+                                        <FaTrashAlt />
+                                    </button>
+                                </td>
+                                <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">
+                                    <select 
+                                        onChange={(e) => handleBatchChange(product.id, e.target.value)}
+                                        value={batchIndex}
+                                        className="form-select"
+                                    >
+                                        {renderBatchOptions(product.batchCode)}
+                                    </select>
+                                    <div>{batch.quantity || languageData[language].batch_not_available}</div>
+                                </td>
+                                <td className="p-2 border-b">{totalStock}</td>
+                                <td className="p-2 border-b">
+                                    {product.productImage ? (
+                                        <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
+                                    ) : (
+                                        <div className="w-10 h-10 flex items-center justify-center bg-gray-200">
+                                            <span className="text-gray-500">🛒</span>
+                                        </div>
+                                    )}
+                                </td>
+                                <td className="p-2 border-b">{product.name}</td>
+                                <td className="p-2 border-b">{l + 1}</td>
+                            </>
+                        ) : (
+                            <>
+                                <td className="p-2 border-b">{l + 1}</td>
+                                <td className="p-2 border-b">{product.name}</td>
+                                <td className="p-2 border-b">
+                                    {product.productImage ? (
+                                        <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
+                                    ) : (
+                                        <div className="w-10 h-10 flex items-center justify-center bg-gray-200">
+                                            <span className="text-gray-500">🛒</span>
+                                        </div>
+                                    )}
+                                </td>
+                                <td className="p-2 border-b">{totalStock}</td>
+                                <td className="p-2 border-b">
+                                    <select 
+                                        onChange={(e) => handleBatchChange(product.id, e.target.value)}
+                                        value={batchIndex}
+                                        className="form-select"
+                                    >
+                                        {renderBatchOptions(product.batchCode)}
+                                    </select>
+                                    <div>{batch.quantity || languageData[language].batch_not_available}</div>
+                                </td>
+                                <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                <td className="p-2 border-b">
+                                    <Link to={`/inventory/edit-product/${product.id}`}>
+                                        <button className="btn btn-warning mr-2">
+                                            <FaEdit />
+                                        </button>
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDelete(product.id)}
+                                        className="btn btn-danger"
+                                    >
+                                        <FaTrashAlt />
+                                    </button>
+                                </td>
+                            </>
+                        )}
+                    </tr>
+                );
+            })}
+        </tbody>
+    </table>
+</div>
+
+
         </div>
     );
+    
 };
 
 export default Products;

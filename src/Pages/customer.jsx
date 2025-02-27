@@ -222,7 +222,7 @@ const Customers = () => {
             <form onSubmit={handleFormSubmission}>
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block font-bold">{languageData[language].name}</label>
+                  <label className="block font-bold">{languageData[language].name} *</label>
                   <input
                     type="text"
                     name="name"
@@ -243,7 +243,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">{languageData[language].phone}</label>
+                  <label className="block font-bold">{languageData[language].phone} *</label>
                   <input
                     type="number"
                     name="phone"
@@ -254,7 +254,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">{languageData[language].address}</label>
+                  <label className="block font-bold">{languageData[language].address} *</label>
                   <textarea
                     name="address"
                     value={formData.address}

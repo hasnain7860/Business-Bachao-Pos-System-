@@ -4,11 +4,14 @@ import { FaPlus, FaTimes } from "react-icons/fa";
 import { v4 as uuidv4 } from "uuid";
 import { Link } from "react-router-dom";
 import PaymentDetails from "../components/element/PaymentDetails.jsx";
+import languageData from "../assets/languageData.json";
 
 const CreditManagement = () => {
   const context = useAppContext();
+  const {language} = context;
   const customers = context.supplierCustomerContext.customers;
   const salesData = context.SaleContext.Sales;
+  const t = languageData[language];
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
 console.log(submittedRecords)
@@ -103,7 +106,7 @@ console.log(submittedRecords)
   return (
     <div className="p-4 bg-gray-50">
       <h1 className="text-lg font-bold mb-4 text-blue-600">
-        Credit Management
+      {t.creditManagement}
       </h1>
       {!selectedCustomer ? (
         <div className="relative mb-4">
@@ -143,18 +146,16 @@ console.log(submittedRecords)
             .length > 0 ? (
             <>
               <div className="mt-4 max-h-64 overflow-y-auto">
-                <h3 className="text-md font-bold mt-4">Sales Data</h3>
+                <h3 className="text-md font-bold mt-4">{t.salesData}</h3>
                 <table className="min-w-full bg-white border border-gray-200 mt-2">
                   <thead>
                     <tr>
-                      <th className="border px-4 py-2">Sale Ref No</th>
-                      <th className="border px-4 py-2">Amount Paid</th>
-                      <th className="border px-4 py-2">Credit</th>
-                      <th className="border px-4 py-2">Date</th>
-                      <th className="border px-4 py-2">
-                        Add Payment to this Sale
-                      </th>
-                      <th className="border px-4 py-2">Action</th>
+                    <th className="border px-4 py-2">{t.saleRefNo}</th>
+                      <th className="border px-4 py-2">{t.amountPaid}</th>
+                      <th className="border px-4 py-2">{t.credit}</th>
+                      <th className="border px-4 py-2">{t.date}</th>
+                      <th className="border px-4 py-2">{t.addPayment}</th>
+                      <th className="border px-4 py-2">{t.action}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -178,31 +179,19 @@ console.log(submittedRecords)
                                 sale.credit === 0 ? "bg-red-200" : "bg-white"
                               } border-b`}
                             >
-                              <td className="border px-4 py-2">
-                                {sale.salesRefNo}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {totalPayment}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {sale.credit}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {new Date(sale.dateTime).toLocaleDateString()}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {Number(totalPayment) ===
-                                Number(sale.credit) ? (
-                                  <span className="text-green-600 block  text-center font-semibold bg-green-100 px-3 py-1 rounded-lg">
-                                    No Need More Payment
-                                  </span>
+                             <td className="border px-4 py-2">{sale.salesRefNo}</td>
+                            <td className="border px-4 py-2">{totalPayment}</td>
+                            <td className="border px-4 py-2">{sale.credit}</td>
+                            <td className="border px-4 py-2">{new Date(sale.dateTime).toLocaleDateString()}</td>
+                            <td className="border px-4 py-2">
+                              {Number(totalPayment) === Number(sale.credit) ? (
+                                <span className="text-green-600 block text-center font-semibold bg-green-100 px-3 py-1 rounded-lg">
+                                  {t.noMorePayment}
+                                </span>
                                 ) : (
-                                  <Link
-                                    to={`/sales/addPayments/${sale.id}`}
-                                    className="bg-blue-500 block text-center hover:bg-blue-600 text-white font-medium py-1 px-4 rounded-lg shadow-md transition duration-300 ease-in-out"
-                                  >
-                                    Add More Payment
-                                  </Link>
+                                  <Link to={`/sales/addPayments/${sale.id}`} className="bg-blue-500 block text-center hover:bg-blue-600 text-white font-medium py-1 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
+                                  {t.addMorePayment}
+                                </Link>
                                 )}
                               </td>
                               <td className="border px-4 py-2 text-center">
@@ -219,55 +208,29 @@ console.log(submittedRecords)
                               </td>
                             </tr>
                             {dropdownOpen === sale.id && (
-                              <tr>
-                                <td
-                                  colSpan="6"
-                                  className="border px-4 py-2 bg-gray-100"
-                                >
-                                  <div>
-                                    <p className="font-bold text-gray-700">
-                                      Payment Details:
-                                    </p>
-                                    <table className="w-full border-collapse border border-gray-300 mt-2">
-                                      <thead>
-                                        <tr className="bg-gray-200">
-                                          <th className="border px-4 py-2">
-                                            Ref No
-                                          </th>
-                                          <th className="border px-4 py-2">
-                                            Amount
-                                          </th>
-                                          <th className="border px-4 py-2">
-                                            Notes
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        <tr className="bg-white border-b">
-                                          <td className="border px-4 py-2">
-                                            First Time Payment
-                                          </td>
-                                          <td className="border px-4 py-2">
-                                            {sale.amountPaid}
-                                          </td>
-                                          <td className="border px-4 py-2">
-                                            N/A
-                                          </td>
-                                        </tr>
-                                        {sale.addPayment &&
-                                          sale.addPayment.map(
-                                            (payment, index) => (
-                                              <PaymentDetails
-                                                key={index}
-                                                payment={payment}
-                                              />
-                                            )
-                                          )}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </td>
-                              </tr>
+                             <tr>
+                             <td colSpan="6" className="border px-4 py-2 bg-gray-100">
+                               <div>
+                                 <p className="font-bold text-gray-700">{t.paymentDetails}:</p>
+                                 <table className="w-full border-collapse border border-gray-300 mt-2">
+                                   <thead>
+                                     <tr className="bg-gray-200">
+                                       <th className="border px-4 py-2">{t.refNo}</th>
+                                       <th className="border px-4 py-2">{t.amount}</th>
+                                       <th className="border px-4 py-2">{t.notes}</th>
+                                     </tr>
+                                   </thead>
+                                   <tbody>
+                                     <tr className="bg-white border-b">
+                                       <td className="border px-4 py-2">{t.firstTimePayment}</td>
+                                       <td className="border px-4 py-2">{sale.amountPaid}</td>
+                                       <td className="border px-4 py-2">N/A</td>
+                                     </tr>
+                                   </tbody>
+                                 </table>
+                               </div>
+                             </td>
+                           </tr>
                             )}
                           </>
                         );

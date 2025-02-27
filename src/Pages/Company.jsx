@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Import icons for edit and delete
 import { v4 as uuidv4 } from 'uuid';
+import languageData from "../assets/languageData.json";
+
+
 const Company = () => {
   
 
@@ -11,7 +14,8 @@ const Company = () => {
   const context = useAppContext(); 
   
   const companies = context.companyContext.companies
- console.log(companies)
+  const {language} = context;
+  
   const selectedCompany = context.companyContext.selectedCompany
   const addCompany = context.companyContext.add
   const editCompany = context.companyContext.edit
@@ -66,11 +70,11 @@ const uniqueId = uuidv4();
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
-        {editing ? <span>Edit Company</span> : <span>Add Company</span>}
+        {editing ? <span> {languageData[language].edit_company}</span> : <span>   {languageData[language].add_company}</span>}
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-gray-700 text-sm font-medium">Company Name:</label>
+          <label className="block text-gray-700 text-sm font-medium"> {languageData[language].company_name}:</label>
           <input
             type="text"
             value={companyName}
@@ -84,14 +88,14 @@ const uniqueId = uuidv4();
           className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-md flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {editing ? <FaEdit className="mr-2" /> : null}
-          {editing ? 'Save Changes' : 'Add Company'}
+          {editing ?  languageData[language].save_changes : languageData[language].add_company}
         </button>
       </form>
 
       <div className="mt-6">
-        <h3 className="text-lg font-semibold text-gray-700">Company List</h3>
+        <h3 className="text-lg font-semibold text-gray-700"> {languageData[language].company_list}</h3>
         {companies.length === 0 ? ( // Check if array is empty
-          <p className="text-center text-gray-500">No companies available. Add a new company!</p>
+          <p className="text-center text-gray-500"> {languageData[language].no_companies}</p>
         ) : (
           <ul className="space-y-4">
             {companies.map((company) => (

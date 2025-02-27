@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { v4 as uuidv4 } from 'uuid';
-
+import languageData from "../assets/languageData.json";
 const Unit = () => {
   const context = useAppContext(); 
+  const {language} = context;
   const units = context.unitContext.units
   const addUnit = context.unitContext.add
   const editUnit = context.unitContext.edit
@@ -45,18 +46,22 @@ const Unit = () => {
 
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">Manage Units</h2>
-
+      <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
+        {languageData[language].manage_units}
+      </h2>
+  
       {/* Add/Edit Unit Form */}
       <form onSubmit={handleAddOrEditUnit} className="space-y-4">
         <div>
-          <label className="block text-gray-700 text-sm font-medium">Unit Name:</label>
+          <label className="block text-gray-700 text-sm font-medium">
+            {languageData[language].unit_name}
+          </label>
           <input
             type="text"
             value={unitName}
             onChange={(e) => setUnitName(e.target.value)}
             required
-            placeholder="Enter unit name (e.g., Kg, Pcs, Liter)"
+            placeholder={languageData[language].enter_unit_name}
             className="w-full p-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -65,7 +70,7 @@ const Unit = () => {
             type="submit"
             className="flex-1 py-3 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {editingUnitId ? "Update Unit" : "Add Unit"}
+            {editingUnitId ? languageData[language].update_unit : languageData[language].add_unit}
           </button>
           {editingUnitId && (
             <button
@@ -73,16 +78,18 @@ const Unit = () => {
               onClick={handleCancelEdit}
               className="flex-1 py-3 px-4 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
-              Cancel
+              {languageData[language].cancel}
             </button>
           )}
         </div>
       </form>
-
+  
       {/* Unit List */}
       {units.length > 0 ? (
         <div className="mt-6">
-          <h3 className="text-lg font-semibold text-gray-700">Unit List</h3>
+          <h3 className="text-lg font-semibold text-gray-700">
+            {languageData[language].unit_list}
+          </h3>
           <ul className="space-y-4">
             {units.map((unit) => (
               <li
@@ -96,14 +103,14 @@ const Unit = () => {
                     onClick={() => handleEditClick(unit)}
                     className="py-1 px-3 bg-yellow-500 text-white text-sm font-semibold rounded hover:bg-yellow-600"
                   >
-                    Edit
+                    {languageData[language].edit}
                   </button>
                   {/* Delete Button */}
                   <button
                     onClick={() => deleteUnit(unit.id)}
                     className="py-1 px-3 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600"
                   >
-                    Delete
+                    {languageData[language].delete}
                   </button>
                 </div>
               </li>
@@ -111,10 +118,13 @@ const Unit = () => {
           </ul>
         </div>
       ) : (
-        <p className="text-center text-gray-500 mt-6">No units available. Add a new unit above.</p>
+        <p className="text-center text-gray-500 mt-6">
+          {languageData[language].no_units_available}
+        </p>
       )}
     </div>
   );
+  
 };
 
 export default Unit;
