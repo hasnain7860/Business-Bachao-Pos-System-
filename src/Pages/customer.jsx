@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
+import languageData from "../assets/languageData.json";
 
 const Customers = () => {
   const context = useAppContext();
@@ -10,7 +11,7 @@ const Customers = () => {
   const addCustomer = context.supplierCustomerContext.addCustomer;
   const editCustomer = context.supplierCustomerContext.editCustomer;
   const deleteCustomer = context.supplierCustomerContext.deleteCustomer;
-
+  const {language} = context;
   let idCounter = 0;
 
   const generateUniqueId = () => {
@@ -123,22 +124,34 @@ const Customers = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">Customer Management</h1>
-      <div className="mb-4 flex justify-between items-center">
+       <h1
+  className={`text-2xl font-bold mb-2 ${
+    language === "ur" ? "text-right" : "text-left"
+  }`}
+>{languageData[language].customer_management}</h1>
+        <div
+    className={`mb-4 flex justify-between items-center ${
+      language === "ur" ? "flex-row-reverse" : ""
+    }`}
+  >
         <span className="text-lg font-medium">
-          Total Customers: {customers.length}
+        {languageData[language].total} {languageData[language].customers} : {customers.length}
         </span>
         <button
           onClick={openCustomerModal}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          Add Customer
+         {languageData[language].add_customer} 
         </button>
       </div>
 
       {/* VCF File Upload Section */}
-      <div className="mb-4">
-        <label className="inline-flex items-center">
+      <div
+    className={`mb-4 flex items-center gap-2 ${
+      language === "ur" ? "flex-row-reverse text-right" : ""
+    }`}
+  >
+        <label className="inline-flex items-center   ">
           <input
             type="file"
             accept=".vcf"
@@ -146,58 +159,72 @@ const Customers = () => {
             className="hidden"
           />
           <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-            Upload Contact
+          {languageData[language].upload_customer} 
           </span>
         </label>
-        <span className="ml-2 text-gray-500">Upload a VCF file</span>
+        <span className="ml-2 text-gray-500">   {languageData[language].upload_vcf}</span>
       </div>
 
       {/* Customer List Display */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {customers.map((customer) => (
-          <div
-            key={customer.id}
-            className="p-4 bg-white shadow rounded-lg flex flex-col items-center"
-          >
-            {customer.image && (
-              <img
-                src={customer.image}
-                alt={customer.name}
-                className="w-20 h-20 rounded-full mb-4 object-cover"
-              />
-            )}
-            <h3 className="text-lg font-bold">{customer.name}</h3>
-            <p>Phone: {customer.phone}</p>
-            <p>Address: {customer.address}</p>
-            <div className="flex space-x-2 mt-4">
-              <button
-                onClick={() => initiateEdit(customer)}
-                className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => removeCustomer(customer.id)}
-                className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ))}
+      <div
+  className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${
+    language === "ur" ? "text-right" : "text-left"
+  }`}
+  dir={language === "ur" ? "rtl" : "ltr"} // Change text direction based on language
+>
+  {customers.map((customer) => (
+    <div
+      key={customer.id}
+      className="p-4 bg-white shadow rounded-lg flex flex-col items-center"
+    >
+      {customer.image && (
+        <img
+          src={customer.image}
+          alt={customer.name}
+          className="w-20 h-20 rounded-full mb-4 object-cover"
+        />
+      )}
+      <h3 className="text-lg font-bold">{customer.name}</h3>
+      <p>
+        {languageData[language].phone}: {customer.phone}
+      </p>
+      <p>
+        {languageData[language].address}: {customer.address}
+      </p>
+      <div
+        className={`flex space-x-2 mt-4 ${
+          language === "ur" ? "flex-row-reverse" : ""
+        }`}
+      >
+        <button
+          onClick={() => initiateEdit(customer)}
+          className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+        >
+          {languageData[language].edit}
+        </button>
+        <button
+          onClick={() => removeCustomer(customer.id)}
+          className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+        >
+          {languageData[language].remove}
+        </button>
       </div>
+    </div>
+  ))}
+</div>
+
 
       {/* Modal for Adding and Editing Customers */}
       {isModalVisible && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`}>
             <h2 className="text-xl font-bold mb-4">
-              {isEditingMode ? "Edit Customer" : "Add Customer"}
+              {isEditingMode ? languageData[language].edit_customer : languageData[language].add_customer}
             </h2>
             <form onSubmit={handleFormSubmission}>
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block font-bold">Name *</label>
+                  <label className="block font-bold">{languageData[language].name}</label>
                   <input
                     type="text"
                     name="name"
@@ -208,7 +235,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">Email</label>
+                  <label className="block font-bold">{languageData[language].email}</label>
                   <input
                     type="email"
                     name="email"
@@ -218,7 +245,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">Phone *</label>
+                  <label className="block font-bold">{languageData[language].phone}</label>
                   <input
                     type="number"
                     name="phone"
@@ -229,7 +256,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">Address *</label>
+                  <label className="block font-bold">{languageData[language].address}</label>
                   <textarea
                     name="address"
                     value={formData.address}
@@ -239,7 +266,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">Image</label>
+                  <label className="block font-bold">{languageData[language].image}</label>
                   <input
                     type="file"
                     onChange={handleImageSelection}
@@ -253,13 +280,13 @@ const Customers = () => {
                   onClick={closeModal}
                   className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                 >
-                  Cancel
+                  {languageData[language].cancel}
                 </button>
                 <button
                   type="submit"
                   className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                 >
-                  {isEditingMode ? "Update" : "Add"}
+                  {isEditingMode ? languageData[language].update : languageData[language].add}
                 </button>
               </div>
             </form>
