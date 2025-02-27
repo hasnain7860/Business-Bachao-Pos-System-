@@ -39,7 +39,7 @@ export const AppContextProvider = ({ children }) => {
   const SaleContext = useSalesContext();
 
   const { settings } = settingContext;
-
+  const [language, setLanguage] = useState('en');
   const [isOpen, setIsOpen] = useState(true);
   useEffect(() => {
     // Check if settings is an array and has at least one element
@@ -52,6 +52,8 @@ export const AppContextProvider = ({ children }) => {
   return (
     <AppContext.Provider
       value={{
+        language,
+        setLanguage,
         isOpen,
         setIsOpen,
         isAuthenticated,

@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { useAppContext } from "../../Appfullcontext";
 import { FaShoppingCart, FaMoneyBillWave, FaCreditCard, FaMoneyCheckAlt,FaFileInvoice, FaUsers } from "react-icons/fa";
 import { MdReport } from "react-icons/md";
 import { MdError } from "react-icons/md";
+import languageData from "../../assets/languageData.json";
 
-
-const StatisticsDasbord = () => {
+const StatisticsDasboard = () => {
     const context = useAppContext(); 
     const products = context.productContext.products;
     const userAndBusinessDetail = context.settingContext.settings;
-    const [filter, setFilter] = useState("daily");
+    const {language} = context;
+    const [filter, setFilter] = useState(languageData[language].daily);
     const sales = context.SaleContext.Sales;
     const creditRecord = context.creditManagementContext.submittedRecords;
     const costData = context.costContext.costData;
@@ -19,34 +20,11 @@ const StatisticsDasbord = () => {
 
     function generateSalesData(sales, costData, creditRecord) {
       const salesData = {
-        daily: {
-          sales: 0,
-          profit: 0,
-          loss: 0,
-          credit: 0,
-          payment: 0,
-          issuedSales: 0,
-          cost: 0,
-        },
-        weekly: {
-          sales: 0,
-          profit: 0,
-          loss: 0,
-          credit: 0,
-          payment: 0,
-          issuedSales: 0,
-          cost: 0,
-        },
-        monthly: {
-          sales: 0,
-          profit: 0,
-          loss: 0,
-          credit: 0,
-          payment: 0,
-          issuedSales: 0,
-          cost: 0,
-        },
+        [languageData[language].daily]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
+        [languageData[language].weekly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
+        [languageData[language].monthly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
       };
+      
 
       const today = new Date().toISOString().split("T")[0];
       const oneWeekAgo = new Date();
@@ -78,7 +56,7 @@ const StatisticsDasbord = () => {
           0
         );
 
-        console.log(dailyCost+ 'daily cost')
+      
         let weeklyCost = costData.reduce((acc, cost) => {
           const costDate = new Date(cost.date);
           return costDate >= oneWeekAgo
@@ -149,34 +127,35 @@ const StatisticsDasbord = () => {
 
         // Updating sales data
         if (saleDate === today) {
-          salesData.daily.sales += totalBill;
-          salesData.daily.profit += dailyProfit;
-          salesData.daily.loss += dailyLoss;
-          salesData.daily.credit += totalCredit;
-          salesData.daily.payment += totalPayment;
-          salesData.daily.cost += dailyCost;
-          if (isIssuedSale) salesData.daily.issuedSales++; // Counting issued sales
+          salesData[languageData[language].daily].sales += totalBill;
+          salesData[languageData[language].daily].profit += dailyProfit;
+          salesData[languageData[language].daily].loss += dailyLoss;
+          salesData[languageData[language].daily].credit += totalCredit;
+          salesData[languageData[language].daily].payment += totalPayment;
+          salesData[languageData[language].daily].cost += dailyCost;
+          if (isIssuedSale) salesData[languageData[language].daily].issuedSales++; // Counting issued sales
         }
-
+        
         if (new Date(saleDate) >= oneWeekAgo) {
-          salesData.weekly.sales += totalBill;
-          salesData.weekly.profit += weeklyProfit;
-          salesData.weekly.loss += weeklyLoss;
-          salesData.weekly.credit += totalCredit;
-          salesData.weekly.payment += totalPayment;
-          salesData.weekly.cost += weeklyCost;
-          if (isIssuedSale) salesData.weekly.issuedSales++; // Counting issued sales
+          salesData[languageData[language].weekly].sales += totalBill;
+          salesData[languageData[language].weekly].profit += weeklyProfit;
+          salesData[languageData[language].weekly].loss += weeklyLoss;
+          salesData[languageData[language].weekly].credit += totalCredit;
+          salesData[languageData[language].weekly].payment += totalPayment;
+          salesData[languageData[language].weekly].cost += weeklyCost;
+          if (isIssuedSale) salesData[languageData[language].weekly].issuedSales++; // Counting issued sales
         }
-
+        
         if (new Date(saleDate) >= oneMonthAgo) {
-          salesData.monthly.sales += totalBill;
-          salesData.monthly.profit += monthlyProfit;
-          salesData.monthly.loss += monthlyLoss;
-          salesData.monthly.credit += totalCredit;
-          salesData.monthly.payment += totalPayment;
-          salesData.monthly.cost += monthlyCost;
-          if (isIssuedSale) salesData.monthly.issuedSales++; // Counting issued sales
+          salesData[languageData[language].monthly].sales += totalBill;
+          salesData[languageData[language].monthly].profit += monthlyProfit;
+          salesData[languageData[language].monthly].loss += monthlyLoss;
+          salesData[languageData[language].monthly].credit += totalCredit;
+          salesData[languageData[language].monthly].payment += totalPayment;
+          salesData[languageData[language].monthly].cost += monthlyCost;
+          if (isIssuedSale) salesData[languageData[language].monthly].issuedSales++; // Counting issued sales
         }
+        
       });
 
       // Round values to 2 decimal places
@@ -194,9 +173,16 @@ const StatisticsDasbord = () => {
 
    
   
-  const salesData = generateSalesData(sales, costData, creditRecord);
+    const [salesData, setSalesData] = useState(generateSalesData(sales, costData, creditRecord));
   console.log(salesData);
-  
+ console.log(filter)
+  useEffect(() => {
+    // Regenerate salesData whenever language changes
+    const updatedSalesData = generateSalesData(sales, costData, creditRecord);
+    
+    setFilter(languageData[language].daily)
+    setSalesData(updatedSalesData);
+  }, [language]);
   
   return (
     <>
@@ -204,27 +190,30 @@ const StatisticsDasbord = () => {
     <div className="flex justify-end mb-4">
       <button
         className={`px-4 py-2 mx-2 rounded ${
-          filter === "daily" ? "bg-blue-500 text-white" : "bg-gray-200"
+          filter === languageData[language].daily ? "bg-blue-500 text-white" : "bg-gray-200"
         }`}
-        onClick={() => setFilter("daily")}
+        onClick={() => setFilter(languageData[language].daily)}
       >
-        Daily
+        {languageData[language].daily}
+    
       </button>
       <button
         className={`px-4 py-2 mx-2 rounded ${
-          filter === "weekly" ? "bg-blue-500 text-white" : "bg-gray-200"
+          filter === languageData[language].weekly ? "bg-blue-500 text-white" : "bg-gray-200"
         }`}
-        onClick={() => setFilter("weekly")}
+        onClick={() => setFilter(languageData[language].weekly)}
       >
-        Weekly
+        {languageData[language].weekly}
+    
       </button>
       <button
         className={`px-4 py-2 mx-2 rounded ${
-          filter === "monthly" ? "bg-blue-500 text-white" : "bg-gray-200"
+          filter === languageData[language].monthly ? "bg-blue-500 text-white" : "bg-gray-200"
         }`}
-        onClick={() => setFilter("monthly")}
+        onClick={() => setFilter(languageData[language].monthly)}
       >
-        Monthly
+        {languageData[language].monthly}
+        
       </button>
     </div>
   
@@ -235,7 +224,8 @@ const StatisticsDasbord = () => {
       <div className="card bg-blue-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <FaShoppingCart />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Sales</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} {languageData[language].sales}
+          </span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].sales}
@@ -246,7 +236,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-green-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <FaMoneyBillWave />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Profit</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} {languageData[language].profit}</span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].profit}
@@ -257,7 +247,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-red-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <MdReport />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Loss</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} {languageData[language].loss} </span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].loss}
@@ -268,7 +258,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-yellow-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <FaCreditCard />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Credit</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)}  {languageData[language].credit}</span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].credit}
@@ -279,7 +269,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-purple-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <FaMoneyCheckAlt />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Payment</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)}  {languageData[language].payment}</span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].payment}
@@ -290,7 +280,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-gray-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <FaMoneyBillWave />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Cost</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)}  {languageData[language].cost} </span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {currency} {salesData[filter].cost}
@@ -301,7 +291,7 @@ const StatisticsDasbord = () => {
       <div className="card bg-indigo-500 text-white p-4 shadow-lg rounded-lg">
         <h2 className="text-lg font-semibold flex items-center space-x-2">
           <MdError />
-          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)} Issue Sales</span>
+          <span>{filter.charAt(0).toUpperCase() + filter.slice(1)}   {languageData[language].issue_sales}</span>
         </h2>
         <p className="text-2xl font-bold mt-2">
           {salesData[filter].issuedSales} Sales
@@ -314,5 +304,4 @@ const StatisticsDasbord = () => {
   );
 };
 
-export default StatisticsDasbord;
-
+export default StatisticsDasboard;

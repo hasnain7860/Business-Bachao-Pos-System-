@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { FaFileInvoice, FaUsers } from "react-icons/fa";
-import StatisticsDasbord from "../components/element/StatisticsDasbord.jsx";
+import StatisticsDasboard from "../components/element/StatisticsDasboard.jsx";
 import { MdInventory } from "react-icons/md";
 import { Link } from "react-router-dom";
 
@@ -16,7 +16,7 @@ const POSDashboard = () => {
     <div className="flex">
       <div className="flex-1 bg-gray-100 min-h-screen p-6">
         
-<StatisticsDasbord/>
+<StatisticsDasboard/>
 
 
         {/* Dashboard Content */}

@@ -5,6 +5,11 @@ import {
   AiOutlineRight,
   AiOutlineDashboard,
 } from "react-icons/ai";
+
+import languageData from "../../assets/languageData.json";
+
+import clsx from "clsx";
+
 import {
   FiSettings,
   FiLogOut,
@@ -23,8 +28,8 @@ import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
 
 const Navbar = () => {
-  const { setIsAuthenticated , settingContext} = useAppContext();
-const [language, setLanguage] = useState('en');
+  const { setIsAuthenticated , settingContext,language,setLanguage} = useAppContext();
+
 
 const businessName = settingContext?.settings[0]?.business?.businessName || "POS System"
 
@@ -95,40 +100,58 @@ const toggleLanguage = () => {
   return (
     <div>
       {/* Navbar */}
-   <nav className="fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex justify-between items-center">
+      <nav 
+  className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 
+  justify-between  ${language === 'ur' ? 'flex-row-reverse' : ''}`}
+>
+  {/* ☰ Menu Button */}
   <button
-    onClick={toggleSidebar}    ref={menuButtonRef}
+    onClick={toggleSidebar}
+    ref={menuButtonRef}
     className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600"
   >
     ☰
   </button>
-<h1 className="text-2xl font-bold">
-  {businessName }
-</h1>
-  <div className="flex items-center space-x-4">
-          <button
-            onClick={toggleLanguage}
-            className="p-2 bg-gray-700 rounded-full hover:bg-gray-600"
-          >
-            {language === 'en' ? 'EN' : 'PK'}
-          </button>
-          <Link
-            to="/sales/new"
-            className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-          >
-            Sales
-          </Link>
-        </div>
+
+  {/* Business Name */}
+  <h1 className="text-2xl font-bold">
+    {businessName}
+  </h1>
+
+  {/* Language & Sales Button */}
+  <div 
+    className={`flex items-center space-x-4 transition-all duration-300 
+    ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}
+  >
+    <button
+      onClick={toggleLanguage}
+      className="p-2 bg-gray-700 rounded-full hover:bg-gray-600"
+    >
+      {languageData[language].toggle_language}
+    </button>
+
+    <Link
+      to="/sales/new"
+      className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+    >
+      {languageData[language].sales}
+    </Link>
+  </div>
 </nav>
 
+
       {/* Sidebar */}
-      <div   ref={sidebarRef}
-        className={`fixed top-0 left-0 h-full bg-gray-800 text-white shadow-md z-40 transform ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 w-64 overflow-y-auto`}
-      >
+      <div
+  ref={sidebarRef}
+  className={`fixed top-0 ${
+    language === "ur" ? "right-0" : "left-0"
+  } h-full bg-gray-800 text-white shadow-md z-40 transform ${
+    isSidebarOpen ? "translate-x-0" : language === "ur" ? "translate-x-full" : "-translate-x-full"
+  } transition-transform duration-300 w-64 overflow-y-auto`}
+  style={{ direction: language === "ur" ? "rtl" : "ltr" }}
+>
         <div className="p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Menu</h2>
+          <h2 className="text-lg font-bold">{languageData[language].menu}</h2>
           <button
             onClick={toggleSidebar}
             className="text-lg font-bold bg-gray-700 p-1 rounded-md hover:bg-gray-600"
@@ -144,7 +167,7 @@ const toggleLanguage = () => {
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
               <AiOutlineDashboard className="mr-3" />
-              Dashboard
+             {languageData[language].dashboard}
             </Link>
           </li>
 
@@ -155,7 +178,8 @@ const toggleLanguage = () => {
               className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
             >
               <FiUsers className="mr-3" />
-              People
+                {languageData[language].people}
+              
               {collapsedSections["people"] ? (
                 <AiOutlineRight size={20} />
               ) : (
@@ -172,7 +196,7 @@ const toggleLanguage = () => {
                   to="/people/customers"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Customers
+     {languageData[language].customers}
                 </Link>
               </li>
               <li>
@@ -180,7 +204,7 @@ const toggleLanguage = () => {
                   to="/people/suppliers"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Suppliers
+                       {languageData[language].suppliers}
                 </Link>
               </li>
             </ul>
@@ -193,7 +217,7 @@ const toggleLanguage = () => {
               className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
             >
               <MdInventory className="mr-3" />
-              Inventory
+                {languageData[language].inventory}
               {collapsedSections["inventory"] ? (
                 <AiOutlineRight size={20} />
               ) : (
@@ -210,7 +234,7 @@ const toggleLanguage = () => {
                   to="/inventory/company"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Company
+                       {languageData[language].company}
                 </Link>
               </li>
               <li>
@@ -218,7 +242,7 @@ const toggleLanguage = () => {
                   to="/inventory/brands"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Brands
+                     {languageData[language].brands}
                 </Link>
               </li>
               <li>
@@ -226,7 +250,7 @@ const toggleLanguage = () => {
                   to="/inventory/products"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Products
+                       {languageData[language].products}
                 </Link>
               </li>
               <li>
@@ -234,7 +258,7 @@ const toggleLanguage = () => {
                   to="/inventory/units"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
-                  Units
+                       {languageData[language].units} 
                 </Link>
               </li>
             </ul>
@@ -245,98 +269,44 @@ const toggleLanguage = () => {
 
 
           {/* Sales Section */}
-          <li>
-            <button
-              onClick={() => toggleSection("sales")}
-              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
-            >
-              <FiClipboard size={20} />
-              Sales
-              {collapsedSections["sales"] ? (
-                <AiOutlineRight size={20} />
-              ) : (
-                <AiOutlineDown size={20} />
-              )}
-            </button>
-            <ul
-              className={`mt-2 space-y-2 ${
-                collapsedSections["sales"] ? "hidden" : "block"
-              }`}
-            >
 
           <li>
             <Link
               to="/sales"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-              <FiClipboard className="mr-3" />
-              Sales
+                 <FiClipboard className="mr-3" />
+          {languageData[language].sales}
             </Link>
-          </li>
-          <li>
-            <Link
-              to="/salesReturn"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-     
-              Sales Return 
-            </Link>
-          </li>
-              <li>
-                <Link
-                  to="/sales"
-                  className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-                >
-                  Sales Report
-                </Link>
-              </li>
-            </ul>
           </li>
 
+
+
+      
+        
+      
+
           {/* Purchases Section */}
+
           <li>
-            <button
-              onClick={() => toggleSection("purchases")}
-              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
+            <Link
+              to="/purchases"
+              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-              <FiClipboard size={20} />
-              Purchases
-              {collapsedSections["purchases"] ? (
-                <AiOutlineRight size={20} />
-              ) : (
-                <AiOutlineDown size={20} />
-              )}
-            </button>
-            <ul
-              className={`mt-2 space-y-2 ${
-                collapsedSections["purchases"] ? "hidden" : "block"
-              }`}
-            >
-              <li>
-                <Link
-                  to="/purchases"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                  New Purchase
-                </Link>
-              </li>
-              {/* <li>
-                <Link
-                  to="/purchases/returns"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                  Purchase Returns
-                </Link>
-              </li> */}
-            </ul>
+                 <FiClipboard className="mr-3" />
+                 {languageData[language].purchases}
+            </Link>
           </li>
+
+
                     {/* Credit Management */}
           <li>
             <Link
               to="/CreditManagement"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-               Credit Management
+                {languageData[language].credit_management}
+           
             </Link>
           </li>
                     {/* Cost Management */}
@@ -345,7 +315,7 @@ const toggleLanguage = () => {
               to="/Cost"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-                Cost Management
+                   {languageData[language].costManagement}
             </Link>
           </li>
 
@@ -366,8 +336,8 @@ const toggleLanguage = () => {
               to="/data"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-
-              Data sync
+  {languageData[language].dataSync}
+              
             </Link>
           </li>
 
@@ -378,7 +348,7 @@ const toggleLanguage = () => {
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
               <FiSettings className="mr-3" />
-              Settings
+              {languageData[language].settings}
             </Link>
           </li>
 
@@ -389,7 +359,7 @@ const toggleLanguage = () => {
               className="w-full text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
               <FiLogOut className="mr-3" />
-              Logout
+              {languageData[language].logout}
             </button>
             </li>
           
@@ -399,4 +369,4 @@ const toggleLanguage = () => {
   );
 };
 
-export default Navbar;  
+export default Navbar;             
