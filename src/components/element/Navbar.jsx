@@ -315,7 +315,7 @@ const toggleLanguage = () => {
               to="/Cost"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-                   {languageData[language].costManagement}
+                   {languageData[language].cost_management}
             </Link>
           </li>
 
@@ -336,7 +336,7 @@ const toggleLanguage = () => {
               to="/data"
               className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
-  {languageData[language].dataSync}
+  {languageData[language].data_sync}
               
             </Link>
           </li>
