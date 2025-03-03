@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { FaFileInvoice, FaUsers } from "react-icons/fa";
 import StatisticsDasboard from "../components/element/StatisticsDasboard.jsx";
 import { MdInventory } from "react-icons/md";
 import { Link } from "react-router-dom";
 import languageData from "../assets/languageData.json";
-
+import checkExpiringProducts from "../Utils/checkExpiringProducts.jsx";
 
 const POSDashboard = () => {
   const context = useAppContext(); 
@@ -13,6 +13,15 @@ const POSDashboard = () => {
   const suppliers = context.supplierCustomerContext.suppliers;
   const products = context.productContext.products;
   const {language} = context;
+
+  useEffect(() => {
+   
+    checkExpiringProducts(context)
+
+
+  }, []);
+
+
 
   return (
     <div className="flex">

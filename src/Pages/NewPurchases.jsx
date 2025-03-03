@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
-
+import {  useNavigate } from "react-router-dom";
 const NewPurchases = () => {
   const context = useAppContext();
   const suppliers = context.supplierCustomerContext.suppliers;
@@ -12,19 +12,20 @@ const NewPurchases = () => {
   const units = context.unitContext.units;
   const updateProduct = context.productContext.edit;
   const addPurchase = context.purchaseContext.add;
-
+  const navigate = useNavigate();
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
-  const [currentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [totalPayment, setTotalPayment] = useState(0);
   const [credit, setCredit] = useState(0);
   const [batchCodes, setBatchCodes] = useState({});
 
-  const handleAddSupplier = () => {
-    window.location.href = '/people/suppliers';
-  };
+ 
+
+
+ 
 
   const handleAddProductToTable = (product) => {
     const existingProduct = selectedProducts.find((p) => p.id === product.id);
@@ -37,6 +38,7 @@ const NewPurchases = () => {
         purchasePrice: '',
         sellPrice: '',
         retailPrice: '',
+        expirationDate: '',
         quantity: 0,
       };
 
@@ -49,6 +51,7 @@ const NewPurchases = () => {
         sellPrice: batchInfo.sellPrice,
         retailPrice: batchInfo.retailPrice,
         purchasePrice: batchInfo.purchasePrice,
+        expirationDate:batchInfo.expirationDate,
         quantity: 0,
         total: 0,
         batchCode: batchInfo.batchCode,
@@ -67,6 +70,7 @@ const NewPurchases = () => {
     const selectedBatch = batches.find((batch) => batch.batchCode === newBatchCode) || {};
 
     product.batchCode = newBatchCode;
+    product.expirationDate = selectedBatch.expirationDate || product.expirationDate;
     product.sellPrice = selectedBatch.sellPrice || product.sellPrice;
     product.retailPrice = selectedBatch.retailPrice || product.retailPrice;
     product.purchasePrice = selectedBatch.purchasePrice || product.purchasePrice;
@@ -101,12 +105,81 @@ const NewPurchases = () => {
   };
 
   const handleAddPurchase = () => {
-    const supplier = suppliers.find((s) => s.id == selectedSupplier);
-    const uniqueId = uuidv4();
-    console.log(JSON.stringify(selectedProducts) + "selected product jk ")
-    const newPurchase = {
-      id: uniqueId,
-      supplierName: supplier ? supplier.name : '',
+   
+  
+      // Validation: Supplier required
+  if (!selectedSupplier) {
+    alert("Please select a supplier.");
+    return;
+  }
+
+    // Validation: Purchase date required
+    if (!currentDate) {
+      alert("Please select a purchase date.");
+      return;
+    }
+
+
+
+  // Validation: At least one product required
+  if (selectedProducts.length === 0) {
+    alert("Please add at least one product.");
+    return;
+  }
+
+  // Validation: Each product must have at least 1 quantity
+  const invalidProduct = selectedProducts.find((p) => Number(p.quantity) <= 0);
+  if (invalidProduct) {
+    alert(`Product "${invalidProduct.name}" must have at least 1 quantity.`);
+    return;
+  }
+   
+    selectedProducts.forEach((product) => {
+      const existingProduct = products.find((p) => p.id === product.id);
+      if (existingProduct) {
+        let batches = existingProduct.batchCode || [];
+        
+        // Check if there's an exact match (same batch code + same purchase price + same expiration date)
+        const existingBatch = batches.find(
+          (batch) => batch.purchasePrice === product.purchasePrice && batch.expirationDate === product.expirationDate
+        );
+    
+        if (existingBatch) {
+          // Update existing batch
+          const batchIndex = batches.findIndex(batch => batch.batchCode === existingBatch.batchCode);
+          if (batchIndex !== -1) {
+            batches[batchIndex].purchasePrice = product.purchasePrice;
+            batches[batchIndex].sellPrice = product.sellPrice;
+            batches[batchIndex].retailPrice = product.retailPrice;
+            batches[batchIndex].expirationDate = product.expirationDate;
+            batches[batchIndex].quantity = Number(batches[batchIndex].quantity) + Number(product.quantity);
+          }
+        } else {
+          // Create a new batch if no match found
+          const nextBatchNumber = batches.length + 1;
+          const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
+          const newBatch = {
+            batchCode: newBatchCode,
+            expirationDate: product.expirationDate,
+            purchasePrice: product.purchasePrice,
+            sellPrice: product.sellPrice,
+            retailPrice: product.retailPrice,
+            quantity: Number(product.quantity),
+          };
+    
+          batches = [...batches, newBatch];
+          product.batchCode = newBatchCode; // Assign the new batch code to the product
+        }
+    
+        // Update the product with the modified batches array
+        updateProduct(product.id, { ...existingProduct, batchCode: batches });
+      }
+    });
+    
+    // Ab purchase add karte waqt naya batch wala product use karo
+    const newPurchase1 = {
+      id: uuidv4(),
+      supplierName: suppliers.find((s) => s.id == selectedSupplier)?.name || '',
       date: currentDate,
       paymentMode,
       products: selectedProducts.map((p) => ({
@@ -116,60 +189,17 @@ const NewPurchases = () => {
         purchasePrice: p.purchasePrice,
         sellPrice: p.sellPrice,
         retailPrice: p.retailPrice,
-        batchCode: p.batchCode,
+        batchCode: p.batchCode,  // Yeh ab naya batch hoga agar zaroori hua toh
       })),
       totalPayment,
       credit,
       totalBill: calculateTotalBill(),
     };
-
-    selectedProducts.forEach((product) => {
-  const existingProduct = products.find((p) => p.id === product.id);
-  if (existingProduct) {
-    let batches = existingProduct.batchCode || [];
-    const currentBatch = batches.find(b => b.batchCode === product.batchCode);
     
-    // Check for existing purchase price match
-    const purchasePriceMatch = batches.find((batch) => batch.purchasePrice === product.purchasePrice);
-    
-    if (purchasePriceMatch) {
-      // Find the index of the matched batch
-      const matchedBatchIndex = batches.findIndex(batch => batch.batchCode === purchasePriceMatch.batchCode);
-      
-      // Update the matched batch in the batches array
-      if (matchedBatchIndex !== -1) {
-        batches[matchedBatchIndex].purchasePrice = product.purchasePrice;
-        batches[matchedBatchIndex].sellPrice = product.sellPrice;
-        batches[matchedBatchIndex].retailPrice = product.retailPrice;
-        
-        console.log(batches[matchedBatchIndex].quantity + "batches quantiy ")
-        batches[matchedBatchIndex].quantity =  Number(Number(batches[matchedBatchIndex].quantity) + Number(product.quantity)) ; // Update quantity
-     console.log(batches[matchedBatchIndex].quantity + "batches quantiy ") 
-      }
-    } else {
-      // Create a new batch if no match found
-      const nextBatchNumber = batches.length + 1;
-      const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
-      const newBatch = {
-        batchCode: newBatchCode,
-        purchasePrice: product.purchasePrice,
-        sellPrice: product.sellPrice,
-        retailPrice: product.retailPrice,
-        quantity: Number(product.quantity),
-      };
-      batches = [...batches, newBatch]; // Add the new batch to the array
-    }
-
-    // Update the product with the modified batches array
-    updateProduct(product.id, { ...existingProduct, batchCode: batches });
-  }
-});
-
-
-
-    addPurchase(newPurchase);
+    addPurchase(newPurchase1);
     setSelectedProducts([]);
     alert('Purchase added successfully!');
+    
   };
 
   const filteredProducts = products.filter((product) =>
@@ -181,7 +211,7 @@ const NewPurchases = () => {
       <h1 className="text-2xl font-bold text-center mb-6">New Purchase</h1>
 
       <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">Supplier</label>
+        <label className="block text-gray-700 font-medium mb-2">Supplier *</label>
         <div className="flex items-center space-x-2">
           <select
             className="select select-bordered w-full"
@@ -197,7 +227,8 @@ const NewPurchases = () => {
               </option>
             ))}
           </select>
-          <button className="btn btn-primary btn-sm flex items-center" onClick={handleAddSupplier}>
+        
+          <button className="btn btn-primary btn-sm flex items-center"  onClick={() => navigate("/people/suppliers")}>
             <AiOutlinePlus className="mr-1" /> Add Supplier
           </button>
         </div>
@@ -205,7 +236,7 @@ const NewPurchases = () => {
 
       <div className="mb-4">
         <label className="block text-gray-700 font-medium mb-2">Purchase Date</label>
-        <input type="date" className="input input-bordered w-full" max={currentDate} />
+        <input type="date"  value={currentDate} max={currentDate}  onChange={(e) => setCurrentDate(e.target.value)} className="input input-bordered w-full" />
       </div>
 
       <div className="mb-4">
@@ -239,11 +270,13 @@ const NewPurchases = () => {
               <th>Brand</th>
               <th>Units</th>
               <th>Batch Code</th>
+              <th>Expire Date</th>
               <th>Per Sell Price</th>
               <th>Per Retail Price</th>
               <th>Per Purchase Price</th>
               <th>Purchase Quantity</th>
               <th>Total</th>
+              <th className="">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -272,6 +305,15 @@ const NewPurchases = () => {
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                    <input
+  type="date"
+  value={selectedProducts[index].expirationDate || ''}
+  onChange={(e) => updateProductField(index, 'expirationDate', e.target.value)}
+  className="input input-bordered"
+/>
+
                     </td>
                     <td>
                       <input
@@ -318,6 +360,17 @@ const NewPurchases = () => {
                       />
                     </td>
                     <td>{product.total.toFixed(2)}</td>
+                    <td className="border border-gray-300 px-4 py-2">
+          <button
+            className="btn btn-error text-white px-3 py-1 rounded-md"
+            onClick={() => {
+              const updatedProducts = selectedProducts.filter((_, i) => i !== index);
+              setSelectedProducts(updatedProducts);
+            }}
+          >
+            ❌
+          </button>
+        </td>
                   </tr>
                 );
               })

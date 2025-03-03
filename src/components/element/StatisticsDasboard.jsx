@@ -174,8 +174,7 @@ const StatisticsDasboard = () => {
    
   
     const [salesData, setSalesData] = useState(generateSalesData(sales, costData, creditRecord));
-  console.log(salesData);
- console.log(filter)
+  
   useEffect(() => {
     // Regenerate salesData whenever language changes
     const updatedSalesData = generateSalesData(sales, costData, creditRecord);

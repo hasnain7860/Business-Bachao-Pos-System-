@@ -18,7 +18,7 @@ const Products = () => {
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedBatch, setSelectedBatch] = useState({});
-
+console.log(products)
     const handleFileChange = (event) => {
         const file = event.target.files[0];
         if (file) {

@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { ref, remove } from 'firebase/database'; // Import Firebase remove function
 import { clientDatabase} from './ClientFirebaseDb'; // Adjust the import path as needed
 const DB_NAME = 'pos-system';
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 
 // Define object store names
 export const STORE_NAMES = {
@@ -16,7 +16,9 @@ export const STORE_NAMES = {
   suppliers: 'suppliers',
   customers: 'customers',
   settings:'settings',
-  creditManagement: 'creditManagement'
+  creditManagement: 'creditManagement',
+  notifications: 'notifications',
+  notificationsDb: 'notificationsDb'
 };
 
 // Store name for tracking deleted items

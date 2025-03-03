@@ -10,6 +10,7 @@ import usePurchaseContext from './Logic/Purchase.jsx';
 import useSalesContext from './Logic/Sales.jsx';
 import useSettingsContext from './Logic/Settings.jsx';
 import useCreditManagementContext from './Logic/CreditManagement.jsx';
+import useNotificationContext from './Logic/Notifications.jsx';
 
 // Utility function for updating items in an array
 const updateItem = (items, id, updatedItem) =>
@@ -33,7 +34,7 @@ export const AppContextProvider = ({ children }) => {
   const supplierCustomerContext = useSupplierAndCustomerContext();
   const settingContext = useSettingsContext();
   const costContext = useCostContext();
-  
+  const notificationContext = useNotificationContext()
   const creditManagementContext = useCreditManagementContext();
   const purchaseContext = usePurchaseContext();
   const SaleContext = useSalesContext();
@@ -44,7 +45,6 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     // Check if settings is an array and has at least one element
     if (settings && settings.length > 0 && settings[0].business && settings[0].business.firebaseStorePass) {
-      console.log("true firebase: " + settings[0].business.firebaseStorePass);
       setIsAuthenticated(true);
     }
   }, [settings]); // Dependency array includes settings to run effect when settings change
@@ -58,6 +58,7 @@ export const AppContextProvider = ({ children }) => {
         setIsOpen,
         isAuthenticated,
         setIsAuthenticated,
+        notificationContext,
         companyContext,
         brandContext,
         unitContext,

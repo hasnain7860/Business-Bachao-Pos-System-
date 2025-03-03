@@ -147,7 +147,7 @@ const Suppliers = () => {
           onClick={openModal}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-{languageData[language].suppliers_management}
+{languageData[language].add_supplier}
 
           
         </button>

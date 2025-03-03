@@ -28,7 +28,7 @@ const AddProduct = () => {
   const [sellPrice, setSellPrice] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
   const [quantity, setQuantity] = useState("");
-
+const [expirationDate, setExpirationDate] = useState()
   const [batches, setBatches] = useState([]); // Array to store batch details
 
   useEffect(() => {
@@ -36,6 +36,7 @@ const AddProduct = () => {
       const product = context.productContext.products.find((p) => p.id == id);
 
       if (product) {
+ 
         setProductName(product.name || "");
         setSelectedCompany(product.companyId || "");
         setSelectedBrand(product.brandId || "");
@@ -61,6 +62,7 @@ const AddProduct = () => {
       // Find the batch details for the selected batch code
       const batch = batches.find((b) => b.batchCode === selectedBatch);
       if (batch) {
+        setExpirationDate(batch.expirationDate)
         setPurchasePrice(batch.purchasePrice);
         setSellPrice(batch.sellPrice);
         setRetailPrice(batch.retailPrice);
@@ -86,7 +88,9 @@ const AddProduct = () => {
     }
 
     const batchData = {
+  
       batchCode: edit ? selectedBatch : batchCode,
+      expirationDate,
       purchasePrice,
       sellPrice,
       retailPrice,
@@ -138,6 +142,7 @@ const AddProduct = () => {
       setSellPrice("");
       setRetailPrice("");
       setQuantity("");
+      setExpirationDate('')
     }
   };
 
@@ -305,6 +310,20 @@ const AddProduct = () => {
           />
         </div>
       )}
+
+ {/* Expiration Date */}
+ <div className="form-control mb-4">
+      <label className="label">
+        <span className="label-text">Expiration Date:</span>
+      </label>
+      <input
+        type="date"
+        value={expirationDate}
+        onChange={(e) => setExpirationDate(e.target.value)}
+        className="input input-bordered w-full"
+        
+      />
+    </div>
 
       {/* Purchase Price */}
       <div className="form-control mb-4">
