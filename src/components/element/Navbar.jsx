@@ -29,7 +29,7 @@ import { useAppContext } from '../../Appfullcontext.jsx';
 
 const Navbar = () => {
   const { setIsAuthenticated , settingContext,language,setLanguage} = useAppContext();
-
+const [notificationCount, setNotificationCount] = useState(0)
 
 const businessName = settingContext?.settings[0]?.business?.businessName || "POS System"
 
@@ -118,11 +118,22 @@ const toggleLanguage = () => {
     {businessName}
   </h1>
 
-  {/* Language & Sales Button */}
+  {/* Language, Notifications & Sales Button */}
   <div 
     className={`flex items-center space-x-4 transition-all duration-300 
     ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}
   >
+    {/* Notification Icon */}
+    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
+      🔔
+      {notificationCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          {notificationCount}
+        </span>
+      )}
+    </Link>
+
+    {/* Language Toggle Button */}
     <button
       onClick={toggleLanguage}
       className="p-2 bg-gray-700 rounded-full hover:bg-gray-600"
@@ -130,6 +141,7 @@ const toggleLanguage = () => {
       {languageData[language].toggle_language}
     </button>
 
+    {/* Sales Button */}
     <Link
       to="/sales/new"
       className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
@@ -138,6 +150,7 @@ const toggleLanguage = () => {
     </Link>
   </div>
 </nav>
+
 
 
       {/* Sidebar */}

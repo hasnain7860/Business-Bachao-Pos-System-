@@ -32,6 +32,7 @@ import ProtectedRoute from "./components/element/ProtectedRoute";
 import SaleReturn from "./Pages/SaleReturn";
 import AddPayments from "./Pages/AddPayments";
 import ViewPayments from "./Pages/ViewPayments";
+import Notification from "./Pages/Notification";
 // import eruda from 'eruda';
 
 function App() {
@@ -54,12 +55,23 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+
                 <Route
                     path="/profile"
                     element={
                         <ProtectedRoute>
                             <Layout>
                                 <Profile />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/notifications"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Notification/>
                             </Layout>
                         </ProtectedRoute>
                     }
