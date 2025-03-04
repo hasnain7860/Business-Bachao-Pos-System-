@@ -1,0 +1,119 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Ali Khan
+TEL;CELL:+923001234567
+EMAIL:ali.khan@example.com
+ADR:123 Street, Lahore, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Ayesha Ahmed
+TEL;CELL:+923112345678
+EMAIL:ayesha.ahmed@example.com
+ADR:456 Road, Karachi, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Hamza Malik
+TEL;CELL:+923221234567
+EMAIL:hamza.malik@example.com
+ADR:789 Avenue, Islamabad, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Zainab Fatima
+TEL;CELL:+923331234567
+EMAIL:zainab.fatima@example.com
+ADR:101 Block, Rawalpindi, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Usman Tariq
+TEL;CELL:+923441234567
+EMAIL:usman.tariq@example.com
+ADR:555 Lane, Multan, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Farhan Sheikh
+TEL;CELL:+923551234567
+EMAIL:farhan.sheikh@example.com
+ADR:888 Plaza, Faisalabad, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Noor Jahan
+TEL;CELL:+923661234567
+EMAIL:noor.jahan@example.com
+ADR:777 Park, Gujranwala, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Bilal Hussain
+TEL;CELL:+923771234567
+EMAIL:bilal.hussain@example.com
+ADR:222 Street, Peshawar, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Maryam Javed
+TEL;CELL:+923881234567
+EMAIL:maryam.javed@example.com
+ADR:333 Colony, Quetta, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Shahbaz Khan
+TEL;CELL:+923991234567
+EMAIL:shahbaz.khan@example.com
+ADR:444 Town, Hyderabad, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Imran Qureshi
+TEL;CELL:+923101234567
+EMAIL:imran.qureshi@example.com
+ADR:999 Heights, Sargodha, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Hira Ali
+TEL;CELL:+923211234567
+EMAIL:hira.ali@example.com
+ADR:666 Apartments, Bahawalpur, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Omer Riaz
+TEL;CELL:+923321234567
+EMAIL:omer.riaz@example.com
+ADR:111 Complex, Sukkur, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Sadia Nawaz
+TEL;CELL:+923431234567
+EMAIL:sadia.nawaz@example.com
+ADR:555 House, Sialkot, Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Kamran Abbasi
+TEL;CELL:+923541234567
+EMAIL:kamran.abbasi@example.com
+ADR:777 Society, Abbottabad, Pakistan
+END:VCARD

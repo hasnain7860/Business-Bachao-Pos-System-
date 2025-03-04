@@ -1,0 +1,149 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Ali
+EMAIL:m.ali@example.com
+TEL;CELL:+923001234567
+ADR:123 Street, Karachi
+CITY:Karachi
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Talal Ahmad
+EMAIL:talal.ahmad@example.com
+TEL;CELL:+923112345678
+ADR:456 Avenue, Lahore
+CITY:Lahore
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Rafaqat Hussain
+EMAIL:rafaqat.h@example.com
+TEL;CELL:+923221234567
+ADR:789 Road, Islamabad
+CITY:Islamabad
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Talha Nadeem
+EMAIL:talha.nadeem@example.com
+TEL;CELL:+923331234567
+ADR:101 Street, Peshawar
+CITY:Peshawar
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Zohaib
+EMAIL:m.zohaib@example.com
+TEL;CELL:+923441234567
+ADR:202 Block, Quetta
+CITY:Quetta
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Aashir
+EMAIL:m.aashir@example.com
+TEL;CELL:+923551234567
+ADR:303 Lane, Multan
+CITY:Multan
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Saqib Nawaz
+EMAIL:saqib.n@example.com
+TEL;CELL:+923661234567
+ADR:404 Plaza, Sialkot
+CITY:Sialkot
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Umar
+EMAIL:m.umar@example.com
+TEL;CELL:+923771234567
+ADR:505 House, Faisalabad
+CITY:Faisalabad
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Ismail
+EMAIL:m.ismail@example.com
+TEL;CELL:+923881234567
+ADR:606 Residency, Rawalpindi
+CITY:Rawalpindi
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Basharat
+EMAIL:m.basharat@example.com
+TEL;CELL:+923991234567
+ADR:707 Town, Gujranwala
+CITY:Gujranwala
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Shahid Mehmood
+EMAIL:shahid.m@example.com
+TEL;CELL:+923002345678
+ADR:808 Park, Hyderabad
+CITY:Hyderabad
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Noman
+EMAIL:m.noman@example.com
+TEL;CELL:+923113456789
+ADR:909 Square, Sukkur
+CITY:Sukkur
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Muhammad Bilal Akhtar
+EMAIL:m.bilal@example.com
+TEL;CELL:+923224567890
+ADR:1010 Area, Abbottabad
+CITY:Abbottabad
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Shoib Aslam
+EMAIL:shoib.aslam@example.com
+TEL;CELL:+923335678901
+ADR:1111 Colony, Bahawalpur
+CITY:Bahawalpur
+COUNTRY:Pakistan
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+FN:Mohsin Siddique
+EMAIL:mohsin.s@example.com
+TEL;CELL:+923446789012
+ADR:1212 Street, Gilgit
+CITY:Gilgit
+COUNTRY:Pakistan
+END:VCARD

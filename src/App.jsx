@@ -33,6 +33,7 @@ import SaleReturn from "./Pages/SaleReturn";
 import AddPayments from "./Pages/AddPayments";
 import ViewPayments from "./Pages/ViewPayments";
 import Notification from "./Pages/Notification";
+import ProductUploadPage from "./Pages/ProductUploadPage";
 // import eruda from 'eruda';
 
 function App() {
@@ -172,6 +173,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Products />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/inventory/upload-Products"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <ProductUploadPage />
                             </Layout>
                         </ProtectedRoute>
                     }

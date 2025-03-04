@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
+import { useNavigate } from "react-router-dom";
+
 const Unit = () => {
+  const navigate = useNavigate();
   const context = useAppContext(); 
   const {language} = context;
   const units = context.unitContext.units
@@ -43,13 +46,20 @@ const Unit = () => {
     setEditingUnitId(null);
     setUnitName("");
   };
-
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
         {languageData[language].manage_units}
       </h2>
-  
+
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="w-full mb-4 py-3 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+      >
+        {languageData[language].back}
+      </button>
+
       {/* Add/Edit Unit Form */}
       <form onSubmit={handleAddOrEditUnit} className="space-y-4">
         <div>
@@ -83,7 +93,7 @@ const Unit = () => {
           )}
         </div>
       </form>
-  
+
       {/* Unit List */}
       {units.length > 0 ? (
         <div className="mt-6">

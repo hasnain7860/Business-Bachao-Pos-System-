@@ -3,14 +3,14 @@ import React, { useState } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
-
+import {  useNavigate } from "react-router-dom";
 
 const Suppliers = () => {
   const context = useAppContext();
 
   const {language} = context;
  
-
+  const navigate = useNavigate();
   const suppliers = context.supplierCustomerContext.suppliers;
   
   const addSupplier = context.supplierCustomerContext.addSupplier;
@@ -131,6 +131,17 @@ const Suppliers = () => {
   return (
     <div className="p-4">
       {/* Header */}
+      {/* Back Button */}
+      <div className={`mb-4 flex ${language === "ur" ? "justify-end" : "justify-start"}`}>
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center gap-2 bg-gray-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"
+  >
+    {language === "ur" ? null : "🔙"}
+    <span>{languageData[language].back}</span>
+    {language === "ur" ? "🔙" : null}
+  </button>
+</div>
       <h1
   className={`text-2xl font-bold mb-2 ${
     language === "ur" ? "text-right" : "text-left"
@@ -152,26 +163,35 @@ const Suppliers = () => {
           
         </button>
       </div>
+{/* VCF File Upload Section */}
+<div
+  className={`mb-4 flex items-center gap-2 ${
+    language === "ur" ? "flex-row-reverse text-right" : ""
+  }`}
+>
+  <label className="inline-flex items-center">
+    <input
+      type="file"
+      accept=".vcf"
+      onChange={handleVcfUpload}
+      className="hidden"
+    />
+    <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+      {languageData[language].upload_contacts}
+    </span>
+  </label>
+  <span className="ml-2 text-gray-500">{languageData[language].upload_vcf}</span>
 
-      {/* VCF File Upload Section */}
-      <div
-    className={`mb-4 flex items-center gap-2 ${
-      language === "ur" ? "flex-row-reverse text-right" : ""
-    }`}
+  {/* Demo VCF File Download Button */}
+  <a
+    href="/supplier.vcf" // یہاں اپنی VCF فائل کا اصل لنک دیں
+    download="supplier.vcf"
+    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
   >
-        <label className="inline-flex items-center">
-          <input
-            type="file"
-            accept=".vcf"
-            onChange={handleVcfUpload}
-            className="hidden"
-          />
-          <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-          {languageData[language].upload_contacts}
-          </span>
-        </label>
-        <span className="ml-2 text-gray-500">    {languageData[language].upload_vcf}</span>
-      </div>
+    {languageData[language].download_demo}
+  </a>
+</div>
+
 
       {/* Supplier List */}
       <div
@@ -222,7 +242,7 @@ const Suppliers = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
-              {isEditing ? edit_supplier : languageData[language].add_supplier}
+              {isEditing ? languageData[language].edit_supplier : languageData[language].add_supplier}
             </h2>
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 gap-4">
@@ -251,7 +271,7 @@ const Suppliers = () => {
                 <div>
                   <label className="block font-bold">{languageData[language].phone} *</label>
                   <input
-                    type="number"
+                    type="tel"
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}

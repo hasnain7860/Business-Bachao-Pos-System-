@@ -20,13 +20,17 @@ const useProductContext = () => {
 
   const refreshData = async () => {
     const updatedData = await getItems(STORE_NAMES.products);
-    setProducts(updatedData);
+  setProducts(updatedData);
   };
 
 const addProduct = async (newProduct) => {
-     await addItem(STORE_NAMES.products, newProduct);
-    setProducts((prev) => [...prev, { ...newProduct
-    }]);
+  await addItem(STORE_NAMES.products, newProduct);
+  await refreshData()
+  //  await setProducts((prev) => [...prev, { ...newProduct
+  //   }]);
+
+   
+    
   };
   
   

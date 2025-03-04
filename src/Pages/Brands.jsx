@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
+import { useNavigate } from "react-router-dom";
 const Brand = () => {
-  
+  const navigate = useNavigate();
   const context = useAppContext(); 
   const companies = context.companyContext.companies
   const brands = context.brandContext.brands
@@ -63,10 +64,18 @@ console.log(selectedCompanyId)
 
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
+      {/* Back Button Full Width */}
+      <button
+        onClick={() => navigate(-1)}
+        className="w-full mb-4 py-3 bg-gray-500 text-white font-semibold rounded-md flex items-center justify-center hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+      >
+        ⬅ {languageData[language].back}
+      </button>
+
       <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
         {languageData[language].manage_brands}
       </h2>
-  
+
       {/* Show message if no companies are available */}
       {companies.length === 0 ? (
         <p className="text-center text-red-500">
@@ -95,7 +104,7 @@ console.log(selectedCompanyId)
               ))}
             </select>
           </div>
-  
+
           {/* Brand name input */}
           <div>
             <label className="block text-gray-700 text-sm font-medium">
@@ -110,7 +119,7 @@ console.log(selectedCompanyId)
               className="w-full p-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-  
+
           {/* Add/Edit Brand button */}
           <div className="flex space-x-4">
             <button
@@ -133,7 +142,7 @@ console.log(selectedCompanyId)
           </div>
         </form>
       )}
-  
+
       {/* Brand List */}
       {brands.length > 0 && (
         <div className="mt-6">

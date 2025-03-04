@@ -6,9 +6,10 @@ import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
-
+import {  useNavigate } from "react-router-dom";
 const Products = () => {
     const context = useAppContext();
+    const navigate = useNavigate();
     const products = context.productContext.products;
     const addProduct = context.productContext.add;
     const edit = context.productContext.edit;
@@ -92,27 +93,33 @@ console.log(products)
 
     return (
         <div className="p-6">
+
+              {/* Back Button */}
+         <div className={`mb-4 flex ${language === "ur" ? "justify-end" : "justify-start"}`}>
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center gap-2 bg-gray-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"
+  >
+    {language === "ur" ? null : "🔙"}
+    <span>{languageData[language].back}</span>
+    {language === "ur" ? "🔙" : null}
+  </button>
+</div>
+
     <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'}`}>
     <h1 className="text-2xl font-semibold">{languageData[language].products}</h1>
 </div>
 
 <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
-    <input 
-        type="file" 
-        accept=".xlsx, .xls" 
-        onChange={handleFileChange} 
-        className="hidden" 
-        id="file-upload" 
-    />
-    <label htmlFor="file-upload" className="btn btn-primary cursor-pointer">
-        {languageData[language].upload_products}
-    </label>
-
+   
+    {/* Add Product Button */}
     <Link to="/inventory/addProduct">
         <button className="btn btn-primary">
             {languageData[language].add_product}
         </button>
     </Link>
+
+    
 </div>
 
 
