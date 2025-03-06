@@ -5,10 +5,11 @@ import { v4 as uuidv4 } from "uuid";
 import { Link } from "react-router-dom";
 import PaymentDetails from "../components/element/PaymentDetails.jsx";
 import languageData from "../assets/languageData.json";
-
+import { useNavigate } from 'react-router-dom';
 const CreditManagement = () => {
   const context = useAppContext();
   const {language} = context;
+  const navigate = useNavigate();
   const customers = context.supplierCustomerContext.customers;
   const salesData = context.SaleContext.Sales;
   const t = languageData[language];
@@ -105,6 +106,15 @@ console.log(submittedRecords)
   const grandCredit = Number(totalSalesCredit) + Number(totalExistRecordCredit);
   return (
     <div className="p-4 bg-gray-50">
+      <div className={`mt-4 ${language === 'ur' ? "text-right" : "text-left"}`}>
+  <button
+    className="bg-gray-300 text-black px-4 py-2 rounded"
+    onClick={() => navigate(-1)}
+  >
+ {languageData[language].back}
+  </button>
+</div>
+
       <h1 className="text-lg font-bold mb-4 text-blue-600">
       {t.creditManagement}
       </h1>

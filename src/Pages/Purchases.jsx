@@ -44,9 +44,14 @@ const userAndBusinessDetail = context.settingContext.settings;
 
   return (
     <div className={`p-4 ${language === 'ur' ? 'rtl' : 'ltr'}`} dir={language === 'ur' ? 'rtl' : 'ltr'}>
-      <button onClick={handleAddPurchase} className="mb-4 btn btn-primary">
-        {languageData[language].add_purchase}
-      </button>
+      <div className="flex justify-between mb-4">
+        <button onClick={handleAddPurchase} className="btn btn-primary">
+          {languageData[language].add_purchase}
+        </button>
+        <button onClick={() => navigate(-1)} className="btn  btn-secondary" style={{ alignSelf: 'flex-start', marginLeft: language === 'ur' ? 'auto' : '8px', marginRight: language === 'ur' ? '8px' : 'auto' }}>
+          {languageData[language].back}
+        </button>
+      </div>
   
       <div className="overflow-x-auto">
         <table className="table w-full">
@@ -107,6 +112,7 @@ const userAndBusinessDetail = context.settingContext.settings;
       </div>
     </div>
   );
+  
   
 };
 

@@ -69,6 +69,14 @@ console.log(sales)
 
   return (
     <div className={`container mx-auto p-6 bg-white shadow-md rounded-lg ${language === 'ur' ? 'rtl' : 'ltr'}`} dir={language === 'ur' ? 'rtl' : 'ltr'}>
+  
+   <button 
+  className={`flex items-center gap-2 bg-gray-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-gray-600 transition duration-200 ${language === 'ur' ? 'float-right' : 'float-left'}`}
+  onClick={() => navigate(-1)}
+>
+  {languageData[language].back}
+</button>
+
     <h1 className="text-2xl font-bold text-center mb-6">{languageData[language].sales_records}</h1>
   
     {/* Search Input */}
