@@ -21,7 +21,7 @@ const Products = () => {
     const [selectedBatch, setSelectedBatch] = useState({});
 
 
-
+   
    
 
     const handleBatchChange = (productId, batchIndex) => {
@@ -85,9 +85,11 @@ const Products = () => {
     
             {/* Products Table */}
             <div className="overflow-x-auto">
+          
     <table className="table w-full table-auto border-collapse">
         <thead>
             <tr className={language === 'ur' ? 'text-right' : 'text-left'}>
+
                 {language === 'ur' ? (
                     <>
                         <th className="p-2 border-b">{languageData[language].actions}</th>
@@ -166,7 +168,7 @@ const Products = () => {
                                         </div>
                                     )}
                                 </td>
-                                <td className="p-2 border-b">{product.namInUrdu}</td>
+                                <td className="p-2 border-b">{product.nameInUrdu}</td>
                                 <td className="p-2 border-b">{product.name}</td>
                                 <td className="p-2 border-b">{l + 1}</td>
                             </>
@@ -174,7 +176,7 @@ const Products = () => {
                             <>
                                 <td className="p-2 border-b">{l + 1}</td>
                                 <td className="p-2 border-b">{product.name}</td>
-                                <td className="p-2 border-b">{product.namInUrdu}</td>
+                                <td className="p-2 border-b">{product.nameInUrdu}</td>
                                 <td className="p-2 border-b">
                                     {product.productImage ? (
                                         <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
