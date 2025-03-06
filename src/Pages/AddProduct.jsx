@@ -19,6 +19,7 @@ const AddProduct = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
   const [productName, setProductName] = useState("");
   const [productImage, setProductImage] = useState(null);
+  const [productNameInUrdu, setProductNameInUrdu] = useState(null);
   const [edit, setEdit] = useState(false);
   const [preview, setPreview] = useState(""); // For previewing the image
 
@@ -38,6 +39,7 @@ const [expirationDate, setExpirationDate] = useState()
       if (product) {
  
         setProductName(product.name || "");
+        setProductNameInUrdu(product.NameInUrdu || "");
         setSelectedCompany(product.companyId || "");
         setSelectedBrand(product.brandId || "");
         setSelectedUnit(product.unitId || "");
@@ -72,7 +74,7 @@ const [expirationDate, setExpirationDate] = useState()
   }, [selectedBatch, batches]);
 
   const handleSaveProduct = () => {
-    if (!productName || !selectedCompany || !selectedBrand || !selectedUnit) {
+    if (!productName || !productNameInUrdu || !selectedCompany || !selectedBrand || !selectedUnit) {
       alert("Please fill all required fields.");
       return;
     }
@@ -111,6 +113,7 @@ const [expirationDate, setExpirationDate] = useState()
     const productData = {
       id: edit ? id : uuidv4(),
       name: productName,
+      namInUrdu: productNameInUrdu,
       companyId: selectedCompany,
       brandId: selectedBrand,
       unitId: selectedUnit,
@@ -134,6 +137,7 @@ const [expirationDate, setExpirationDate] = useState()
     // Clear fields if not editing
     if (!edit) {
       setProductName("");
+      setProductNameInUrdu("")
       setSelectedCompany("");
       setSelectedBrand("");
       setSelectedUnit("");
@@ -177,15 +181,29 @@ const [expirationDate, setExpirationDate] = useState()
         {edit ? "Update Product" : "Add Product"}
       </h2>
 
-      {/* Product Name */}
+      {/* Product Name in English */}
       <div className="form-control mb-4">
         <label className="label">
-          <span className="label-text">Product Name*:</span>
+          <span className="label-text">Product Name in English*:</span>
         </label>
         <input
           type="text"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
+          placeholder="Enter product name"
+          className="input input-bordered w-full"
+          required
+        />
+      </div>   
+      {/* Product Name  in Urdu*/}
+      <div className="form-control mb-4">
+        <label className="label">
+          <span className="label-text">Product Name in Urdu *:</span>
+        </label>
+        <input
+          type="text"
+          value={productNameInUrdu}
+          onChange={(e) => setProductNameInUrdu(e.target.value)}
           placeholder="Enter product name"
           className="input input-bordered w-full"
           required

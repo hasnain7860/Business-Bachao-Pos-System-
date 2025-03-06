@@ -258,20 +258,21 @@ const toggleLanguage = () => {
                      {languageData[language].brands}
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/inventory/upload-Products"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].upload_products}
-                </Link>
-              </li>
+             
               <li>
                 <Link
                   to="/inventory/products"
                   className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
                 >
                        {languageData[language].products}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/inventory/upload-Products"
+                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
+                >
+                       {languageData[language].upload_products}
                 </Link>
               </li>
               <li>

@@ -139,13 +139,16 @@ console.log(products)
                         <th className="p-2 border-b">{languageData[language].batch_stock}</th>
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
+                        <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
                         <th className="p-2 border-b">{languageData[language].product_name}</th>
                         <th className="p-2 border-b">{languageData[language].no}</th>
                     </>
                 ) : (
                     <>
                         <th className="p-2 border-b">{languageData[language].no}</th>
+                       
                         <th className="p-2 border-b">{languageData[language].product_name}</th>
+                        <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
                         <th className="p-2 border-b">{languageData[language].batch_stock}</th>
@@ -203,6 +206,7 @@ console.log(products)
                                         </div>
                                     )}
                                 </td>
+                                <td className="p-2 border-b">{product.namInUrdu}</td>
                                 <td className="p-2 border-b">{product.name}</td>
                                 <td className="p-2 border-b">{l + 1}</td>
                             </>
@@ -210,6 +214,7 @@ console.log(products)
                             <>
                                 <td className="p-2 border-b">{l + 1}</td>
                                 <td className="p-2 border-b">{product.name}</td>
+                                <td className="p-2 border-b">{product.namInUrdu}</td>
                                 <td className="p-2 border-b">
                                     {product.productImage ? (
                                         <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
