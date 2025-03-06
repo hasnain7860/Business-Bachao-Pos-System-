@@ -19,52 +19,10 @@ const Products = () => {
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedBatch, setSelectedBatch] = useState({});
-console.log(products)
-    const handleFileChange = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            setSelectedFile(file.name);
-            const confirmUpload = window.confirm(`Are you sure you want to upload the file: ${file.name}?`);
-            if (confirmUpload) {
-                handleFileUpload(file);
-            }
-        }
-    };
 
-    const handleFileUpload = (file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-            const formattedData = jsonData.map((item) => {
-                const uniqueId = uuidv4();
-                const name = item.name || "";
-                if (!name) return null;
 
-                return {
-                    brandId: item.brandId ? item.brandId.toString() : '',
-                    companyId: item.companyId ? item.companyId.toString() : '',
-                    id: uniqueId,
-                    name: name,
-                    productImage: null,
-                    batchCode: item.batchCode || [],
-                    unitId: item.unitId ? item.unitId.toString() : '',
-                };
-            }).filter(item => item !== null);
-
-            if (formattedData.length === 0) {
-                setUploadMessage("No valid products found - all entries are missing names.");
-                return;
-            }
-
-            formattedData.forEach((product) => addProduct(product));
-            setUploadMessage("Products uploaded successfully!");
-        };
-        reader.readAsArrayBuffer(file);
-    };
+   
 
     const handleBatchChange = (productId, batchIndex) => {
         setSelectedBatch((prevState) => ({
@@ -137,6 +95,7 @@ console.log(products)
                         <th className="p-2 border-b">{languageData[language].sell_price}</th>
                         <th className="p-2 border-b">{languageData[language].purchase_price}</th>
                         <th className="p-2 border-b">{languageData[language].batch_stock}</th>
+                       
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
                         <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
@@ -151,6 +110,7 @@ console.log(products)
                         <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
+                   
                         <th className="p-2 border-b">{languageData[language].batch_stock}</th>
                         <th className="p-2 border-b">{languageData[language].purchase_price}</th>
                         <th className="p-2 border-b">{languageData[language].sell_price}</th>
@@ -225,6 +185,7 @@ console.log(products)
                                     )}
                                 </td>
                                 <td className="p-2 border-b">{totalStock}</td>
+                                
                                 <td className="p-2 border-b">
                                     <select 
                                         onChange={(e) => handleBatchChange(product.id, e.target.value)}

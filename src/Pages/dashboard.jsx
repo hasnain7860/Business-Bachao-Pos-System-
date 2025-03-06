@@ -14,12 +14,12 @@ const POSDashboard = () => {
   const products = context.productContext.products;
   const {language} = context;
 
-  useEffect(() => {
+  // useEffect(() => {
    
-    checkExpiringProducts(context)
+  //   // checkExpiringProducts(context)
 
 
-  }, []);
+  // }, []);
 
 
 

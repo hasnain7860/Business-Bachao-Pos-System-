@@ -56,6 +56,7 @@ const StatisticsDasboard = () => {
           0
         );
 
+         console.log(dailyCost)
       
         let weeklyCost = costData.reduce((acc, cost) => {
           const costDate = new Date(cost.date);

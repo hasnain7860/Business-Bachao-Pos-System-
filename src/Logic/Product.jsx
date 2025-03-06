@@ -6,7 +6,7 @@ const useProductContext = () => {
     // Product context
   const [products, setProducts] = useState([]);
   
-  console.log(products)
+
   
     // Load units from IndexedDB when the component mounts
   useEffect(() => {
