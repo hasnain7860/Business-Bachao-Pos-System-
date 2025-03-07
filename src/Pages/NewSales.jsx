@@ -222,42 +222,52 @@ const handleSaveSales = async () => {
           placeholder="Search product"
           className="input input-bordered w-full"
         />
-        <div className="overflow-y-auto max-h-60 mt-2">
-          {products.length === 0 ? (
-            <div>No products available.</div>
-          ) : (
-            products
-              .filter(product => product.name.includes(searchProduct))
-              .map(product => (
-                <div key={product.id} className="py-2 border-b">
-                  <div className="pl-4">
-                    {product.batchCode.map(batch => (
-                      <div key={batch.batchCode} className="flex justify-between items-center py-1">
-                        <span>{product.name} - Batch: {batch.batchCode} - Stock: {batch.quantity}</span>
-                        {batch.quantity > 0 ? (
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-outline"
-                            onClick={() => handleAddProduct(product, batch)}
-                          >
-                            Add Batch
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-outline"
-                            disabled
-                          >
-                            Out of Stock
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+ <div className="overflow-y-auto max-h-60 mt-2">
+  {products.length === 0 ? (
+    <div>No products available.</div>
+  ) : (
+    products
+      .filter(product => 
+        product.name.includes(searchProduct) || 
+        product.nameInUrdu.includes(searchProduct)
+      )
+      .map(product => (
+        product.batchCode && product.batchCode.length > 0 ? (
+          <div key={product.id} className="py-2 border-b">
+            <div className="pl-4">
+              {product.batchCode.map(batch => (
+                <div key={batch.batchCode} className="flex justify-between items-center py-1">
+                  <span>
+                    {product.name || "Unnamed Product"} ({product.nameInUrdu || "نام نہیں"}) - 
+                    Batch: {batch.batchCode} - Stock: {batch.quantity}
+                  </span>
+                  {batch.quantity > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-outline"
+                      onClick={() => handleAddProduct(product, batch)}
+                    >
+                      Add Batch
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-outline"
+                      disabled
+                    >
+                      Out of Stock
+                    </button>
+                  )}
                 </div>
-              ))
-          )}
-        </div>
+              ))}
+            </div>
+          </div>
+        ) : null
+      ))
+  )}
+</div>
+
+
       </div>
 
       <div className="overflow-x-auto mt-4">

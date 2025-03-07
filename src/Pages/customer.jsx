@@ -111,32 +111,57 @@ const Customers = () => {
     }
   };
 
-  const extractCustomersFromVcf = (vcfContent) => {
+
+
+
+
+  const decodeQuotedPrintable = (input) => {
+    // Soft line breaks remove karna
+    input = input.replace(/=\r?\n/g, "");
+
+    return input.replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {
+        return String.fromCharCode(parseInt(hex, 16));
+    });
+};
+
+
+
+const extractCustomersFromVcf = (vcfContent) => {
     const customers = [];
     const entries = vcfContent.split("END:VCARD");
-    
+
     entries.forEach(entry => {
-      if (entry.includes("BEGIN:VCARD")) {
-        const nameMatch = entry.match(/FN:(.*)/);
-        const phoneMatch = entry.match(/TEL;CELL:(.*)/);
-        const emailMatch = entry.match(/EMAIL:(.*)/);
-        const addressMatch = entry.match(/ADR:(.*)/);
+        if (entry.includes("BEGIN:VCARD")) {
+            let nameMatch = entry.match(/FN[:;]?(?:CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:)?(.*)/i);
+            let phoneMatch = entry.match(/TEL[^:]*:(.*)/);
+            let emailMatch = entry.match(/EMAIL[^:]*:(.*)/);
+            let addressMatch = entry.match(/ADR[^:]*:(.*)/);
 
-        const customer = {
-          id: uuidv4(), // Create a unique ID
-          name: nameMatch ? nameMatch[1].trim() : "Unknown",
-          email: emailMatch ? emailMatch[1].trim() : "",
-          phone: phoneMatch ? phoneMatch[1].trim() : "",
-          address: addressMatch ? addressMatch[1].trim() : "",
-          image: null // Placeholder for image handling
-        };
+            let name = nameMatch ? decodeQuotedPrintable(nameMatch[1].trim()) : "Unknown";
+            let phone = phoneMatch ? phoneMatch[1].trim() : "";
+            let email = emailMatch ? emailMatch[1].trim() : "";
+            let address = addressMatch ? decodeQuotedPrintable(addressMatch[1].trim()) : "";
 
-        customers.push(customer);
-      }
+            // Convert decoded name and address to proper UTF-8
+            try {
+                const utf8Decoder = new TextDecoder("utf-8");
+                const encodedName = new Uint8Array([...name].map(c => c.charCodeAt(0)));
+                const encodedAddress = new Uint8Array([...address].map(c => c.charCodeAt(0)));
+
+                name = utf8Decoder.decode(encodedName);
+                address = utf8Decoder.decode(encodedAddress);
+            } catch (e) {
+                console.error("Text decoding error:", e);
+            }
+
+            customers.push({ id: uuidv4(), name, phone, email, address });
+        }
     });
 
     return customers;
-  };
+};
+
+
 
   return (
     <div className="p-4">

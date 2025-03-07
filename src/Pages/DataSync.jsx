@@ -83,7 +83,7 @@ const DataSync = () => {
         const itemRef = ref(clientDatabase, `${currentStore}/${item.id}`);
         await set(itemRef, item);
       }
-      
+      deleteItemsFromFirebase()
       toast.success('All offline items synced to Firebase successfully!', {
         className: 'bg-blue-500 text-white',
       });
