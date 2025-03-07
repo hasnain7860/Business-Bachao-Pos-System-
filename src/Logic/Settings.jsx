@@ -48,21 +48,29 @@ const useSettingsContext = () => {
 
   // 🟢 Add or Update Setting (with UUID for first-time entry)
   const saveSetting = useCallback(async (newSetting) => {
+    console.log("saveSetting called with:", newSetting); // Add this log
     try {
       const existingSettings = await getItems(STORE_NAMES.settings);
-
+      console.log("Existing settings:", existingSettings); // Add this log
+  
       if (existingSettings.length > 0) {
-        // 🔹 Update existing setting
-        await editSetting(existingSettings[0].id, newSetting);
+        console.log("Updating existing setting"); // Add this log
+        const updatedSetting = await editSetting(existingSettings[0].id, newSetting);
+        console.log("Setting updated:", updatedSetting); // Add this log
+        return { ...existingSettings[0], ...newSetting };
       } else {
-        // 🔹 Add new setting with UUID
+        console.log("Adding new setting"); // Add this log
         const settingWithId = { ...newSetting, id: uuidv4() };
-        await addItem(STORE_NAMES.settings, settingWithId);
+        const addedSetting = await addItem(STORE_NAMES.settings, settingWithId);
+        console.log("Setting added:", addedSetting); // Add this log
         setSettings([settingWithId]);
         setSelectedSetting(settingWithId);
+        return settingWithId;
       }
     } catch (error) {
       console.error("❌ Failed to save setting:", error);
+      console.log("saveSetting returning rejected promise"); //add this log
+      return Promise.reject(error);
     }
   }, [editSetting]);
 

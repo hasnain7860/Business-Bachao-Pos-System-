@@ -152,23 +152,23 @@ const [expirationDate, setExpirationDate] = useState()
 
   
   // Handle image selection
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProductImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result); // Convert file to base64 string for preview
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // const handleImageChange = (e) => {
+  //   const file = e.target.files[0];
+  //   if (file) {
+  //     setProductImage(file);
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       setPreview(reader.result); // Convert file to base64 string for preview
+  //     };
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
 
-  // Handle image removal
-  const handleRemoveImage = () => {
-    setProductImage(null);
-    setPreview("");
-  };
+  // // Handle image removal
+  // const handleRemoveImage = () => {
+  //   setProductImage(null);
+  //   setPreview("");
+  // };
 
   // Filter brands based on selected company
   const filteredBrands = brands.filter(
@@ -404,7 +404,7 @@ const [expirationDate, setExpirationDate] = useState()
       </div>
 
       {/* Product Image Upload */}
-      <div className="product-image-upload">
+      {/* <div className="product-image-upload">
         <label className="block mb-2 text-sm font-medium">
           Upload Product Image
         </label>
@@ -431,7 +431,7 @@ const [expirationDate, setExpirationDate] = useState()
             className="file-input file-input-bordered file-input-primary w-full max-w-xs"
           />
         )}
-      </div>
+      </div> */}
 
       {/* Add or Update Product Button */}
       <div className="form-control mt-6">

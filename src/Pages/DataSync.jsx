@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { clientDatabase, ClientDatabaseInitializer } from '../Utils/ClientFirebaseDb.jsx';
+import { clientDatabase} from '../Utils/ClientFirebaseDb.jsx';
 import { ref, onValue, set, off } from 'firebase/database';
 import { FaSync, FaTrash, FaUpload } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import { useAppContext } from "../Appfullcontext.jsx";
-
+import refreshData from "../Utils/refreshData.jsx";
 import {
   getItems,
   deleteItemsFromFirebase,
@@ -20,18 +20,6 @@ const DataSync = () => {
   const [currentStore, setCurrentStore] = useState(STORE_NAMES.products);
   const [isFetching, setIsFetching] = useState(false); // State to track fetching
 
-  const refreshData = async () => {
-    await context.companyContext.refreshData();
-    await context.brandContext.refreshData();
-    await context.unitContext.refreshData();
-    await context.productContext.refreshData();
-    await context.supplierCustomerContext.refreshData();
-    await context.settingContext.refreshData();
-    await context.creditManagementContext.refreshData();
-    await context.purchaseContext.refreshData();
-    await context.SaleContext.refreshData();
-    console.log("✅ All contexts refreshed successfully!");
-  };
 
   const checkInternet = async () => {
     try {
@@ -66,7 +54,7 @@ const DataSync = () => {
           className: 'bg-green-500 text-white',
         });
 
-        refreshData();
+        refreshData(context);
         fetchOfflineData();
         off(dataRef); // Firebase listener stop karna
         setIsFetching(false); // Enable selection & button
@@ -101,7 +89,7 @@ const DataSync = () => {
       });
 
       setIsFetching(false);
-      refreshData();
+      refreshData(context);
       fetchOfflineData();
     } else {
       toast.error('Internet is Not Working, check and try Again', {
@@ -117,7 +105,7 @@ const DataSync = () => {
 
   return (
     <div className="container mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <ClientDatabaseInitializer/>
+  
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} closeOnClick />
       
       <h1 className="text-3xl font-bold mb-6 text-center">Data Synchronization</h1>

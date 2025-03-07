@@ -6,7 +6,8 @@ import { adminDb } from '../Utils/AuthViaFirebase.jsx';
 import { collection, getDocs } from "firebase/firestore";
 import bcrypt from 'bcryptjs';
 import Cookies from 'js-cookie';
-
+import { syncDataInRealTime } from "../Logic/syncDataInRealTime.jsx"
+import { ClientDatabaseInitializer } from "../Utils/ClientFirebaseDb.jsx";
 
 
 const Login = () => {
@@ -53,7 +54,7 @@ const Login = () => {
             user: { name: '', phoneNo: '', email: '', signature: '' },
             business: { businessName: '', phoneNo: '', email: '', currency: '$', role: '', firebaseStorePass: user.AdminFirebaseObject }
           });
-
+          
           setIsAuthenticated(true);
           return;
         }
@@ -71,12 +72,20 @@ const Login = () => {
   // Use useEffect to call saveSetting after form state updates
   useEffect(() => {
     if (form.business.firebaseStorePass) {
-      // Call saveSetting with the updated form
-      saveSetting(form).catch(err => {
-        console.error("Failed to save setting:", err);
-      });
+      ClientDatabaseInitializer(JSON.parse(form.business.firebaseStorePass))   
+      syncDataInRealTime(context);
+      // .then(() => {
+         
+        
+      //     // setTimeout(() => {
+           
+      //     // }, 8000); // 2000 milliseconds = 2 seconds
+      //   })
+      //   .catch((err) => {
+      //     console.error('Failed to save setting:', err);
+      //   });
     }
-  }, [form, saveSetting]);
+  }, [form, saveSetting, context]);
 
   if (isAuthenticated) {
     return <Navigate to="/" />;
