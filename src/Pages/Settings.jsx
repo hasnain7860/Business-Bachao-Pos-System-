@@ -24,7 +24,7 @@ const Settings = () => {
 
   const [formData, setFormData] = useState({
     user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: '' }
+    business: { businessName: '', phoneNo: '', email: '',address: '', currency: '', role: '', firebaseStorePass: '' }
   });
 
    console.log(formData)
@@ -84,7 +84,7 @@ const Settings = () => {
 
       <h2 className="text-2xl font-bold mt-8 mb-4">Business Information</h2>
       <div className="space-y-4">
-        {['businessName', 'phoneNo', 'email', 'currency'].map((field, k) => (
+        {['businessName', 'phoneNo', 'email','address', 'currency'].map((field, k) => (
           <InputField
             key={k}
             label={field.charAt(0).toUpperCase() + field.slice(1)}
