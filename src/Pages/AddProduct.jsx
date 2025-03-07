@@ -39,7 +39,7 @@ const [expirationDate, setExpirationDate] = useState()
       if (product) {
  
         setProductName(product.name || "");
-        setProductNameInUrdu(product.NameInUrdu || "");
+        setProductNameInUrdu(product.nameInUrdu || "");
         setSelectedCompany(product.companyId || "");
         setSelectedBrand(product.brandId || "");
         setSelectedUnit(product.unitId || "");
@@ -113,7 +113,7 @@ const [expirationDate, setExpirationDate] = useState()
     const productData = {
       id: edit ? id : uuidv4(),
       name: productName,
-      namInUrdu: productNameInUrdu,
+      nameInUrdu: productNameInUrdu,
       companyId: selectedCompany,
       brandId: selectedBrand,
       unitId: selectedUnit,
