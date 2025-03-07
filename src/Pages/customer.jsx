@@ -311,12 +311,12 @@ const extractCustomersFromVcf = (vcfContent) => {
 />
                 </div>
                 <div>
-                  <label className="block font-bold">{languageData[language].address} *</label>
+                  <label className="block font-bold">{languageData[language].address} </label>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    required
+                  
                     className="w-full p-2 border rounded"
                   />
                 </div>
