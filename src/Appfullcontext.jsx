@@ -1,5 +1,5 @@
 
-import React, { createContext, useEffect, useContext, useState } from 'react';
+import React, { createContext, useEffect, useContext, useState , useRef } from 'react';
 import useCompanyContext from './Logic/Company.jsx';
 import useBrandsContext from './Logic/Brands.jsx';
 import useUnitsContext from './Logic/Units.jsx';
@@ -26,7 +26,8 @@ const AppContext = createContext();
 // Context Provider
 export const AppContextProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
- 
+  
+ const afterFirstTimeCheck = useRef(false);
   // Contexts
   const companyContext = useCompanyContext();
   const brandContext = useBrandsContext();
@@ -46,9 +47,12 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     // Check if settings is an array and has at least one element
     if (settings && settings.length > 0 && settings[0].business && settings[0].business.firebaseStorePass) {
+      if(!afterFirstTimeCheck){
       setIsAuthenticated(true);
       
        ClientDatabaseInitializer(JSON.parse(settings[0].business.firebaseStorePass))
+       afterFirstTimeCheck.current = true ;
+    }
     }
   }, [settings]); // Dependency array includes settings to run effect when settings change
 
