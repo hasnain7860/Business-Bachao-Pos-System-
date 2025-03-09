@@ -39,18 +39,18 @@ const ProductUploadPage = () => {
                     errors.push(`Invalid or missing UUID: ${product.id || "N/A"}`);
                     continue;
                 }
-                if (!product.name) {
-                    errors.push(`Missing product name in english for ID: ${product.id}`);
-                    continue;
-                }
-                if (!product.nameInUrdu) {
-                    errors.push(`Missing product name in urdu for ID: ${product.id}`);
-                    continue;
-                }
-                if (!product.batchCode) {
-                    errors.push(`Missing batch code for product: ${product.name}`);
-                    continue;
-                }
+                // if (!product.name) {
+                //     errors.push(`Missing product name in english for ID: ${product.id}`);
+                //     continue;
+                // }
+                // if (!product.nameInUrdu) {
+                //     errors.push(`Missing product name in urdu for ID: ${product.id}`);
+                //     continue;
+                // }
+                // if (!product.batchCode) {
+                //     errors.push(`Missing batch code for product: ${product.name}`);
+                //     continue;
+                // }
     
                 const batchData = {
                     batchCode: product.batchCode,
@@ -78,7 +78,7 @@ const ProductUploadPage = () => {
                     const newProduct = {
                         id: product.id,
                         name: product.name,
-                        nameInUrdu: product.nameInUrdu || "Unknown Product",
+                        nameInUrdu: product.nameInUrdu ,
                         companyId: product.companyId || null,
                         brandId: product.brandId || null,
                         unitId: product.unitId || null,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { updateItem, deleteItem } from './UpdateDeleteUntils.jsx';
-import { addItem, getItems, deleteAndTrackItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
+import { addItem, getItems, deleteItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
 
 const useUnitsContext = () => {
   // Unit context
@@ -21,9 +21,10 @@ const useUnitsContext = () => {
     const updatedData = await getItems(STORE_NAMES.units);
     setUnits(updatedData);
   };
+
   const addUnit = async (newUnit) => {
      await addItem(STORE_NAMES.units, newUnit);
-    setUnits((prev) => [...prev, { ...newUnit }]);
+     refreshData()
   };
 
   const editUnit = async (id, updatedUnit) => {

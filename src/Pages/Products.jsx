@@ -20,7 +20,7 @@ const Products = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedBatch, setSelectedBatch] = useState({});
 
-
+console.log(products)
    
    
 

@@ -227,11 +227,12 @@ const handleSaveSales = async () => {
     <div>No products available.</div>
   ) : (
     products
-      .filter(product => 
-        product.name.includes(searchProduct) || 
-        product.nameInUrdu.includes(searchProduct)
-      )
-      .map(product => (
+    .filter(product => {
+      const productName = product.name || ""; // Default to empty string if undefined
+      const productNameUrdu = product.nameInUrdu || ""; // Default to empty string if undefined
+  
+      return productName.includes(searchProduct) || productNameUrdu.includes(searchProduct);
+  }).map(product => (
         product.batchCode && product.batchCode.length > 0 ? (
           <div key={product.id} className="py-2 border-b">
             <div className="pl-4">

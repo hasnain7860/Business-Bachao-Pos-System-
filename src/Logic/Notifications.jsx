@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { addItem, getItems, deleteAndTrackItem, putItem, STORE_NAMES } from "../Utils/IndexedDb.jsx";
+import { addItem, getItems, deleteItem as deleteFromDB, putItem, STORE_NAMES } from "../Utils/IndexedDb.jsx";
 import { updateItem, deleteItem } from "./UpdateDeleteUntils.jsx";
 
 const useNotificationContext = () => {
@@ -51,7 +51,7 @@ const useNotificationContext = () => {
 
   // Delete a notification and store its ID to prevent future duplicates
   const deleteNotification = async (id) => {
-    await deleteAndTrackItem(STORE_NAMES.notifications, id);
+    await deleteFromDB(STORE_NAMES.notifications, id);
     setNotifications((prev) => deleteItem(prev, id));
 
     // Store deleted ID to prevent re-adding

@@ -1,6 +1,7 @@
 import { openDB } from 'idb';
-import { ref, remove } from 'firebase/database';
+import { ref, update, set, get,query , push, remove,onChildChanged, onChildRemoved, onChildAdded  } from 'firebase/database'; 
 import { clientDatabase } from './ClientFirebaseDb';
+import refreshData from "./refreshData"
 
 const DB_NAME = 'pos-system';
 const DB_VERSION = 4;
@@ -21,8 +22,6 @@ export const STORE_NAMES = {
   notificationsDb: 'notificationsDb',
 };
 
-export const DELETED_ITEMS_STORE = 'deletedItems';
-
 export const getDB = async () => {
   return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
@@ -31,21 +30,35 @@ export const getDB = async () => {
           db.createObjectStore(storeName, { keyPath: 'id' });
         }
       });
-      if (!db.objectStoreNames.contains(DELETED_ITEMS_STORE)) {
-        db.createObjectStore(DELETED_ITEMS_STORE, { keyPath: 'id' });
-      }
     },
   });
 };
 
 export const addItem = async (storeName, item) => {
   const db = await getDB();
-  return db.add(storeName, item);
+  const existingItem = await db.get(storeName, item.id);
+
+  if (!existingItem) {
+    await db.add(storeName, item);
+    console.log(`Item with ID ${item.id} add in IndexedDB for store ${storeName}.`);
+    if (clientDatabase) {
+      const itemRef = ref(clientDatabase, `${storeName}/${item.id}`);
+      await set(itemRef, item);
+      console.log(`Item with ID ${item.id} add in firebase for store ${storeName}.`);
+    }
+  } else {
+    console.log(`Item with ID ${item.id} already exists in IndexedDB for store ${storeName}.`);
+  }
 };
 
 export const putItem = async (storeName, item) => {
   const db = await getDB();
-  return db.put(storeName, item);
+  await db.put(storeName, item);
+
+  if (clientDatabase) {
+    const itemRef = ref(clientDatabase, `${storeName}/${item.id}`);
+    await set(itemRef, item);
+  }
 };
 
 export const getItems = async (storeName) => {
@@ -53,9 +66,17 @@ export const getItems = async (storeName) => {
   return db.getAll(storeName);
 };
 
-export const deleteItem = async (storeName, id) => {
-  const db = await getDB();
-  return db.delete(storeName, id);
+export const deleteItem = async (storeName, id) => { 
+  try {
+    const db = await getDB();
+    await db.delete(storeName, id);
+    if (clientDatabase) {
+      const itemRef = ref(clientDatabase, `${storeName}/${id}`);
+      await remove(itemRef);
+    }
+  } catch (error) {
+    console.error(`Error deleting item with ID ${id}:`, error);
+  }
 };
 
 export const setItems = async (storeName, items) => {
@@ -67,27 +88,10 @@ export const setItems = async (storeName, items) => {
       await tx.store.put(item);
     }
     await tx.done;
-    return Promise.resolve(); // Return a resolved promise on success
+    return Promise.resolve();
   } catch (error) {
     console.error('Error setting items:', error);
-    return Promise.reject(error); // Return a rejected promise on error
-  }
-};
-
-export const addDeletedItem = async (storeName, id) => {
-  const db = await getDB();
-  return db.put(DELETED_ITEMS_STORE, { storeName, id });
-};
-
-export const deleteAndTrackItem = async (storeName, id) => {
-  try {
-    await deleteItem(storeName, id);
-    await addDeletedItem(storeName, id);
-    console.log(`Item with ID ${id} deleted from IndexedDB and tracked for Firebase deletion.`);
-    return Promise.resolve(); // Return a resolved promise on success
-  } catch (error) {
-    console.error('Error deleting and tracking item:', error);
-    return Promise.reject(error); // Return a rejected promise on error
+    return Promise.reject(error);
   }
 };
 
@@ -97,29 +101,35 @@ export const clearOfflineData = async (storeName) => {
   const objectStore = tx.store;
   await objectStore.clear();
   await tx.done;
-  return Promise.resolve(); // Return a resolved promise on success
+  return Promise.resolve();
 };
 
-export const deleteItemsFromFirebase = async () => {
-    try {
-        const db = await getDB();
-        const deletedItems = await db.getAll(DELETED_ITEMS_STORE);
+export const listenForChanges = (storeName, context) => {
+  if (clientDatabase) {
+    const itemsRef = ref(clientDatabase, storeName);
 
-        for (const { storeName, id } of deletedItems) {
-            const itemRef = ref(clientDatabase, `${storeName}/${id}`);
-            try {
-                await remove(itemRef);
-                console.log(`Deleted item with ID ${id} from Firebase in store ${storeName}.`);
-                await deleteItem(DELETED_ITEMS_STORE, id);
-                console.log(`Removed item with ID ${id} from deletedItems store.`);
-            } catch (error) {
-                console.error(`Failed to delete item with ID ${id} from Firebase:`, error);
-            }
-        }
-        console.log('All marked items processed for deletion from Firebase.');
-        return Promise.resolve();
-    } catch (error) {
-        console.error("Error in deleteItemsFromFirebase :", error);
-        return Promise.reject(error);
-    }
+    onChildAdded(itemsRef, (snapshot) => {
+      const addedItem = snapshot.val();
+      console.log(`Item with ID ${snapshot.key} added to Firebase in store ${storeName}.`);
+      addItem(storeName, addedItem).then(() => {
+        refreshData(context);
+      });
+    });
+
+    onChildChanged(itemsRef, (snapshot) => {
+      const updatedItem = snapshot.val();
+      console.log(`Item with ID ${snapshot.key} updated in Firebase in store ${storeName}.`);
+      putItem(storeName, updatedItem).then(() => {
+        refreshData(context);
+      });
+    });
+
+    onChildRemoved(itemsRef, (snapshot) => {
+      const deletedItemId = snapshot.key;
+      console.log(`Item with ID ${deletedItemId} deleted from Firebase in store ${storeName}.`);
+      deleteItem(storeName, deletedItemId, context).then(()=>{
+        refreshData(context);
+      });
+    });
+  }
 };

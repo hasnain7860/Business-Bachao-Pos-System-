@@ -7,7 +7,6 @@ import { useAppContext } from "../Appfullcontext.jsx";
 import refreshData from "../Utils/refreshData.jsx";
 import {
   getItems,
-  deleteItemsFromFirebase,
   setItems,
   STORE_NAMES,
   clearOfflineData,
@@ -90,7 +89,7 @@ const DataSync = () => {
 
       setIsFetching(false);
       refreshData(context);
-      fetchOfflineData();
+    
     } else {
       toast.error('Internet is Not Working, check and try Again', {
         className: 'bg-orange-500 text-white',

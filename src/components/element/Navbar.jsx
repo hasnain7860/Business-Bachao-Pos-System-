@@ -19,13 +19,14 @@ import {
   FiClipboard,
 } from "react-icons/fi";
 
-
+import Syncauto from "../Syncauto.jsx";
 
 
 
 import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
 import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
+
 
 const Navbar = () => {
   const { setIsAuthenticated , settingContext,language,setLanguage} = useAppContext();
@@ -49,6 +50,7 @@ const toggleLanguage = () => {
   purchases: true,
 });
   
+
  
 
   // Toggle Sidebar
@@ -99,6 +101,7 @@ const toggleLanguage = () => {
 
   return (
     <div>
+      <Syncauto></Syncauto>
       {/* Navbar */}
       <nav 
   className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 

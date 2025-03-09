@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { updateItem, deleteItem } from './UpdateDeleteUntils.jsx';
-import { addItem, getItems, deleteAndTrackItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
+import { addItem, getItems, deleteItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
 
 const useProductContext = () => {
     // Product context

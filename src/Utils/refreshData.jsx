@@ -1,14 +1,17 @@
 
- const refreshData = async (context) => {
-      await context.companyContext.refreshData();
-      await context.brandContext.refreshData();
-      await context.unitContext.refreshData();
-      await context.productContext.refreshData();
-      await context.supplierCustomerContext.refreshData();
-      await context.settingContext.refreshData();
-      await context.creditManagementContext.refreshData();
-      await context.purchaseContext.refreshData();
-      await context.SaleContext.refreshData();
+
+const refreshData = async (context) => {
+  context.companyContext.refreshData(),
+  context.brandContext.refreshData(),
+  context.unitContext.refreshData(),
+  context.productContext.refreshData(),
+  context.supplierCustomerContext.refreshData(),
+  context.settingContext.refreshData(),
+  // context.creditManagementContext.refreshData(),
+  // context.purchaseContext.refreshData(),
+  // context.salesContext.refreshData(),
+  // context.costContext.refreshData(),
+  // context.notificationContext.refreshData(),
       console.log("✅ All contexts refreshed successfully!");
     };
 

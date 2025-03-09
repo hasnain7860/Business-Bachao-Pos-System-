@@ -73,17 +73,7 @@ const Login = () => {
   useEffect(() => {
     if (form.business.firebaseStorePass) {
       ClientDatabaseInitializer(JSON.parse(form.business.firebaseStorePass))   
-      syncDataInRealTime(context);
-      // .then(() => {
-         
-        
-      //     // setTimeout(() => {
-           
-      //     // }, 8000); // 2000 milliseconds = 2 seconds
-      //   })
-      //   .catch((err) => {
-      //     console.error('Failed to save setting:', err);
-      //   });
+    
     }
   }, [form, saveSetting, context]);
 

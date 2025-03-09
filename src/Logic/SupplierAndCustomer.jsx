@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { addItem, getItems, deleteAndTrackItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
+import { addItem, getItems, deleteItem as deleteFromDB, putItem, STORE_NAMES } from '../Utils/IndexedDb.jsx';
 
 const useSupplierAndCustomerContext = () => {
   // Suppliers and Customers context

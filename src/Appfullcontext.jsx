@@ -52,6 +52,7 @@ export const AppContextProvider = ({ children }) => {
     }
   }, [settings]); // Dependency array includes settings to run effect when settings change
 
+ 
   return (
     <AppContext.Provider
       value={{
