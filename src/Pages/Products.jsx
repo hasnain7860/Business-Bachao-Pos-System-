@@ -11,11 +11,17 @@ const Products = () => {
     const context = useAppContext();
     const navigate = useNavigate();
     const products = context.productContext.products;
+    const companies = context.companyContext.companies
     const addProduct = context.productContext.add;
     const edit = context.productContext.edit;
     const handleDelete = context.productContext.delete;
     const userAndBusinessDetail = context.settingContext.settings;
     const {language} = context;
+    const [selectedCompany, setSelectedCompany] = useState(""); // Company Filter ke liye
+    // Company Filter Function
+  const filteredProducts = selectedCompany
+    ? products.filter((product) => product.companyId === selectedCompany)
+    : products;
     const [uploadMessage, setUploadMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedBatch, setSelectedBatch] = useState({});
@@ -69,7 +75,9 @@ console.log(products)
 </div>
 
 <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
-   
+
+
+
     {/* Add Product Button */}
     <Link to="/inventory/addProduct">
         <button className="btn btn-primary">
@@ -80,7 +88,19 @@ console.log(products)
     
 </div>
 
-
+           {/* Company Filter Dropdown */}
+        <select
+          className="form-select p-2 border rounded"
+          value={selectedCompany}
+          onChange={(e) => setSelectedCompany(e.target.value)}
+        >
+          <option value="">{languageData[language].all_companies}</option>
+          {companies.map((company) => (
+            <option key={company.id} value={company.id}>
+              {company.name}
+            </option>
+          ))}
+        </select>
 
     
             {/* Products Table */}
@@ -100,6 +120,7 @@ console.log(products)
                        
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
+                         <th className="p-2 border-b">{languageData[language].company}</th>
                         <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
                         <th className="p-2 border-b">{languageData[language].product_name}</th>
                         <th className="p-2 border-b">{languageData[language].no}</th>
@@ -110,6 +131,7 @@ console.log(products)
                        
                         <th className="p-2 border-b">{languageData[language].product_name}</th>
                         <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
+                         <th className="p-2 border-b">{languageData[language].company}</th>
                         <th className="p-2 border-b">{languageData[language].image}</th>
                         <th className="p-2 border-b">{languageData[language].total_stock}</th>
                    
@@ -123,7 +145,7 @@ console.log(products)
             </tr>
         </thead>
         <tbody>
-            {products && products.map((product, l) => {
+            {products && filteredProducts.map((product, l) => {
                 const batchIndex = selectedBatch[product.id] || 0;
                 const batch = product.batchCode?.[batchIndex] || {};
                 const totalStock = calculateTotalStock(product.batchCode);
@@ -168,6 +190,7 @@ console.log(products)
                                         </div>
                                     )}
                                 </td>
+                                  <td className="p-2 border-b">{companies.find((c) => c.id === product.companyId)?.name || "N/A"}</td>
                                 <td className="p-2 border-b">{product.nameInUrdu}</td>
                                 <td className="p-2 border-b">{product.name}</td>
                                 <td className="p-2 border-b">{l + 1}</td>
@@ -177,6 +200,7 @@ console.log(products)
                                 <td className="p-2 border-b">{l + 1}</td>
                                 <td className="p-2 border-b">{product.name}</td>
                                 <td className="p-2 border-b">{product.nameInUrdu}</td>
+                           <td className="p-2 border-b">{companies.find((c) => c.id === product.companyId)?.name || "N/A"}</td>   
                                 <td className="p-2 border-b">
                                     {product.productImage ? (
                                         <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover" />
