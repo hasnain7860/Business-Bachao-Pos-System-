@@ -47,7 +47,7 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     // Check if settings is an array and has at least one element
     if (settings && settings.length > 0 && settings[0].business && settings[0].business.firebaseStorePass) {
-      if(!afterFirstTimeCheck){
+      if(!afterFirstTimeCheck.current){
       setIsAuthenticated(true);
       
        ClientDatabaseInitializer(JSON.parse(settings[0].business.firebaseStorePass))
