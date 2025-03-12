@@ -8,10 +8,7 @@ const refreshData = async (context, storeName) => {
       await context.companyContext.refreshData();
       console.log("✅ Company context refreshed!");
       break;
-    case "brands":
-      await context.brandContext.refreshData();
-      console.log("✅ Brands context refreshed!");
-      break;
+  
     case "products":
       await context.productContext.refreshData();
       console.log("✅ Products context refreshed!");
@@ -57,7 +54,6 @@ const refreshData = async (context, storeName) => {
       await Promise.all([
         context.costContext.refreshData(),
         context.companyContext.refreshData(),
-        context.brandContext.refreshData(),
         context.productContext.refreshData(),
         context.purchaseContext.refreshData(),
         context.salesContext.refreshData(),

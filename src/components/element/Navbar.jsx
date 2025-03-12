@@ -253,14 +253,7 @@ const toggleLanguage = () => {
                        {languageData[language].company}
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/inventory/brands"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                     {languageData[language].brands}
-                </Link>
-              </li>
+            
              
               <li>
                 <Link

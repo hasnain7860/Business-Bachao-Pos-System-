@@ -1,7 +1,7 @@
 
 import React, { createContext, useEffect, useContext, useState , useRef } from 'react';
 import useCompanyContext from './Logic/Company.jsx';
-import useBrandsContext from './Logic/Brands.jsx';
+
 import useUnitsContext from './Logic/Units.jsx';
 import useProductContext from './Logic/Product.jsx';
 import useCostContext from './Logic/Cost.jsx';
@@ -30,7 +30,7 @@ export const AppContextProvider = ({ children }) => {
  const afterFirstTimeCheck = useRef(false);
   // Contexts
   const companyContext = useCompanyContext();
-  const brandContext = useBrandsContext();
+ 
   const unitContext = useUnitsContext();
   const productContext = useProductContext();
   const supplierCustomerContext = useSupplierAndCustomerContext();
@@ -68,7 +68,7 @@ export const AppContextProvider = ({ children }) => {
         setIsAuthenticated,
         notificationContext,
         companyContext,
-        brandContext,
+     
         unitContext,
         productContext,
         supplierCustomerContext,

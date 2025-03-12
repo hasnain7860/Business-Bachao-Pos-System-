@@ -23,8 +23,7 @@ const Suppliers = () => {
     image: null,
     email: "",
     phone: "",
-    city: "",
-    country: "",
+    
     address: "",
   });
 
@@ -67,8 +66,7 @@ const Suppliers = () => {
       image: null,
       email: "",
       phone: "",
-      city: "",
-      country: "",
+     
       address: "",
     });
     setIsEditing(false);
@@ -214,8 +212,7 @@ const Suppliers = () => {
             <h3 className="text-lg font-bold">{supplier.name}</h3>
             <p>{languageData[language].email}: {supplier.email}</p>
             <p>{languageData[language].phone}: {supplier.phone}</p>
-            <p>{languageData[language].city}: {supplier.city}</p>
-            <p>{languageData[language].country}: {supplier.country}</p>
+            <p>{languageData[language].address}: {supplier.address}</p>
             <div
         className={`flex space-x-2 mt-4 ${
           language === "ur" ? "flex-row-reverse" : ""
@@ -258,13 +255,13 @@ const Suppliers = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold">{languageData[language].email} *</label>
+                  <label className="block font-bold">{languageData[language].email} </label>
                   <input
                     type="email"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    required
+                
                     className="w-full p-2 border rounded"
                   />
                 </div>
@@ -279,28 +276,8 @@ const Suppliers = () => {
                     className="w-full p-2 border rounded"
                   />
                 </div>
-                <div>
-                  <label className="block font-bold">{languageData[language].city} *</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={form.city}
-                    onChange={handleChange}
-                    required
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold">{languageData[language].country} *</label>
-                  <input
-                    type="text"
-                    name="country"
-                    value={form.country}
-                    onChange={handleChange}
-                    required
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
+             
+              
                 <div>
                   <label className="block font-bold">{languageData[language].address} *</label>
                   <textarea

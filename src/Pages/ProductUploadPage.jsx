@@ -80,7 +80,6 @@ const ProductUploadPage = () => {
                         name: product.name,
                         nameInUrdu: product.nameInUrdu ,
                         companyId: product.companyId || null,
-                        brandId: product.brandId || null,
                         unitId: product.unitId || null,
                         productImage: product.productImage || null,
                         batchCode: [batchData]

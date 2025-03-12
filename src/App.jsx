@@ -16,7 +16,7 @@ import Settings from "./Pages/Settings.jsx";
 import Suppliers from "./Pages/suppliers.jsx";
 import Customer from "./Pages/customer.jsx";
 import Company from "./Pages/Company.jsx";
-import Brands from "./Pages/Brands.jsx";
+
 import Unit from "./Pages/Unit.jsx";
 import AddProduct from "./Pages/AddProduct.jsx";
 import Products from "./Pages/Products.jsx";
@@ -127,16 +127,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                <Route
-                    path="/inventory/brands"
-                    element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Brands />
-                            </Layout>
-                        </ProtectedRoute>
-                    }
-                />
+              
                 <Route
                     path="/inventory/units"
                     element={

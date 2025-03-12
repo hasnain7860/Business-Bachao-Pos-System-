@@ -8,7 +8,7 @@ const NewPurchases = () => {
   const suppliers = context.supplierCustomerContext.suppliers;
   const products = context.productContext.products;
   const companies = context.companyContext.companies;
-  const brands = context.brandContext.brands;
+
   const units = context.unitContext.units;
   const updateProduct = context.productContext.edit;
   const addPurchase = context.purchaseContext.add;
@@ -46,7 +46,7 @@ const NewPurchases = () => {
         id: product.id,
         name: product.name,
         companyId: product.companyId || '',
-        brandId: product.brandId || '',
+       
         unitId: product.unitId || '',
         sellPrice: batchInfo.sellPrice,
         retailPrice: batchInfo.retailPrice,
@@ -267,7 +267,7 @@ const NewPurchases = () => {
             <tr>
               <th>Product Name</th>
               <th>Company</th>
-              <th>Brand</th>
+            
               <th>Units</th>
               <th>Batch Code</th>
               <th>Expire Date</th>
@@ -283,7 +283,7 @@ const NewPurchases = () => {
             {selectedProducts.length > 0 ? (
               selectedProducts.map((product, index) => {
                 const company = companies.find((c) => c.id === product.companyId);
-                const brand = brands.find((b) => b.id === product.brandId);
+                
                 const unit = units.find((u) => u.id === product.unitId);
                 const productBatches = batchCodes[product.id] || [];
 
@@ -291,7 +291,7 @@ const NewPurchases = () => {
                   <tr key={product.id}>
                     <td>{product.name}</td>
                     <td>{company ? company.name : 'Unknown Company'}</td>
-                    <td>{brand ? brand.name : 'Unknown Brand'}</td>
+              
                     <td>{unit ? unit.name : 'Unknown Unit'}</td>
                     <td>
                       <select

@@ -9,7 +9,7 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const companies = context.companyContext.companies;
-  const brands = context.brandContext.brands;
+ 
   const units = context.unitContext.units;
   const addProduct = context.productContext.add;
   const updateProduct = context.productContext.edit;
@@ -41,7 +41,7 @@ const [expirationDate, setExpirationDate] = useState()
         setProductName(product.name || "");
         setProductNameInUrdu(product.nameInUrdu || "");
         setSelectedCompany(product.companyId || "");
-        setSelectedBrand(product.brandId || "");
+      
         setSelectedUnit(product.unitId || "");
         if(!product.batchCode){
       const nextBatchNumber = batches.length + 1;
@@ -115,7 +115,7 @@ const [expirationDate, setExpirationDate] = useState()
       name: productName,
       nameInUrdu: productNameInUrdu,
       companyId: selectedCompany,
-      brandId: selectedBrand,
+     
       unitId: selectedUnit,
       productImage,
       batchCode: updatedBatches, // Save batches
@@ -139,7 +139,7 @@ const [expirationDate, setExpirationDate] = useState()
       setProductName("");
       setProductNameInUrdu("")
       setSelectedCompany("");
-      setSelectedBrand("");
+    
       setSelectedUnit("");
       setProductImage(null);
       setPurchasePrice("");
@@ -171,10 +171,7 @@ const [expirationDate, setExpirationDate] = useState()
   // };
 
   // Filter brands based on selected company
-  const filteredBrands = brands.filter(
-    (brand) => brand.companyId == selectedCompany
-  );
-
+ 
   return (
     <div className="max-w-xl mx-auto bg-white shadow-lg rounded-lg p-6 mt-10">
       <h2 className="text-2xl font-bold text-center mb-6">
@@ -238,35 +235,7 @@ const [expirationDate, setExpirationDate] = useState()
         </div>
       </div>
 
-      {/* Brand */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Brand*:</span>
-        </label>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedBrand}
-            onChange={(e) => setSelectedBrand(e.target.value)}
-       
-            className="select select-bordered w-full"
-          >
-            <option value="">Select a Brand</option>
-            {filteredBrands.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => navigate("/inventory/brands")}
-          >
-            New
-          </button>
-        </div>
-      </div>
-
+   
       {/* Unit */}
       <div className="form-control mb-4">
         <label className="label">
