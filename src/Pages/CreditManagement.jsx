@@ -6,16 +6,17 @@ import { Link } from "react-router-dom";
 import PaymentDetails from "../components/element/PaymentDetails.jsx";
 import languageData from "../assets/languageData.json";
 import { useNavigate } from 'react-router-dom';
+
 const CreditManagement = () => {
   const context = useAppContext();
-  const {language} = context;
+  const { language } = context;
   const navigate = useNavigate();
   const customers = context.supplierCustomerContext.customers;
   const salesData = context.SaleContext.Sales;
   const t = languageData[language];
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
-console.log(submittedRecords)
+  console.log(submittedRecords);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
@@ -104,25 +105,26 @@ console.log(submittedRecords)
     .reduce((acc, sale) => acc + sale.credit, 0);
 
   const grandCredit = Number(totalSalesCredit) + Number(totalExistRecordCredit);
+
   return (
     <div className="p-4 bg-gray-50">
       <div className={`mt-4 ${language === 'ur' ? "text-right" : "text-left"}`}>
-  <button
-    className="bg-gray-300 text-black px-4 py-2 rounded"
-    onClick={() => navigate(-1)}
-  >
- {languageData[language].back}
-  </button>
-</div>
+        <button
+          className="bg-gray-300 text-black px-4 py-2 rounded"
+          onClick={() => navigate(-1)}
+        >
+          {languageData[language].back}
+        </button>
+      </div>
 
       <h1 className="text-lg font-bold mb-4 text-blue-600">
-      {t.creditManagement}
+        {t.creditManagement}
       </h1>
       {!selectedCustomer ? (
         <div className="relative mb-4">
           <input
             type="text"
-            placeholder="Search Customer"
+            placeholder={t.searchCustomer}
             className="input input-bordered w-full border-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -160,7 +162,7 @@ console.log(submittedRecords)
                 <table className="min-w-full bg-white border border-gray-200 mt-2">
                   <thead>
                     <tr>
-                    <th className="border px-4 py-2">{t.saleRefNo}</th>
+                      <th className="border px-4 py-2">{t.saleRefNo}</th>
                       <th className="border px-4 py-2">{t.amountPaid}</th>
                       <th className="border px-4 py-2">{t.credit}</th>
                       <th className="border px-4 py-2">{t.date}</th>
@@ -189,19 +191,19 @@ console.log(submittedRecords)
                                 sale.credit === 0 ? "bg-red-200" : "bg-white"
                               } border-b`}
                             >
-                             <td className="border px-4 py-2">{sale.salesRefNo}</td>
-                            <td className="border px-4 py-2">{totalPayment}</td>
-                            <td className="border px-4 py-2">{sale.credit}</td>
-                            <td className="border px-4 py-2">{new Date(sale.dateTime).toLocaleDateString()}</td>
-                            <td className="border px-4 py-2">
-                              {Number(totalPayment) === Number(sale.credit) ? (
-                                <span className="text-green-600 block text-center font-semibold bg-green-100 px-3 py-1 rounded-lg">
-                                  {t.noMorePayment}
-                                </span>
+                              <td className="border px-4 py-2">{sale.salesRefNo}</td>
+                              <td className="border px-4 py-2">{totalPayment}</td>
+                              <td className="border px-4 py-2">{sale.credit}</td>
+                              <td className="border px-4 py-2">{new Date(sale.dateTime).toLocaleDateString()}</td>
+                              <td className="border px-4 py-2">
+                                {Number(totalPayment) === Number(sale.credit) ? (
+                                  <span className="text-green-600 block text-center font-semibold bg-green-100 px-3 py-1 rounded-lg">
+                                    {t.noMorePayment}
+                                  </span>
                                 ) : (
                                   <Link to={`/sales/addPayments/${sale.id}`} className="bg-blue-500 block text-center hover:bg-blue-600 text-white font-medium py-1 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
-                                  {t.addMorePayment}
-                                </Link>
+                                    {t.addMorePayment}
+                                  </Link>
                                 )}
                               </td>
                               <td className="border px-4 py-2 text-center">
@@ -218,29 +220,29 @@ console.log(submittedRecords)
                               </td>
                             </tr>
                             {dropdownOpen === sale.id && (
-                             <tr>
-                             <td colSpan="6" className="border px-4 py-2 bg-gray-100">
-                               <div>
-                                 <p className="font-bold text-gray-700">{t.paymentDetails}:</p>
-                                 <table className="w-full border-collapse border border-gray-300 mt-2">
-                                   <thead>
-                                     <tr className="bg-gray-200">
-                                       <th className="border px-4 py-2">{t.refNo}</th>
-                                       <th className="border px-4 py-2">{t.amount}</th>
-                                       <th className="border px-4 py-2">{t.notes}</th>
-                                     </tr>
-                                   </thead>
-                                   <tbody>
-                                     <tr className="bg-white border-b">
-                                       <td className="border px-4 py-2">{t.firstTimePayment}</td>
-                                       <td className="border px-4 py-2">{sale.amountPaid}</td>
-                                       <td className="border px-4 py-2">N/A</td>
-                                     </tr>
-                                   </tbody>
-                                 </table>
-                               </div>
-                             </td>
-                           </tr>
+                              <tr>
+                                <td colSpan="6" className="border px-4 py-2 bg-gray-100">
+                                  <div>
+                                    <p className="font-bold text-gray-700">{t.paymentDetails}:</p>
+                                    <table className="w-full border-collapse border border-gray-300 mt-2">
+                                      <thead>
+                                        <tr className="bg-gray-200">
+                                          <th className="border px-4 py-2">{t.refNo}</th>
+                                          <th className="border px-4 py-2">{t.amount}</th>
+                                          <th className="border px-4 py-2">{t.notes}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr className="bg-white border-b">
+                                          <td className="border px-4 py-2">{t.firstTimePayment}</td>
+                                          <td className="border px-4 py-2">{sale.amountPaid}</td>
+                                          <td className="border px-4 py-2">N/A</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
                           </>
                         );
@@ -257,14 +259,14 @@ console.log(submittedRecords)
               (record) => record.customerId === selectedCustomer.id
             ).length > 0 && (
               <div className="mt-4 max-h-64 overflow-y-auto">
-                <h3 className="text-lg font-semibold">Existing Records</h3>
+                <h3 className="text-lg font-semibold">{t.existingRecords}</h3>
                 <table className="min-w-full bg-white border border-gray-300 mt-2">
                   <thead>
                     <tr className="bg-gray-200">
-                      <th className="border px-4 py-2">Type</th>
-                      <th className="border px-4 py-2">Amount</th>
-                      <th className="border px-4 py-2">Date</th>
-                      <th className="border px-4 py-2">Notes</th>
+                      <th className="border px-4 py-2">{t.type}</th>
+                      <th className="border px-4 py-2">{t.amount}</th>
+                      <th className="border px-4 py-2">{t.date}</th>
+                      <th className="border px-4 py-2">{t.notes}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -287,10 +289,10 @@ console.log(submittedRecords)
               </div>
             )}
           <h3 className="text-md font-bold mt-4">
-            Total Payment: {totalPayment}
+            {t.totalPayment}: {totalPayment}
           </h3>
           <h3 className="text-md font-bold mt-4">
-            Grand Credit: {grandCredit}
+            {t.grandCredit}: {grandCredit}
           </h3>
 
           <div className="mt-4 flex space-x-2">
@@ -301,7 +303,7 @@ console.log(submittedRecords)
                 setFormType("payment");
               }}
             >
-              Add Payment
+              {t.addPayment}
             </button>
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded"
@@ -310,7 +312,7 @@ console.log(submittedRecords)
                 setFormType("credit");
               }}
             >
-              Add Credit
+              {t.addCredit}
             </button>
           </div>
         </div>
@@ -319,7 +321,7 @@ console.log(submittedRecords)
       {showPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-4 rounded shadow-lg w-80">
-            <h3 className="text-lg font-bold">Add {formType}</h3>
+            <h3 className="text-lg font-bold">{t.add} {formType}</h3>
             <input
               type="date"
               className="w-full p-2 border rounded mt-2"
@@ -330,7 +332,7 @@ console.log(submittedRecords)
             />
             <input
               type="number"
-              placeholder="Amount"
+              placeholder={t.amount}
               className="w-full p-2 border rounded mt-2"
               value={formData.amount}
               onChange={(e) =>
@@ -339,7 +341,7 @@ console.log(submittedRecords)
             />
             <input
               type="text"
-              placeholder="Note"
+              placeholder={t.note}
               className="w-full p-2 border rounded mt-2"
               value={formData.note}
               onChange={(e) =>
@@ -351,13 +353,13 @@ console.log(submittedRecords)
                 className="bg-green-500 text-white px-4 py-2 rounded"
                 onClick={handleSubmit}
               >
-                Add
+                {t.add}
               </button>
               <button
                 className="bg-red-500 text-white px-4 py-2 rounded"
                 onClick={() => setShowPopup(false)}
               >
-                Cancel
+                {t.cancel}
               </button>
             </div>
           </div>

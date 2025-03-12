@@ -30,7 +30,7 @@
     "credit": "Credit",
     "payment": "Payment",
     "cost": "Cost",
-    "download_demo":"Demo File Download",
+    "download_demo": "Demo File Download",
     "issue_sales": "Issue Sales",
     "customer_management": "Customer Management",
     "total": "Total",
@@ -125,8 +125,6 @@
     "salesData": "Sales Data",
     "saleRefNo": "Sale Ref No",
     "amountPaid": "Amount Paid",
-   
-   
     "instructions": "Please follow the instructions before uploading the file:",
     "instruction_1": "Ensure the file is in .xlsx or .xls format.",
     "instruction_2": "Each product must have a unique ID.",
@@ -134,7 +132,7 @@
     "generate_uuid": "this link",
     "download_sample": "Download Sample File",
     "addPayment": "Add Payment to this Sale",
-    "upload_success":" Product Uploading successful",
+    "upload_success": " Product Uploading successful",
     "noMorePayment": "No Need More Payment",
     "addMorePayment": "Add More Payment",
     "paymentDetails": "Payment Details",
@@ -143,9 +141,23 @@
     "notes": "Notes",
     "firstTimePayment": "First Time Payment",
     "existingRecords": "Existing Records",
-    "type": "Type"
-   
-    
+    "type": "Type",
+    "add_new_cost": "Add New Cost",
+    "note": "Note",
+    "enter_note": "Enter a note",
+    "enter_cost": "Enter the cost",
+    "save": "Save",
+    "cost_entries": "Cost Entries",
+    "no_cost_entries": "No cost entries available",
+    "user_information": "User Information",
+    "business_information": "Business Information",
+    "phoneNo": "Phone Number",
+    "signature": "Signature",
+    "businessName": "Business Name",
+    "currency": "Currency",
+    "totalPayment": "Total Payment",
+    "grandCredit": "Grand Credit",
+    "addCredit": "Add Credit"
   },
   "ur": {
     "menu": "مینو",
@@ -182,7 +194,7 @@
     "profit": "منافع",
     "loss": "نقصان",
     "back": "بیک بٹن",
-    "download_demo":"ڈیمو فائل ڈاؤن لوڈ",
+    "download_demo": "ڈیمو فائل ڈاؤن لوڈ",
     "credit": "ادھار",
     "payment": "ادائیگی",
     "cost": "لاگت",
@@ -239,7 +251,7 @@
     "add_product": "نئی مصنوع شامل کریں",
     "no": "نمبر",
     "product_name": "پروڈکٹ کا نام انگریزی میں",
-    "product_name_in_urdu":"پروڈکٹ کا نام اردو میں",
+    "product_name_in_urdu": "پروڈکٹ کا نام اردو میں",
     "total_stock": "کل اسٹاک",
     "batch_stock": "بیچ اسٹاک",
     "purchase_price": "خریداری قیمت",
@@ -278,9 +290,7 @@
     "salesData": "فروخت کے ڈیٹا",
     "saleRefNo": "سیل ریفرنس نمبر",
     "amountPaid": "ادائیگی کی گئی رقم",
-    
     "addPayment": "اس فروخت پر ادائیگی شامل کریں",
-   
     "noMorePayment": "مزید ادائیگی کی ضرورت نہیں",
     "addMorePayment": "مزید ادائیگی شامل کریں",
     "paymentDetails": "ادائیگی کی تفصیلات",
@@ -289,7 +299,22 @@
     "notes": "نوٹس",
     "firstTimePayment": "پہلی بار ادائیگی",
     "existingRecords": "موجودہ ریکارڈز",
-    "type": "قسم"
-    
+    "type": "قسم",
+    "add_new_cost": "نیا خرچ شامل کریں",
+    "note": "نوٹ",
+    "enter_note": "نوٹ درج کریں",
+    "enter_cost": "خرچ درج کریں",
+    "save": "محفوظ کریں",
+    "cost_entries": "خرچ کے اندراجات",
+    "no_cost_entries": "کوئی خرچ کے اندراجات دستیاب نہیں ہیں",
+    "user_information": "صارف کی معلومات",
+    "business_information": "کاروباری معلومات",
+    "phoneNo": "فون نمبر",
+    "signature": "دستخط",
+    "businessName": "کاروبار کا نام",
+    "currency": "کرنسی",
+    "totalPayment": "کل ادائیگی",
+    "grandCredit": "کل کریڈٹ",
+    "addCredit": "کریڈٹ شامل کریں"
   }
 }

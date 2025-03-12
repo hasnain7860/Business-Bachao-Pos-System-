@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaSignOutAlt } from 'react-icons/fa';
-
 import { useAppContext } from '../Appfullcontext';
+import languageData from "../assets/languageData.json";
 
-const InputField = ({ label, type, name, value, onChange, disabled }) => (
-  <div className="flex items-center">
+const InputField = ({ label, type, name, value, onChange, disabled, language }) => (
+  <div className={`flex items-center ${language === 'ur' ? 'text-right' : 'text-left'}`}>
     <label className="w-1/3 font-semibold">{label}:</label>
     <input
       type={type}
@@ -19,15 +19,16 @@ const InputField = ({ label, type, name, value, onChange, disabled }) => (
 
 const Settings = () => {
   const context = useAppContext();
-  const { selectedSetting, saveSetting } =  context.settingContext;
+  const { language } = context;
+  const { selectedSetting, saveSetting } = context.settingContext;
   const [isEditing, setIsEditing] = useState({ user: false, business: false });
 
   const [formData, setFormData] = useState({
     user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '',address: '', currency: '', role: '', firebaseStorePass: '' }
+    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '' }
   });
 
-   console.log(formData)
+  console.log(formData);
 
   // 🟢 Load setting into local state
   useEffect(() => {
@@ -63,18 +64,19 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">User Information</h2>
+    <div className={`p-6 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
+      <h2 className="text-2xl font-bold mb-4">{languageData[language].user_information}</h2>
       <div className="space-y-4">
         {['name', 'phoneNo', 'email', 'signature'].map((field, k) => (
           <InputField
             key={k}
-            label={field.charAt(0).toUpperCase() + field.slice(1)}
+            label={languageData[language][field]}
             type={field === 'email' ? 'email' : 'text'}
             name={`user.${field}`}
             value={formData.user[field]}
             onChange={handleChange}
             disabled={!isEditing.user}
+            language={language}
           />
         ))}
         <button onClick={() => { saveData(); toggleEdit('user'); }} className="btn btn-primary">
@@ -82,17 +84,18 @@ const Settings = () => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold mt-8 mb-4">Business Information</h2>
+      <h2 className="text-2xl font-bold mt-8 mb-4">{languageData[language].business_information}</h2>
       <div className="space-y-4">
-        {['businessName', 'phoneNo', 'email','address', 'currency'].map((field, k) => (
+        {['businessName', 'phoneNo', 'email', 'address', 'currency'].map((field, k) => (
           <InputField
             key={k}
-            label={field.charAt(0).toUpperCase() + field.slice(1)}
+            label={languageData[language][field]}
             type={field === 'email' ? 'email' : 'text'}
             name={`business.${field}`}
             value={formData.business[field]}
             onChange={handleChange}
             disabled={!isEditing.business}
+            language={language}
           />
         ))}
         <button onClick={() => { saveData(); toggleEdit('business'); }} className="btn btn-primary">
@@ -101,7 +104,7 @@ const Settings = () => {
       </div>
 
       <button onClick={handleLogout} className="btn btn-danger flex items-center mt-8">
-        <FaSignOutAlt className="mr-2" /> Logout
+        <FaSignOutAlt className="mr-2" /> {languageData[language].logout}
       </button>
     </div>
   );

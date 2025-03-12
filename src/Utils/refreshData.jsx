@@ -37,10 +37,10 @@ const refreshData = async (context, storeName) => {
       await context.settingContext.refreshData();
       console.log("✅ Settings context refreshed!");
       break;
-    // case "creditManagement":
-    //   await context.creditManagementContext.refreshData();
-    //   console.log("✅ Credit Management context refreshed!");
-    //   break;
+    case "creditManagement":
+      await context.creditManagementContext.refreshData();
+      console.log("✅ Credit Management context refreshed!");
+      break;
     // case "notifications":
     //   await context.notificationContext.refreshData();
     //   console.log("✅ Notifications context refreshed!");
@@ -60,7 +60,7 @@ const refreshData = async (context, storeName) => {
         context.unitContext.refreshData(),
         context.supplierCustomerContext.refreshData(),
         context.settingContext.refreshData(),
-        // context.creditManagementContext.refreshData(),
+        context.creditManagementContext.refreshData(),
         // context.notificationContext.refreshData(),
         // context.notificationsDbContext.refreshData(),
       ]);
