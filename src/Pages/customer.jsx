@@ -17,6 +17,7 @@ const Customers = () => {
   const [columns, setColumns] = useState(3);
   const [currentPage, setCurrentPage] = useState(1);
   const [customersPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const updateColumns = () => {
@@ -151,14 +152,25 @@ const Customers = () => {
     return customers;
   };
 
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.phone.includes(searchQuery) ||
+    customer.address.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Pagination Logic
   const indexOfLastCustomer = currentPage * customersPerPage;
   const indexOfFirstCustomer = indexOfLastCustomer - customersPerPage;
-  const currentCustomers = customers.slice(indexOfFirstCustomer, indexOfLastCustomer);
+  const currentCustomers = filteredCustomers.slice(indexOfFirstCustomer, indexOfLastCustomer);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const totalPages = Math.ceil(customers.length / customersPerPage);
+  const totalPages = Math.ceil(filteredCustomers.length / customersPerPage);
   const pageNumbers = [];
   for (let i = 1; i <= totalPages; i++) {
     pageNumbers.push(i);
@@ -235,6 +247,7 @@ const Customers = () => {
         <span className="text-lg font-medium">
           {languageData[language].total} {languageData[language].customers} : {customers.length}
         </span>
+       
         <button
           onClick={openCustomerModal}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -242,7 +255,15 @@ const Customers = () => {
           {languageData[language].add_customer}
         </button>
       </div>
-
+      <div className={`mb-4 flex justify-between items-center ${language === "ur" ? "flex-row-reverse" : ""}`}>
+      <input
+          type="text"
+          placeholder={languageData[language].search_placeholder}
+          value={searchQuery}
+          onChange={handleSearchInputChange}
+          className="border py-2 px-3 rounded"
+        />
+      </div>
       {/* VCF File Upload Section */}
       <div className={`mb-4 flex items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
         <label className="inline-flex items-center">
