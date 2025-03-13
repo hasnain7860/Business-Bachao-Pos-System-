@@ -17,8 +17,8 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '', currency: '', role: '', firebaseStorePass: '' }
+
+    business: { firebaseStorePass: '' }
   });
 
   const handleInputChange = (e) => {
@@ -51,8 +51,8 @@ const Login = () => {
 
           // Update form state
           setForm({
-            user: { name: '', phoneNo: '', email: '', signature: '' },
-            business: { businessName: '', phoneNo: '', email: '', currency: '$', role: '', firebaseStorePass: user.AdminFirebaseObject }
+            
+            business: {  firebaseStorePass: user.AdminFirebaseObject }
           });
           
           setIsAuthenticated(true);
@@ -75,7 +75,7 @@ const Login = () => {
       ClientDatabaseInitializer(JSON.parse(form.business.firebaseStorePass))   
     
     }
-  }, [form, saveSetting, context]);
+  }, [form, context]);
 
   if (isAuthenticated) {
     return <Navigate to="/" />;

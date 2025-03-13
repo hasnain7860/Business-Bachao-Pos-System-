@@ -1,6 +1,6 @@
 import React, { useEffect ,useRef} from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
-import { listenForChanges, STORE_NAMES , processPendingQueries } from '../Utils/IndexedDb.jsx';
+import { listenForChanges, STORE_NAMES , processPendingQueries,updateAllStoresWithTimestamp } from '../Utils/IndexedDb.jsx';
 
 const Syncauto = () => {
   const context = useAppContext();
@@ -19,6 +19,10 @@ const Syncauto = () => {
 
     
   },[]); 
+
+
+
+ 
 
   return <div>Syncauto</div>;
 };

@@ -1,12 +1,12 @@
 import { openDB } from 'idb';
-import { ref, update, set, get,query , push, remove,onChildChanged, onChildRemoved, onChildAdded  } from 'firebase/database'; 
+import { ref, update, set, get,query , push, remove,onChildChanged,orderByChild,startAt, onChildRemoved, onChildAdded  } from 'firebase/database'; 
 import { clientDatabase } from './ClientFirebaseDb';
 import refreshData from "./refreshData"
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 export const STORE_NAMES = {
   cost: 'cost',
@@ -24,7 +24,10 @@ export const STORE_NAMES = {
   notificationsDb: 'notificationsDb',
 };
 
-const PENDING_QUEREY_STORE ='pendingQuery'
+const LOCAL_STORE = {
+  pendingQuery: 'pendingQuery',
+  syncTimes: 'syncTimes',
+}
 
 let isProcessing = false; // Flag to prevent duplicate calls
 
@@ -81,27 +84,35 @@ export const getDB = async () => {
           db.createObjectStore(storeName, { keyPath: 'id' });
         }
       });
-      if (!db.objectStoreNames.contains(PENDING_QUEREY_STORE)) {
-          db.createObjectStore(PENDING_QUEREY_STORE, { keyPath: 'id' });
-      }
+      Object.values(LOCAL_STORE).forEach((storeName) => {
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName, { keyPath: 'id' });
+        }
+      });
     },
   });
 };
 
-export const addItem = async (storeName, item , firebaseEvent = false) => {
+export const addItem = async (storeName, item, firebaseEvent = false) => {
   const db = await getDB();
   const existingItem = await db.get(storeName, item.id);
+  const timestamp = Date.now(); // ✅ ٹائم اسٹیمپ حاصل کرو
 
   if (!existingItem) {
-    await db.add(storeName, item);
-    console.log(`Item with ID ${item.id} add in IndexedDB for store ${storeName}.`);
-    if(!firebaseEvent){
-   await addPendingQuery(storeName,item,'add')
-  }
+    // ✅ `updatedAt` فیلڈ شامل کرو
+    const newItem = { ...item, updatedAt: timestamp };
+
+    await db.add(storeName, newItem);
+    console.log(`Item with ID ${item.id} added in IndexedDB for store ${storeName}.`);
+
+    if (!firebaseEvent) {
+      await addPendingQuery(storeName, newItem, 'add');
+    }
   } else {
     console.log(`Item with ID ${item.id} already exists in IndexedDB for store ${storeName}.`);
   }
 };
+
 
 
 export const addPendingQuery = async (storeName, item, action) => {
@@ -112,18 +123,52 @@ export const addPendingQuery = async (storeName, item, action) => {
     item: item,
     action: action,
   };
-  await db.add(PENDING_QUEREY_STORE, pendingQuery);
+  await db.add("pendingQuery", pendingQuery);
   console.log(`Pending query for ${action} item to pending query store.`);
 };
 
 export const putItem = async (storeName, item , firebaseEvent = false ) => {
   const db = await getDB();
-  await db.put(storeName, item);
+  const updatedItem = { ...item, updatedAt: timestamp };
+  await db.put(storeName, updatedItem);
   if(!firebaseEvent){
-    await addPendingQuery(storeName,item,'update')
+    await addPendingQuery(storeName,updatedItem,'update')
   }
   
 };
+
+export const updateAllStoresWithTimestamp = async () => {
+  const stores = {
+      cost: 'cost',
+      company: 'company',
+      brands: 'brands',
+      products: 'products',
+      purchases: 'purchases',
+      sales: 'sales',
+      units: 'units',
+      suppliers: 'suppliers',
+      customers: 'customers',
+      settings: 'settings',
+      creditManagement: 'creditManagement'
+  };
+
+  for (const storeName of Object.values(stores)) {
+      try {
+          const items = await getItems(storeName);
+          
+          for (const item of items) {
+              item.updatedAt = Date.now(); // ٹائم اسٹیمپ شامل کریں
+              await putItem(storeName, item);
+          }
+
+          console.log(`Updated ${items.length} items in store: ${storeName}`);
+      } catch (error) {
+          console.error(`Error updating store ${storeName}:`, error);
+      }
+  }
+};
+
+
 
 export const getItems = async (storeName) => {
   const db = await getDB();
@@ -179,32 +224,76 @@ const getDebouncedRefresh = (storeName) => {
   return storeDebounceMap[storeName];
 };
 
-export const listenForChanges = (storeName, context) => {
-  if (clientDatabase) {
-    const itemsRef = ref(clientDatabase, storeName);
+export const getLastSyncTime = async (storeName) => {
+  const db = await getDB();
+  const allSyncTimes = await db.getAll("syncTimes");
 
-    onChildAdded(itemsRef, (snapshot) => {
-      const addedItem = { id: snapshot.key, ...snapshot.val() };
-      console.log(`Item with ID ${snapshot.key} added to Firebase in store ${storeName}.`);
-      addItem(storeName, addedItem, true).then(() => {
-        getDebouncedRefresh(storeName)(context, storeName);
-      });
-    });
+  // مطلوبہ اسٹور کے لیے آخری Sync وقت تلاش کرو
+  const storeSync = allSyncTimes.find(sync => sync.storeName === storeName);
+  
+  return storeSync ? storeSync.timestamp : 0;
+};
 
-    onChildChanged(itemsRef, (snapshot) => {
-      const updatedItem = { id: snapshot.key, ...snapshot.val() };
-      console.log(`Item with ID ${snapshot.key} updated in Firebase in store ${storeName}.`);
-      putItem(storeName, updatedItem, true).then(() => {
-        getDebouncedRefresh(storeName)(context, storeName);
-      });
-    });
+export const setLastSyncTime = async (storeName, timestamp) => {
+  const db = await getDB();
+  const allSyncTimes = await db.getAll("syncTimes");
 
-    onChildRemoved(itemsRef, (snapshot) => {
-      const deletedItemId = snapshot.key;
-      console.log(`Item with ID ${deletedItemId} deleted from Firebase in store ${storeName}.`);
-      deleteItem(storeName, deletedItemId, true).then(() => {
-        getDebouncedRefresh(storeName)(context, storeName);
-      });
-    });
+  // پہلے سے موجود اسٹور تلاش کرو
+  const existingSync = allSyncTimes.find(sync => sync.storeName === storeName);
+
+  if (existingSync) {
+    // اگر موجود ہے تو بس timestamp اپڈیٹ کرو
+    existingSync.timestamp = timestamp;
+    await db.put("syncTimes", existingSync);
+   
+    console.log(`Sync time updated for existing store ${storeName}: ${timestamp}`);
+  } else {
+    // اگر موجود نہیں تو نیا ایڈ کرو
+    const addLastSyncTime = {
+      id: uuidv4(),
+      storeName: storeName,
+      timestamp: timestamp,
+    };
+    await db.put("syncTimes", addLastSyncTime);
+
+    console.log(`New sync time added for store ${storeName}: ${timestamp}`);
   }
+};
+
+export const listenForChanges = async (storeName, context) => {
+  if (!clientDatabase) return;
+
+  const itemsRef = ref(clientDatabase, storeName);
+
+  // IndexedDB سے آخری Sync کا وقت حاصل کرو
+  const lastSyncTime = await getLastSyncTime(storeName);
+
+  // Firebase سے صرف وہی ڈیٹا لو جو آخری Sync کے بعد اپڈیٹ ہوا ہو
+  const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncTime || 0));
+
+  onChildAdded(queryRef, async (snapshot) => {
+    const addedItem = { id: snapshot.key, ...snapshot.val() };
+    console.log(`New item added in store ${storeName}:`, addedItem);
+
+    await addItem(storeName, addedItem, true);
+    await setLastSyncTime(storeName, Date.now()); // Sync ٹائم اپڈیٹ کرو
+    getDebouncedRefresh(storeName)(context, storeName);
+  });
+
+  onChildChanged(queryRef, async (snapshot) => {
+    const updatedItem = { id: snapshot.key, ...snapshot.val() };
+    console.log(`Item updated in store ${storeName}:`, updatedItem);
+
+    await putItem(storeName, updatedItem, true);
+    await setLastSyncTime(storeName, Date.now()); // Sync ٹائم اپڈیٹ کرو
+    getDebouncedRefresh(storeName)(context, storeName);
+  });
+
+  onChildRemoved(itemsRef, async (snapshot) => {
+    const deletedItemId = snapshot.key;
+    console.log(`Item deleted from store ${storeName}: ${deletedItemId}`);
+
+    await deleteItem(storeName, deletedItemId, true);
+    getDebouncedRefresh(storeName)(context, storeName);
+  });
 };
