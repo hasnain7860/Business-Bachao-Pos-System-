@@ -17,161 +17,152 @@ const StatisticsDasboard = () => {
   const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
 
 
-
-    function generateSalesData(sales, costData, creditRecord) {
-      const salesData = {
-        [languageData[language].daily]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
-        [languageData[language].weekly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
-        [languageData[language].monthly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
-      };
-      
-
-      const today = new Date().toISOString().split("T")[0];
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-      sales.forEach((sale) => {
-        const saleDate = sale.dateTime.split("T")[0];
-        const saleMonth = new Date(saleDate).getMonth();
-        const saleYear = new Date(saleDate).getFullYear();
-        const totalBill = parseFloat(sale.totalBill) || 0;
-
-        // **Purchase Cost Calculation**
-        const purchaseCost = sale.products.reduce(
-          (acc, product) =>
-            acc +
-            (parseFloat(product.purchasePrice) || 0) *
-              (parseInt(product.SellQuantity) || 0),
+  function generateSalesData(sales, costData, creditRecord) {
+    const salesData = {
+      [languageData[language].daily]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
+      [languageData[language].weekly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
+      [languageData[language].monthly]: { sales: 0, profit: 0, loss: 0, credit: 0, payment: 0, issuedSales: 0, cost: 0 },
+    };
+  
+    const today = new Date().toISOString().split("T")[0];
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  
+    // **Daily Cost (Only Today's Cost)**
+    let dailyCost = costData.reduce(
+      (acc, cost) => (cost.date === today ? acc + parseFloat(cost.cost || 0) : acc),
+      0
+    );
+  
+    // **Weekly Cost**
+    let weeklyCost = costData.reduce((acc, cost) => {
+      const costDate = new Date(cost.date);
+      return costDate >= oneWeekAgo ? acc + parseFloat(cost.cost || 0) : acc;
+    }, 0);
+  
+    // **Monthly Cost**
+    let monthlyCost = costData.reduce((acc, cost) => {
+      const costDate = new Date(cost.date);
+      return costDate >= oneMonthAgo ? acc + parseFloat(cost.cost || 0) : acc;
+    }, 0);
+  
+    sales.forEach((sale) => {
+      const saleDate = sale.dateTime.split("T")[0];
+      const saleMonth = new Date(saleDate).getMonth();
+      const saleYear = new Date(saleDate).getFullYear();
+      const totalBill = parseFloat(sale.totalBill) || 0;
+  
+      // **Purchase Cost Calculation**
+      const purchaseCost = sale.products.reduce(
+        (acc, product) =>
+          acc +
+          (parseFloat(product.purchasePrice) || 0) *
+            (parseInt(product.SellQuantity) || 0),
+        0
+      );
+  
+      let profit = totalBill - purchaseCost;
+  
+      // Handling credit and payments
+      let totalCredit = parseFloat(sale.credit) || 0;
+      let totalPayment = parseFloat(sale.amountPaid) || 0;
+  
+      // Add extra payments from addPayment array
+      if (Array.isArray(sale.addPayment)) {
+        totalPayment += sale.addPayment.reduce(
+          (acc, payment) => acc + (parseFloat(payment.amount) || 0),
           0
         );
-
-        let profit = totalBill - purchaseCost;
-
-        // **Daily Cost (Only Today's Cost)**
-        let dailyCost = costData.reduce(
-          (acc, cost) =>
-            cost.date === today ? acc + parseFloat(cost.cost || 0) : acc,
-          0
-        );
-
-         console.log(dailyCost)
-      
-        let weeklyCost = costData.reduce((acc, cost) => {
-          const costDate = new Date(cost.date);
-          return costDate >= oneWeekAgo
-            ? acc + parseFloat(cost.cost || 0)
-            : acc;
-        }, 0);
-
-        // **Monthly Cost (Only Current Month Cost)**
-        let monthlyCost = costData.reduce((acc, cost) => {
-          const costDate = new Date(cost.date);
-          return costDate.getMonth() === saleMonth &&
-            costDate.getFullYear() === saleYear
-            ? acc + parseFloat(cost.cost || 0)
-            : acc;
-        }, 0);
-
-        // Handling credit and payments
-        let totalCredit = parseFloat(sale.credit) || 0;
-        let totalPayment = parseFloat(sale.amountPaid) || 0;
-
-        // Add extra payments from addPayment array
-        if (Array.isArray(sale.addPayment)) {
-          totalPayment += sale.addPayment.reduce(
-            (acc, payment) => acc + (parseFloat(payment.amount) || 0),
-            0
-          );
-        }
-
-        // Handling separate credit/payment records
-        creditRecord.forEach((record) => {
-          if (record.date === saleDate) {
-            if (record.type === "credit") {
-              totalCredit += parseFloat(record.amount) || 0;
-            } else if (record.type === "payment") {
-              totalPayment += parseFloat(record.amount) || 0;
-            }
+      }
+  
+      // Handling separate credit/payment records
+      creditRecord.forEach((record) => {
+        if (record.date === saleDate) {
+          if (record.type === "credit") {
+            totalCredit += parseFloat(record.amount) || 0;
+          } else if (record.type === "payment") {
+            totalPayment += parseFloat(record.amount) || 0;
           }
-        });
-
-        // **Deduct Payments from Credit**
-        totalCredit -= totalPayment;
-        if (totalCredit < 0) totalCredit = 0; // Ensuring credit doesn't go negative
-
-        // **Profit Calculation with Cost**
-        let dailyProfit = profit - dailyCost;
-        let weeklyProfit = profit - weeklyCost;
-        let monthlyProfit = profit - monthlyCost;
-
-        // **If profit is negative, convert it into loss**
-        let dailyLoss = 0,
-          weeklyLoss = 0,
-          monthlyLoss = 0;
-        if (dailyProfit < 0) {
-          dailyLoss = Math.abs(dailyProfit);
-          dailyProfit = 0;
         }
-        if (weeklyProfit < 0) {
-          weeklyLoss = Math.abs(weeklyProfit);
-          weeklyProfit = 0;
-        }
-        if (monthlyProfit < 0) {
-          monthlyLoss = Math.abs(monthlyProfit);
-          monthlyProfit = 0;
-        }
-
-        // **Issued Sales Count (Number of Sales)**
-        let isIssuedSale = totalBill > 0; // If there's a sale, count it
-
-        // Updating sales data
-        if (saleDate === today) {
-          salesData[languageData[language].daily].sales += totalBill;
-          salesData[languageData[language].daily].profit += dailyProfit;
-          salesData[languageData[language].daily].loss += dailyLoss;
-          salesData[languageData[language].daily].credit += totalCredit;
-          salesData[languageData[language].daily].payment += totalPayment;
-          salesData[languageData[language].daily].cost += dailyCost;
-          if (isIssuedSale) salesData[languageData[language].daily].issuedSales++; // Counting issued sales
-        }
-        
-        if (new Date(saleDate) >= oneWeekAgo) {
-          salesData[languageData[language].weekly].sales += totalBill;
-          salesData[languageData[language].weekly].profit += weeklyProfit;
-          salesData[languageData[language].weekly].loss += weeklyLoss;
-          salesData[languageData[language].weekly].credit += totalCredit;
-          salesData[languageData[language].weekly].payment += totalPayment;
-          salesData[languageData[language].weekly].cost += weeklyCost;
-          if (isIssuedSale) salesData[languageData[language].weekly].issuedSales++; // Counting issued sales
-        }
-        
-        if (new Date(saleDate) >= oneMonthAgo) {
-          salesData[languageData[language].monthly].sales += totalBill;
-          salesData[languageData[language].monthly].profit += monthlyProfit;
-          salesData[languageData[language].monthly].loss += monthlyLoss;
-          salesData[languageData[language].monthly].credit += totalCredit;
-          salesData[languageData[language].monthly].payment += totalPayment;
-          salesData[languageData[language].monthly].cost += monthlyCost;
-          if (isIssuedSale) salesData[languageData[language].monthly].issuedSales++; // Counting issued sales
-        }
-        
       });
-
-      // Round values to 2 decimal places
-      Object.keys(salesData).forEach((period) => {
-        Object.keys(salesData[period]).forEach((key) => {
-          salesData[period][key] =
-            key === "issuedSales"
-              ? salesData[period][key]
-              : parseFloat(salesData[period][key]).toFixed(2);
-        });
+  
+      // **Deduct Payments from Credit**
+      totalCredit -= totalPayment;
+      if (totalCredit < 0) totalCredit = 0; // Ensuring credit doesn't go negative
+  
+      // **Profit Calculation with Cost**
+      let dailyProfit = profit - dailyCost;
+      let weeklyProfit = profit - weeklyCost;
+      let monthlyProfit = profit - monthlyCost;
+  
+      // **If profit is negative, convert it into loss**
+      let dailyLoss = 0,
+        weeklyLoss = 0,
+        monthlyLoss = 0;
+      if (dailyProfit < 0) {
+        dailyLoss = Math.abs(dailyProfit);
+        dailyProfit = 0;
+      }
+      if (weeklyProfit < 0) {
+        weeklyLoss = Math.abs(weeklyProfit);
+        weeklyProfit = 0;
+      }
+      if (monthlyProfit < 0) {
+        monthlyLoss = Math.abs(monthlyProfit);
+        monthlyProfit = 0;
+      }
+  
+      // **Issued Sales Count (Number of Sales)**
+      let isIssuedSale = totalBill > 0; // If there's a sale, count it
+  
+      // Updating sales data
+      if (saleDate === today) {
+        salesData[languageData[language].daily].sales += totalBill;
+        salesData[languageData[language].daily].profit += dailyProfit;
+        salesData[languageData[language].daily].loss += dailyLoss;
+        salesData[languageData[language].daily].credit += totalCredit;
+        salesData[languageData[language].daily].payment += totalPayment;
+        if (isIssuedSale) salesData[languageData[language].daily].issuedSales++; // Counting issued sales
+      }
+      
+      if (new Date(saleDate) >= oneWeekAgo) {
+        salesData[languageData[language].weekly].sales += totalBill;
+        salesData[languageData[language].weekly].profit += weeklyProfit;
+        salesData[languageData[language].weekly].loss += weeklyLoss;
+        salesData[languageData[language].weekly].credit += totalCredit;
+        salesData[languageData[language].weekly].payment += totalPayment;
+        if (isIssuedSale) salesData[languageData[language].weekly].issuedSales++; // Counting issued sales
+      }
+      
+      if (new Date(saleDate) >= oneMonthAgo) {
+        salesData[languageData[language].monthly].sales += totalBill;
+        salesData[languageData[language].monthly].profit += monthlyProfit;
+        salesData[languageData[language].monthly].loss += monthlyLoss;
+        salesData[languageData[language].monthly].credit += totalCredit;
+        salesData[languageData[language].monthly].payment += totalPayment;
+        if (isIssuedSale) salesData[languageData[language].monthly].issuedSales++; // Counting issued sales
+      }
+    });
+  
+    // Ensure daily, weekly, and monthly costs are always included
+    salesData[languageData[language].daily].cost = dailyCost;
+    salesData[languageData[language].weekly].cost = weeklyCost;
+    salesData[languageData[language].monthly].cost = monthlyCost;
+  
+    // Round values to 2 decimal places
+    Object.keys(salesData).forEach((period) => {
+      Object.keys(salesData[period]).forEach((key) => {
+        salesData[period][key] =
+          key === "issuedSales"
+            ? salesData[period][key]
+            : parseFloat(salesData[period][key]).toFixed(2);
       });
-
-      return salesData;
-    }
-
+    });
+  
+    return salesData;
+  }
    
   
     const [salesData, setSalesData] = useState(generateSalesData(sales, costData, creditRecord));

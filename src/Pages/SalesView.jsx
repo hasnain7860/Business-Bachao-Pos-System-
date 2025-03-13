@@ -16,9 +16,9 @@ const SalesView = () => {
   const [loading, setLoading] = useState(true);
 
   const sale = salesData.find((sale) => sale.id === id) || null;
+  console.log(sale);
   const customer = customers.find((c) => c.id === sale?.customerId) || null;
   const isPrintMode = location.pathname.includes("/print");
-
   useEffect(() => {
     if (salesData.length > 0) {
       setLoading(false);
@@ -26,10 +26,12 @@ const SalesView = () => {
   }, [salesData]);
 
   useEffect(() => {
-    if (isPrintMode) {
+    if (isPrintMode && !loading) {
+      document.title = `Sale - ${sale?.salesRefNo}`;
       window.print();
     }
-  }, [isPrintMode]);
+  }, [isPrintMode, loading, sale]);
+
 
   const handlePrint = () => {
     navigate(`/sales/view/${id}/print`);

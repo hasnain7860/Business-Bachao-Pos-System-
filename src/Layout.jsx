@@ -41,7 +41,7 @@ const Layout = ({ children }) => {
     <div>
       <Navbar />
       
-      <main className="mt-[120px] " >{children}</main>
+      <main className="mt-12">{children}</main>
     </div>
   );
 };

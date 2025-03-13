@@ -92,7 +92,7 @@ const [expirationDate, setExpirationDate] = useState()
     const batchData = {
   
       batchCode: edit ? selectedBatch : batchCode,
-      expirationDate,
+      expirationDate : expirationDate || "",
       purchasePrice,
       sellPrice,
       retailPrice,
@@ -137,16 +137,15 @@ const [expirationDate, setExpirationDate] = useState()
     // Clear fields if not editing
     if (!edit) {
       setProductName("");
-      setProductNameInUrdu("")
+      setProductNameInUrdu("");
       setSelectedCompany("");
-    
       setSelectedUnit("");
       setProductImage(null);
       setPurchasePrice("");
       setSellPrice("");
       setRetailPrice("");
       setQuantity("");
-      setExpirationDate('')
+      setExpirationDate("");
     }
   };
 

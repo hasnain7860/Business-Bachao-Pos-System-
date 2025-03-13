@@ -165,7 +165,7 @@ const Customers = () => {
   }
 
   const renderPageNumbers = () => {
-    const maxPageNumbersToShow = 5;
+    const maxPageNumbersToShow = 1;
     const halfMaxPageNumbersToShow = Math.floor(maxPageNumbersToShow / 2);
     let startPage = Math.max(1, currentPage - halfMaxPageNumbersToShow);
     let endPage = Math.min(totalPages, currentPage + halfMaxPageNumbersToShow);

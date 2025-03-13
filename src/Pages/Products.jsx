@@ -20,7 +20,7 @@ const Products = () => {
     const [selectedCompany, setSelectedCompany] = useState(""); // Company Filter ke liye
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(10); // Har page par kitne products dikhane hain
-
+console.log(products)
     // Company Filter Function
     const filteredProducts = selectedCompany
         ? products.filter((product) => product.companyId === selectedCompany)
