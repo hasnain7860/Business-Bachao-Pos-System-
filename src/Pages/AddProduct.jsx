@@ -74,7 +74,7 @@ const [expirationDate, setExpirationDate] = useState()
   }, [selectedBatch, batches]);
 
   const handleSaveProduct = () => {
-    if (!productName || !productNameInUrdu || !selectedCompany || !selectedBrand || !selectedUnit) {
+    if (!productName || !productNameInUrdu || !selectedCompany || !selectedUnit) {
       alert("Please fill all required fields.");
       return;
     }
