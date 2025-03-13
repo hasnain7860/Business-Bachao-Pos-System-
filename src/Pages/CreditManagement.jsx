@@ -180,7 +180,7 @@ const CreditManagement = () => {
                             ? sale.addPayment.reduce(
                                 (acc, addPayment) =>
                                   acc +
-                                  Number(addPayment ? addPayment.amount : 0),
+                                  Number(addPayment ? Number(addPayment.amount) : 0),
                                 0
                               )
                             : 0);
@@ -238,6 +238,14 @@ const CreditManagement = () => {
                                           <td className="border px-4 py-2">{sale.amountPaid}</td>
                                           <td className="border px-4 py-2">N/A</td>
                                         </tr>
+                                        {sale.addPayment &&
+                                        sale.addPayment.map((payment) => (
+                                        <tr className="bg-white border-b">
+                                          <td className="border px-4 py-2">{payment.refNo}</td>
+                                          <td className="border px-4 py-2">{payment.amount}</td>
+                                          <td className="border px-4 py-2">N/A</td>
+                                        </tr>
+                       )) }
                                       </tbody>
                                     </table>
                                   </div>
