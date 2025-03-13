@@ -72,7 +72,7 @@ const CreditManagement = () => {
 
   const totalSalesPayment = salesData
     .filter((sale) => sale.customerId === selectedCustomer?.id)
-    .reduce((acc, sale) => acc + sale.amountPaid, 0);
+    .reduce((acc, sale) => acc + Number(sale.amountPaid), 0);
 
   const totalAddPayment = salesData
     .filter(

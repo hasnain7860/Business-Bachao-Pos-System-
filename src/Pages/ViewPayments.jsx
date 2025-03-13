@@ -14,7 +14,12 @@ const ViewPayments = () => {
   const purchase = ref === 'purchases' ? purchases.find(purchase => purchase.id === id) : null;
 
   // Set payments based on whether it's a sale or purchase
-  const payments = sale ? sale.addPayment : purchase ? purchase.addPayment : [];
+  const payments = sale && Array.isArray(sale.addPayment) 
+  ? sale.addPayment 
+  : purchase && Array.isArray(purchase.addPayment) 
+    ? purchase.addPayment 
+    : [];
+
 console.log(payments +"viewpayments")
   const closeModal = () => {
     navigate(-1);

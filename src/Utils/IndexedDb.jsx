@@ -129,6 +129,7 @@ export const addPendingQuery = async (storeName, item, action) => {
 
 export const putItem = async (storeName, item , firebaseEvent = false ) => {
   const db = await getDB();
+  const timestamp = Date.now(); 
   const updatedItem = { ...item, updatedAt: timestamp };
   await db.put(storeName, updatedItem);
   if(!firebaseEvent){
