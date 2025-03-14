@@ -300,7 +300,7 @@ console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncUpdateTime || 0));
 
   onChildAdded(queryRef, async (snapshot) => {
-    const addedItem = { id: snapshot.key, ...snapshot.val() };
+    const addedItem = { id: snapshot.id, ...snapshot.val() };
     console.log(`New item added in store ${storeName}:`, addedItem);
 
     await addItem(storeName, addedItem, true);

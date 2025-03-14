@@ -93,10 +93,10 @@ const [expirationDate, setExpirationDate] = useState()
   
       batchCode: edit ? selectedBatch : batchCode,
       expirationDate : expirationDate || "",
-      purchasePrice,
-      sellPrice,
-      retailPrice,
-      quantity,
+      purchasePrice : purchasePrice || "",
+      sellPrice : sellPrice || "" , 
+      retailPrice : retailPrice || "",
+      quantity : quantity || "",
     };
 
     let updatedBatches;
