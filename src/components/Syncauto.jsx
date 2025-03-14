@@ -13,6 +13,7 @@ const Syncauto = () => {
         Object.values(STORE_NAMES).forEach((store_name) => {
           listenForChanges(store_name, context);
         });
+        
         listenersAdded.current = true;
         }
 

@@ -24,7 +24,7 @@ export const STORE_NAMES = {
   notificationsDb: 'notificationsDb',
 };
 
-const LOCAL_STORE = {
+export const LOCAL_STORE = {
   pendingQuery: 'pendingQuery',
   syncTimes: 'syncTimes',
 }
@@ -199,7 +199,7 @@ export const setItems = async (storeName, items) => {
     await tx.done;
     return Promise.resolve();
   } catch (error) {
-    console.error('Error setting items:', error);
+    console.error('Error sets items:', error);
     return Promise.reject(error);
   }
 };
@@ -267,10 +267,37 @@ export const listenForChanges = async (storeName, context) => {
   const itemsRef = ref(clientDatabase, storeName);
 
   // IndexedDB سے آخری Sync کا وقت حاصل کرو
-  const lastSyncTime = await getLastSyncTime(storeName);
+  
+const lastSyncTime = await getLastSyncTime(storeName);
 
+if(lastSyncTime === 0){
+const snapshot = await get(itemsRef);
+  if (snapshot.exists()) {
+    const allData = snapshot.val();
+    const timestamp = Date.now();
+
+    // 🔹 تمام آئٹمز میں updatedAt شامل کریں
+    const itemsArray = Object.keys(allData).map(key => ({
+      id: key,
+      ...allData[key],
+      updatedAt: allData[key].updatedAt || timestamp
+    }));
+
+    // 🔹 ایک ساتھ IndexedDB میں سیٹ کریں
+    await setItems(storeName, itemsArray);
+
+    // 🔹 Sync time اپڈیٹ کریں
+    await setLastSyncTime(storeName, timestamp);
+    getDebouncedRefresh(storeName)(context, storeName);
+  }
+
+}
+
+const lastSyncUpdateTime = await getLastSyncTime(storeName);
+
+console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   // Firebase سے صرف وہی ڈیٹا لو جو آخری Sync کے بعد اپڈیٹ ہوا ہو
-  const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncTime || 0));
+  const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncUpdateTime || 0));
 
   onChildAdded(queryRef, async (snapshot) => {
     const addedItem = { id: snapshot.key, ...snapshot.val() };

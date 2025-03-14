@@ -20,12 +20,13 @@ const Products = () => {
     const [selectedCompany, setSelectedCompany] = useState(""); // Company Filter ke liye
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(10); // Har page par kitne products dikhane hain
-console.log(products)
-    // Company Filter Function
-    const filteredProducts = selectedCompany
-        ? products.filter((product) => product.companyId === selectedCompany)
-        : products;
+const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
 
+    // **Filtering Products Based on Search & Company**
+    const filteredProducts = products.filter(product => 
+        (selectedCompany ? product.companyId === selectedCompany : true) &&
+        (searchTerm ? product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.nameInUrdu.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+    );
     // Pagination Logic
     const indexOfLastProduct = currentPage * productsPerPage;
     const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -145,19 +146,28 @@ console.log(products)
                 </Link>
             </div>
 
-            {/* Company Filter Dropdown */}
-            <select
-                className="form-select p-2 border rounded"
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-            >
-                <option value="">{languageData[language].all_companies}</option>
-                {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                        {company.name}
-                    </option>
-                ))}
-            </select>
+    {/* **Search Input & Filter** */}
+            <div className="flex items-center flex-col gap-4 mb-4">
+                <input
+                    type="text"
+                    placeholder="Search Product..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="p-2 border rounded w-1/3"
+                />
+                <select
+                    className="form-select p-2 border rounded"
+                    value={selectedCompany}
+                    onChange={(e) => setSelectedCompany(e.target.value)}
+                >
+                    <option value="">{languageData[language].all_companies}</option>
+                    {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                            {company.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
             {/* Products Table */}
             <div className="overflow-x-auto mt-4">
