@@ -6,12 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 6;
+const DB_VERSION = 8;
 
 export const STORE_NAMES = {
   cost: 'cost',
   company: 'company',
-  brands: 'brands',
   products: 'products',
   purchases: 'purchases',
   sales: 'sales',
@@ -81,17 +80,20 @@ export const getDB = async () => {
     upgrade(db) {
       Object.values(STORE_NAMES).forEach((storeName) => {
         if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id' });
+          const store = db.createObjectStore(storeName, { keyPath: 'id' });
+          store.createIndex('id', 'id', { unique: true });
         }
       });
       Object.values(LOCAL_STORE).forEach((storeName) => {
         if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id' });
+          const store = db.createObjectStore(storeName, { keyPath: 'id' });
+          store.createIndex('id', 'id', { unique: true });
         }
       });
     },
   });
 };
+
 
 export const addItem = async (storeName, item, firebaseEvent = false) => {
   const db = await getDB();
@@ -100,7 +102,7 @@ export const addItem = async (storeName, item, firebaseEvent = false) => {
 
   if (!existingItem) {
     // ✅ `updatedAt` فیلڈ شامل کرو
-    const newItem = { ...item, updatedAt: timestamp };
+    const newItem = { ...item, updatedAt: timestamp,id: String(item.id)  };
 
     await db.add(storeName, newItem);
     console.log(`Item with ID ${item.id} added in IndexedDB for store ${storeName}.`);
@@ -130,7 +132,7 @@ export const addPendingQuery = async (storeName, item, action) => {
 export const putItem = async (storeName, item , firebaseEvent = false ) => {
   const db = await getDB();
   const timestamp = Date.now(); 
-  const updatedItem = { ...item, updatedAt: timestamp };
+  const updatedItem = { ...item, updatedAt: timestamp ,id: String(item.id) };
   await db.put(storeName, updatedItem);
   if(!firebaseEvent){
     await addPendingQuery(storeName,updatedItem,'update')
@@ -194,7 +196,10 @@ export const setItems = async (storeName, items) => {
 
   try {
     for (const item of items) {
-      await tx.store.put(item);
+      console.log('item', item);
+      const fixedItem = { ...item, id: String(item.id) };
+
+      await tx.store.put(fixedItem);
     }
     await tx.done;
     return Promise.resolve();
@@ -278,11 +283,10 @@ const snapshot = await get(itemsRef);
 
     // 🔹 تمام آئٹمز میں updatedAt شامل کریں
     const itemsArray = Object.keys(allData).map(key => ({
-      id: key,
-      ...allData[key],
-      updatedAt: allData[key].updatedAt || timestamp
-    }));
-
+      ...allData[key],  
+      updatedAt: allData[key].updatedAt || timestamp 
+  }));
+  
     // 🔹 ایک ساتھ IndexedDB میں سیٹ کریں
     await setItems(storeName, itemsArray);
 
@@ -309,7 +313,7 @@ console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   });
 
   onChildChanged(queryRef, async (snapshot) => {
-    const updatedItem = { id: snapshot.key, ...snapshot.val() };
+    const updatedItem = { id: snapshot.id, ...snapshot.val() };
     console.log(`Item updated in store ${storeName}:`, updatedItem);
 
     await putItem(storeName, updatedItem, true);
@@ -318,7 +322,7 @@ console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
-    const deletedItemId = snapshot.key;
+    const deletedItemId = snapshot.id;
     console.log(`Item deleted from store ${storeName}: ${deletedItemId}`);
 
     await deleteItem(storeName, deletedItemId, true);

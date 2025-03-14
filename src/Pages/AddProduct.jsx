@@ -37,7 +37,7 @@ const [expirationDate, setExpirationDate] = useState()
       const product = context.productContext.products.find((p) => p.id == id);
 
       if (product) {
- 
+ console.log(product)
         setProductName(product.name || "");
         setProductNameInUrdu(product.nameInUrdu || "");
         setSelectedCompany(product.companyId || "");
@@ -48,7 +48,7 @@ const [expirationDate, setExpirationDate] = useState()
       const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
       setBatchCode(newBatchCode);
     }else{
-        setBatches(product.batchCode ); // Set batches from product
+        setBatches(product.batchCode); // Set batches from product
         setEdit(true);
     }  }
     } else {

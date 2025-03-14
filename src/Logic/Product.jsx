@@ -38,8 +38,9 @@ const addProduct = async (newProduct) => {
   
   const editProduct = async (id, updatedProduct) => {
     // Use putItem to update the unit in IndexedDB
+    console.log("call edit product" )
     await putItem(STORE_NAMES.products, { ...updatedProduct, id });
-    setProducts((prev) => updateItem(prev, id, updatedProduct));
+    await refreshData()  
 
   };
   
@@ -47,7 +48,7 @@ const addProduct = async (newProduct) => {
     
   const deleteProduct = async (id) => {
     await deleteFromDB(STORE_NAMES.products, id);
-    setProducts((prev) => deleteItem(prev, id));
+    await refreshData()
     
     
   };

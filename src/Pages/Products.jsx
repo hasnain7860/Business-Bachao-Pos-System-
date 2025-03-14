@@ -12,8 +12,7 @@ const Products = () => {
     const navigate = useNavigate();
     const products = context.productContext.products;
     const companies = context.companyContext.companies;
-    const addProduct = context.productContext.add;
-    const edit = context.productContext.edit;
+  console.log(products)
     const handleDelete = context.productContext.delete;
     const userAndBusinessDetail = context.settingContext.settings;
     const { language } = context;
@@ -34,8 +33,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-    const [uploadMessage, setUploadMessage] = useState('');
-    const [selectedFile, setSelectedFile] = useState(null);
+
     const [selectedBatch, setSelectedBatch] = useState({});
 
     const handleBatchChange = (productId, batchIndex) => {
@@ -251,7 +249,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="p-2 border-b">{companies.find((c) => c.id === product.companyId)?.name || "N/A"}</td>
+                                            <td className="p-2 border-b">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
                                             <td className="p-2 border-b">{product.nameInUrdu}</td>
                                             <td className="p-2 border-b">{product.name}</td>
                                             <td className="p-2 border-b">{l + 1}</td>
@@ -261,7 +259,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                             <td className="p-2 border-b">{l + 1}</td>
                                             <td className="p-2 border-b">{product.name}</td>
                                             <td className="p-2 border-b">{product.nameInUrdu}</td>
-                                            <td className="p-2 border-b">{companies.find((c) => c.id === product.companyId)?.name || "N/A"}</td>
+                                            <td className="p-2 border-b">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
                                             <td className="p-2 border-b">
                                                 {product.productImage ? (
                                                     <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover rounded" />
