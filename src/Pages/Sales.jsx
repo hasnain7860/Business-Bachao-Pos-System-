@@ -122,9 +122,17 @@ console.log(sales)
                   return !isNaN(amount) && amount >= 0 ? sum + amount : sum;
                 }, 0)
               : 0;
+       const returnTotal = Array.isArray(sale?.returns)
+              ? sale.returns.reduce((sum, product) => {
+                  const amount = Number(product?.
+                    returnPrice
+                    );  // Return Price
+                  return !isNaN(amount) && amount >= 0 ? sum + amount : sum;
+                }, 0)
+              : 0;
 
             const updatedAmountPaid = Number(sale.amountPaid) + totalPaidFromPayments;
-            const updatedCredit = sale.credit - totalPaidFromPayments;
+            const updatedCredit = sale.credit - totalPaidFromPayments - returnTotal;
 
             return (
               <tr key={index}>
@@ -132,9 +140,9 @@ console.log(sales)
                 <td className="border px-4 py-2">{sale.salesRefNo}</td>
                 <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
                 <td className="border px-4 py-2">{sale.dateTime}</td>
-                <td className="border px-4 py-2">{currency} {sale.totalBill}</td>
+                <td className="border px-4 py-2">{currency} {sale.totalBill - returnTotal}</td>
                 <td className="border px-4 py-2">{currency} {updatedAmountPaid}</td>
-                <td className="border px-4 py-2">{currency} {updatedCredit}</td>
+                <td className="border px-4 py-2">{currency} {updatedCredit }</td>
                 <td className="border px-4 py-2">{sale.paymentMode}</td>
                 <td className="border px-4 py-2">{updatedCredit === 0 ? languageData[language].paid : languageData[language].pending}</td>
                 <td className="border px-4 py-2 ">

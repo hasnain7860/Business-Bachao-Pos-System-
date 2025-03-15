@@ -178,6 +178,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
+                                    <th className="p-2 border-b">total stock Price</th>
                                     <th className="p-2 border-b">{languageData[language].batch_stock}</th>
                                     <th className="p-2 border-b">{languageData[language].total_stock}</th>
                                     <th className="p-2 border-b">{languageData[language].image}</th>
@@ -195,6 +196,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                     <th className="p-2 border-b">{languageData[language].image}</th>
                                     <th className="p-2 border-b">{languageData[language].total_stock}</th>
                                     <th className="p-2 border-b">{languageData[language].batch_stock}</th>
+                                    <th className="p-2 border-b">total stock Price</th>
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
@@ -208,8 +210,17 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                             const batchIndex = selectedBatch[product.id] || 0;
                             const batch = product.batchCode?.[batchIndex] || {};
                             const totalStock = calculateTotalStock(product.batchCode);
-
-                            return (
+                            const totalstockprice = product?.batchCode?.reduce((total, batch) => {
+                                const quantity = Number(batch.quantity || 0);
+                                const purchasePrice = Number(batch.purchasePrice || 0);
+                                
+                                if (isNaN(quantity) || isNaN(purchasePrice)) {
+                                    return total;
+                                }
+                                
+                                return total + (quantity * purchasePrice);
+                            }, 0) || 0;
+                             return (
                                 <tr key={product.id} className="hover:bg-gray-100">
                                     {language === 'ur' ? (
                                         <>
@@ -229,6 +240,8 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
+                                            <td className="p-2 border-b">{totalstockprice}</td>
+                                            
                                             <td className="p-2 border-b">
                                                 <select
                                                     onChange={(e) => handleBatchChange(product.id, e.target.value)}
@@ -239,7 +252,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                                 </select>
                                                 <div>{batch.quantity || languageData[language].batch_not_available}</div>
                                             </td>
-                                            <td className="p-2 border-b">{totalStock}</td>
+                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
                                             <td className="p-2 border-b">
                                                 {product.productImage ? (
                                                     <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover rounded" />
@@ -280,6 +293,7 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                                 </select>
                                                 <div>{batch.quantity || languageData[language].batch_not_available}</div>
                                             </td>
+                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
                                             <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>

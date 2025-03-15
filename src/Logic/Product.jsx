@@ -25,9 +25,9 @@ const useProductContext = () => {
 
 const addProduct = async (newProduct) => {
   await addItem(STORE_NAMES.products, newProduct);
-  await refreshData()
-  //  await setProducts((prev) => [...prev, { ...newProduct
-  //   }]);
+  // await refreshData()
+   await setProducts((prev) => [...prev, { ...newProduct
+    }]);
 
    
     
@@ -40,7 +40,7 @@ const addProduct = async (newProduct) => {
     // Use putItem to update the unit in IndexedDB
     console.log("call edit product" )
     await putItem(STORE_NAMES.products, { ...updatedProduct, id });
-    await refreshData()  
+    setProducts((prev) => updateItem(prev, id, updatedProduct));
 
   };
   
@@ -48,7 +48,8 @@ const addProduct = async (newProduct) => {
     
   const deleteProduct = async (id) => {
     await deleteFromDB(STORE_NAMES.products, id);
-    await refreshData()
+    setProducts((prev) => deleteItem(prev, id));
+    
     
     
   };

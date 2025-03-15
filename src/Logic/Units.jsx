@@ -24,7 +24,8 @@ const useUnitsContext = () => {
 
   const addUnit = async (newUnit) => {
      await addItem(STORE_NAMES.units, newUnit);
-     refreshData()
+     await setProducts((prev) => [...prev, { ...newProduct
+     }])
   };
 
   const editUnit = async (id, updatedUnit) => {

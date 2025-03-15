@@ -318,7 +318,7 @@ const [expirationDate, setExpirationDate] = useState()
         </label>
         <input
         required
-          type="number"
+          type="text"
           value={purchasePrice}
           onChange={(e) => setPurchasePrice(e.target.value)}
           placeholder="Enter purchase price"
