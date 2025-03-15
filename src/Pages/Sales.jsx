@@ -95,90 +95,90 @@ console.log(sales)
       {languageData[language].new_sale}
     </button>
   
-    {/* Sales Table */}
-    <div className=" mb-4">
-      {filteredSales.length > 0 ? (
-        <table className="table-auto w-full mb-4">
-          <thead>
-            <tr>
-              <th className="px-4 py-2">{languageData[language].no}</th>
-              <th className="px-4 py-2">{languageData[language].sales_ref_no}</th>
-              <th className="px-4 py-2">{languageData[language].customer_name}</th>
-              <th className="px-4 py-2">{languageData[language].date}</th>
-              <th className="px-4 py-2">{languageData[language].total_bill}</th>
-              <th className="px-4 py-2">{languageData[language].paid_bill}</th>
-              <th className="px-4 py-2">{languageData[language].credit}</th>
-              <th className="px-4 py-2">{languageData[language].payment_mode}</th>
-              <th className="px-4 py-2">{languageData[language].status}</th>
-              <th className="px-4 py-2">{languageData[language].actions}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSales.map((sale, index) => {
-              const totalPaidFromPayments = Array.isArray(sale?.addPayment)
-                ? sale.addPayment.reduce((sum, payment) => {
-                    const amount = Number(payment?.amount);
-                    return !isNaN(amount) && amount >= 0 ? sum + amount : sum;
-                  }, 0)
-                : 0;
-  
-              const updatedAmountPaid = Number(sale.amountPaid) + totalPaidFromPayments;
-              const updatedCredit = sale.credit - totalPaidFromPayments;
-  
-              return (
-                <tr key={index}>
-                  <td className="border px-4 py-2">{index + 1}</td>
-                  <td className="border px-4 py-2">{sale.salesRefNo}</td>
-                  <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
-                  <td className="border px-4 py-2">{sale.dateTime}</td>
-                  <td className="border px-4 py-2">{currency} {sale.totalBill}</td>
-                  <td className="border px-4 py-2">{currency} {updatedAmountPaid}</td>
-                  <td className="border px-4 py-2">{currency} {updatedCredit}</td>
-                  <td className="border px-4 py-2">{sale.paymentMode}</td>
-                  <td className="border px-4 py-2">{updatedCredit === 0 ? languageData[language].paid : languageData[language].pending}</td>
-                  <td className="border px-4 py-2 relative">
-                    {/* Three-dot menu */}
-                    <button className="btn btn-secondary" onClick={() => toggleMenu(sale.id)}>
-                      ⋮
-                    </button>
-                    {openMenu[sale.id] && (
-                      <div className={`absolute ${language === 'ur' ? 'left-1.5' : 'right-1.5'}  mt-2  text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 `}>
-                     
-                        <button className="block text-center w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>
-                          {languageData[language].view}
-                            
-                        </button><button className="block w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>
-                          {languageData[language].print}
-                        </button>
-                        {updatedCredit > 0 && (
-                          <>
-                            <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('addPayment', sale.id)}>
-                              {languageData[language].add_payment}
-                            </button>
-                            <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('viewPayment', sale.id)}>
-                              {languageData[language].view_payment}
-                            </button>
-                          </>
-                        )}
-                        <button className="block px-4 py-2 w-full hover:bg-gray-100" onClick={() => handleMenuAction('saleReturn', sale.id)}>
-                          {languageData[language].sale_return}
-                        </button>
-                      
-                        <button className="text-red-600 w-full block px-4 py-2 hover:bg-red-100" onClick={() => handleMenuAction('delete', sale.id)}>
-                          {languageData[language].delete}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : (
-        <p className="text-center text-gray-500">{languageData[language].no_sales_records}</p>
-      )}
-    </div>
+   {/* Sales Table */}
+<div className="relative mb-4">
+  <div className="overflow-x-auto">
+    {filteredSales.length > 0 ? (
+      <table className="table-auto w-full mb-4">
+        <thead>
+          <tr>
+            <th className="px-4 py-2">{languageData[language].no}</th>
+            <th className="px-4 py-2">{languageData[language].sales_ref_no}</th>
+            <th className="px-4 py-2">{languageData[language].customer_name}</th>
+            <th className="px-4 py-2">{languageData[language].date}</th>
+            <th className="px-4 py-2">{languageData[language].total_bill}</th>
+            <th className="px-4 py-2">{languageData[language].paid_bill}</th>
+            <th className="px-4 py-2">{languageData[language].credit}</th>
+            <th className="px-4 py-2">{languageData[language].payment_mode}</th>
+            <th className="px-4 py-2">{languageData[language].status}</th>
+            <th className="px-4 py-2">{languageData[language].actions}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredSales.map((sale, index) => {
+            const totalPaidFromPayments = Array.isArray(sale?.addPayment)
+              ? sale.addPayment.reduce((sum, payment) => {
+                  const amount = Number(payment?.amount);
+                  return !isNaN(amount) && amount >= 0 ? sum + amount : sum;
+                }, 0)
+              : 0;
+
+            const updatedAmountPaid = Number(sale.amountPaid) + totalPaidFromPayments;
+            const updatedCredit = sale.credit - totalPaidFromPayments;
+
+            return (
+              <tr key={index}>
+                <td className="border px-4 py-2">{index + 1}</td>
+                <td className="border px-4 py-2">{sale.salesRefNo}</td>
+                <td className="border px-4 py-2">{handleCustomerNameViaId(sale)}</td>
+                <td className="border px-4 py-2">{sale.dateTime}</td>
+                <td className="border px-4 py-2">{currency} {sale.totalBill}</td>
+                <td className="border px-4 py-2">{currency} {updatedAmountPaid}</td>
+                <td className="border px-4 py-2">{currency} {updatedCredit}</td>
+                <td className="border px-4 py-2">{sale.paymentMode}</td>
+                <td className="border px-4 py-2">{updatedCredit === 0 ? languageData[language].paid : languageData[language].pending}</td>
+                <td className="border px-4 py-2 ">
+                  {/* Three-dot menu */}
+                  <button className="btn btn-secondary" onClick={() => toggleMenu(sale.id)}>
+                    ⋮
+                  </button>
+                  {openMenu[sale.id] && (
+                    <div className={`absolute ${language === 'ur' ? 'left-1.5' : 'right-1.5'} mb-2 text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20`}>
+                      <button className="block text-center w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>
+                        {languageData[language].view}
+                      </button>
+                      <button className="block w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>
+                        {languageData[language].print}
+                      </button>
+                      {updatedCredit > 0 && (
+                        <>
+                          <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('addPayment', sale.id)}>
+                            {languageData[language].add_payment}
+                          </button>
+                          <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('viewPayment', sale.id)}>
+                            {languageData[language].view_payment}
+                          </button>
+                        </>
+                      )}
+                      <button className="block px-4 py-2 w-full hover:bg-gray-100" onClick={() => handleMenuAction('saleReturn', sale.id)}>
+                        {languageData[language].sale_return}
+                      </button>
+                      <button className="text-red-600 w-full block px-4 py-2 hover:bg-red-100" onClick={() => handleMenuAction('delete', sale.id)}>
+                        {languageData[language].delete}
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    ) : (
+      <p className="text-center text-gray-500">{languageData[language].no_sales_records}</p>
+    )}
+  </div>
+</div>
   </div>
   
   );
