@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,7 +10,7 @@ const NewSales = () => {
   const customers = context.supplierCustomerContext.customers;
   const products = context.productContext.products;
   const editProduct = context.productContext.edit;
-
+const isPrint = useRef(false);
   const [salesRefNo, setSalesRefNo] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [searchCustomer, setSearchCustomer] = useState('');
@@ -138,8 +138,11 @@ const handleSaveSales = async () => {
     }
   }
 
-  context.SaleContext.add(salesData);
+  await context.SaleContext.add(salesData);
   alert('Sales saved successfully!');
+if(isPrint.current){
+  return salesData;
+}
 
   // Reset form
   setSelectedCustomer('');
@@ -149,6 +152,14 @@ const handleSaveSales = async () => {
   setCredit(0);
   generateSalesRefNo();
   setMessage('');
+};
+
+const handleSaveAndPrintSales = async () => {
+  isPrint.current = true; 
+  const salesData = await handleSaveSales();
+ 
+  navigate(`/sales/view/${salesData.id}/print`);
+  isPrint.current = false; 
 };
 
   
@@ -396,6 +407,15 @@ const handleSaveSales = async () => {
           Save Sales
         </button>
       </div>
+      <div className="form-control mt-6">
+  <button
+    type="button"
+    onClick={handleSaveAndPrintSales}
+    className="btn btn-secondary w-full"
+  >
+    Save and Print
+  </button>
+</div>
     </div>
   );
 };

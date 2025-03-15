@@ -8,20 +8,16 @@ const Syncauto = () => {
   const listenersAdded = useRef(false); // Track if listeners are added
 
   useEffect(() => {
-    console.log("🔥 Syncauto component mounted!");
+ 
 
     if (!listenersAdded.current) {
-      console.log("✅ Adding event listeners & starting interval...");
-setInterval(() => {
-        console.log("⏳ Running processPendingQueries...");
+     
+setInterval(() => { 
         processPendingQueries();
       }, 1000)
-
-
-    
+  
       // Adding IndexedDB event listeners
       Object.values(STORE_NAMES).forEach((store_name) => {
-        console.log(`📌 Listening for changes in ${store_name}`);
         listenForChanges(store_name, context);
       });
 

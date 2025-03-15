@@ -27,12 +27,17 @@ const SalesView = () => {
 
   useEffect(() => {
     if (isPrintMode && !loading) {
+      const handleAfterPrint = () => {
+        navigate(-1);
+      };
+      window.addEventListener("afterprint", handleAfterPrint);
       document.title = `Sale - ${sale?.salesRefNo}`;
       window.print();
+      return () => {
+        window.removeEventListener("afterprint", handleAfterPrint);
+      };
     }
   }, [isPrintMode, loading, sale]);
-
-
   const handlePrint = () => {
     navigate(`/sales/view/${id}/print`);
   };

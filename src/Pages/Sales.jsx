@@ -28,9 +28,7 @@ console.log(sales)
 
   const handleMenuAction = (action, id) => {
     switch (action) {
-      case 'edit':
-        navigate(`/sales/edit/${id}`);
-        break;
+
       case 'view':
         navigate(`/sales/view/${id}`);
         break;
@@ -55,10 +53,14 @@ console.log(sales)
   };
 
   const toggleMenu = (id) => {
-    setOpenMenu((prevState) => ({
-      ...prevState,
-      [id]: !prevState[id],
-    }));
+    setOpenMenu((prevState) => {
+      const newState = {};
+      Object.keys(prevState).forEach((key) => {
+        newState[key] = false;
+      });
+      newState[id] = !prevState[id];
+      return newState;
+    });
   };
 
   // ** Filtered Sales List Based on Search Query **
@@ -94,7 +96,7 @@ console.log(sales)
     </button>
   
     {/* Sales Table */}
-    <div className="overflow-x-auto mb-4">
+    <div className=" mb-4">
       {filteredSales.length > 0 ? (
         <table className="table-auto w-full mb-4">
           <thead>
@@ -140,30 +142,29 @@ console.log(sales)
                       ⋮
                     </button>
                     {openMenu[sale.id] && (
-                      <div className={`absolute ${language === 'ur' ? 'left-1.5' : 'right-1.5'} mt-2 w-28 text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 block`}>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('edit', sale.id)}>
-                          {languageData[language].edit}
-                        </button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>
+                      <div className={`absolute ${language === 'ur' ? 'left-1.5' : 'right-1.5'}  mt-2  text-center bg-white border border-gray-300 rounded-lg shadow-lg z-20 `}>
+                     
+                        <button className="block text-center w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('view', sale.id)}>
                           {languageData[language].view}
+                            
+                        </button><button className="block w-full px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>
+                          {languageData[language].print}
                         </button>
                         {updatedCredit > 0 && (
                           <>
-                            <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('addPayment', sale.id)}>
+                            <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('addPayment', sale.id)}>
                               {languageData[language].add_payment}
                             </button>
-                            <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('viewPayment', sale.id)}>
+                            <button className="block px-4 w-full py-2 hover:bg-gray-100" onClick={() => handleMenuAction('viewPayment', sale.id)}>
                               {languageData[language].view_payment}
                             </button>
                           </>
                         )}
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('saleReturn', sale.id)}>
+                        <button className="block px-4 py-2 w-full hover:bg-gray-100" onClick={() => handleMenuAction('saleReturn', sale.id)}>
                           {languageData[language].sale_return}
                         </button>
-                        <button className="block px-4 py-2 hover:bg-gray-100" onClick={() => handleMenuAction('print', sale.id)}>
-                          {languageData[language].print}
-                        </button>
-                        <button className="text-red-600 block px-4 py-2 hover:bg-red-100" onClick={() => handleMenuAction('delete', sale.id)}>
+                      
+                        <button className="text-red-600 w-full block px-4 py-2 hover:bg-red-100" onClick={() => handleMenuAction('delete', sale.id)}>
                           {languageData[language].delete}
                         </button>
                       </div>

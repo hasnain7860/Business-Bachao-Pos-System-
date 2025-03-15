@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaSave, FaSignOutAlt } from 'react-icons/fa';
+import { FaEdit, FaSave, FaSignOutAlt, FaTrashAlt, FaUpload } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
 
@@ -25,8 +25,10 @@ const Settings = () => {
 
   const [formData, setFormData] = useState({
     user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '' }
+    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '', logo: '' }
   });
+
+  const [selectedFile, setSelectedFile] = useState(null);
 
   console.log(formData);
 
@@ -61,6 +63,46 @@ const Settings = () => {
   // 🟢 Handle Logout
   const handleLogout = () => {
     console.log("User logged out");
+  };
+
+  // 🟢 Handle File Selection
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size <= 1048576 && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+    } else {
+      alert('File must be an image and less than 1MB');
+    }
+  };
+
+  // 🟢 Handle File Upload
+  const handleFileUpload = () => {
+    if (selectedFile) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        setFormData((prevData) => {
+          const updatedData = {
+            ...prevData,
+            business: { ...prevData.business, logo: reader.result }
+          };
+          saveSetting(updatedData); // Save the updated formData
+          return updatedData;
+        });
+      };
+      reader.readAsDataURL(selectedFile);
+    }
+  };
+
+  // 🟢 Handle Delete Logo
+  const handleDeleteLogo = async () => {
+    setFormData((prevData) => {
+      const updatedData = {
+        ...prevData,
+        business: { ...prevData.business, logo: '' }
+      };
+      saveSetting(updatedData); // Save the updated formData
+      return updatedData;
+    });
   };
 
   return (
@@ -103,9 +145,20 @@ const Settings = () => {
         </button>
       </div>
 
-      <button onClick={handleLogout} className="btn btn-danger flex items-center mt-8">
-        <FaSignOutAlt className="mr-2" /> {languageData[language].logout}
-      </button>
+      {/* Logo Uploading and Deleting Code */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Logo</h2>
+        <div className="flex items-center space-x-4">
+          <input type="file" onChange={handleFileChange} className="input input-bordered" />
+          <button onClick={handleFileUpload} className="btn btn-primary"><FaUpload /> Upload</button>
+        </div>
+        {formData.business.logo && (
+          <div className="mt-4">
+            <img src={formData.business.logo} alt="Business Logo" className="w-32 h-32 object-cover" />
+            <button onClick={handleDeleteLogo} className="btn btn-danger mt-2"><FaTrashAlt /> Delete</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

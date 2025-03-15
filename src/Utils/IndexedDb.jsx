@@ -181,7 +181,8 @@ export const getItems = async (storeName) => {
 export const deleteItem = async (storeName, id, firebaseEvent = false ) => { 
   try {
     const db = await getDB();
-    await db.delete(storeName, id);
+
+    await db.delete(storeName, String(id));
       if(!firebaseEvent){
     await addPendingQuery(storeName,id,'delete')
   }
@@ -322,8 +323,10 @@ console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
-    const deletedItemId = snapshot.id;
-    console.log(`Item deleted from store ${storeName}: ${deletedItemId}`);
+    console.log(snapshot.ref._path.pieces_[1])
+   const storeName = snapshot.ref._path.pieces_[0];
+    const deletedItemId = snapshot.ref._path.pieces_[1];
+    console.log(`console from ondelete Item deleted from store ${storeName}: ${deletedItemId}`);
 
     await deleteItem(storeName, deletedItemId, true);
     getDebouncedRefresh(storeName)(context, storeName);
