@@ -383,7 +383,7 @@ const toggleLanguage = () => {
           
         </ul>
         <div className="absolute bottom-0 pl-5">
-        version 1.0.2
+        version 1.0.3
           </div>
         </div>
         

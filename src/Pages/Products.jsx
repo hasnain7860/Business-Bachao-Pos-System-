@@ -12,27 +12,41 @@ const Products = () => {
     const navigate = useNavigate();
     const products = context.productContext.products;
     const companies = context.companyContext.companies;
-  console.log(products)
+    console.log(products)
     const handleDelete = context.productContext.delete;
     const userAndBusinessDetail = context.settingContext.settings;
     const { language } = context;
     const [selectedCompany, setSelectedCompany] = useState(""); // Company Filter ke liye
     const [currentPage, setCurrentPage] = useState(1);
-    const [productsPerPage] = useState(10); // Har page par kitne products dikhane hain
-const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
-
+    const [productsPerPage, setProductsPerPage] = useState(25); // Har page par kitne products dikhane hain
+    const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
+    const [sortOrder, setSortOrder] = useState("asc"); // Sorting order state
+    const calculateTotalStock = (batchCode) => {
+        if (!batchCode || batchCode.length === 0) {
+            return 0;
+        }
+        return batchCode.reduce((total, batch) => total + Number(batch.quantity || 0), 0);
+    };
     // **Filtering Products Based on Search & Company**
     const filteredProducts = products.filter(product => 
         (selectedCompany ? product.companyId === selectedCompany : true) &&
         (searchTerm ? product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.nameInUrdu.toLowerCase().includes(searchTerm.toLowerCase()) : true)
     );
+    
+
+    // Sorting Products Based on Total Stock
+    const sortedProducts = filteredProducts.sort((a, b) => {
+        const totalStockA = calculateTotalStock(a.batchCode);
+        const totalStockB = calculateTotalStock(b.batchCode);
+        return sortOrder === "asc" ? totalStockA - totalStockB : totalStockB - totalStockA;
+    });
+
     // Pagination Logic
     const indexOfLastProduct = currentPage * productsPerPage;
     const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-    const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+    const currentProducts = sortedProducts.slice(indexOfFirstProduct, indexOfLastProduct);
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
 
     const [selectedBatch, setSelectedBatch] = useState({});
 
@@ -52,13 +66,6 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                 {batch.batchCode}
             </option>
         ));
-    };
-
-    const calculateTotalStock = (batchCode) => {
-        if (!batchCode || batchCode.length === 0) {
-            return 0;
-        }
-        return batchCode.reduce((total, batch) => total + Number(batch.quantity || 0), 0);
     };
 
     const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
@@ -117,6 +124,30 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
         );
     };
 
+    const handleSort = () => {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    };
+
+    const exportToExcel = () => {
+        const flattenedData = filteredProducts.flatMap(product => 
+            (product.batchCode || []).map(batch => ({
+                ProductName: product.name,
+                ProductNameInUrdu: product.nameInUrdu,
+                Company: companies.find(c => c.id === product.companyId)?.name || "N/A",
+                BatchCode: batch.batchCode,
+                Quantity: batch.quantity,
+                PurchasePrice: batch.purchasePrice,
+                SellPrice: batch.sellPrice,
+                RetailPrice: batch.retailPrice
+            }))
+        );
+    
+        const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+        XLSX.writeFile(workbook, "products.xlsx");
+    };
+
     return (
         <div className="p-6">
             {/* Back Button */}
@@ -142,9 +173,13 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                         {languageData[language].add_product}
                     </button>
                 </Link>
+                {/* Export to Excel Button */}
+                <button onClick={exportToExcel} className="btn btn-secondary">
+                    Export to Excel
+                </button>
             </div>
 
-    {/* **Search Input & Filter** */}
+            {/* **Search Input & Filter** */}
             <div className="flex items-center flex-col gap-4 mb-4">
                 <input
                     type="text"
@@ -165,6 +200,17 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                         </option>
                     ))}
                 </select>
+                <select
+                    className="form-select p-2 border rounded"
+                    value={productsPerPage}
+                    onChange={(e) => setProductsPerPage(Number(e.target.value))}
+                >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={250}>250</option>
+                    <option value={500}>500</option>
+                </select>
             </div>
 
             {/* Products Table */}
@@ -180,7 +226,9 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
                                     <th className="p-2 border-b">total stock Price</th>
                                     <th className="p-2 border-b">{languageData[language].batch_stock}</th>
-                                    <th className="p-2 border-b">{languageData[language].total_stock}</th>
+                                    <th className="p-2 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
+                                        {languageData[language].total_stock} {sortOrder === "asc" ? "↑" : "↓"}
+                                    </th>
                                     <th className="p-2 border-b">{languageData[language].image}</th>
                                     <th className="p-2 border-b">{languageData[language].company}</th>
                                     <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
@@ -194,7 +242,9 @@ const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
                                     <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
                                     <th className="p-2 border-b">{languageData[language].company}</th>
                                     <th className="p-2 border-b">{languageData[language].image}</th>
-                                    <th className="p-2 border-b">{languageData[language].total_stock}</th>
+                                    <th className="p-2 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
+                                        {languageData[language].total_stock} {sortOrder === "asc" ? "↑" : "↓"}
+                                    </th>
                                     <th className="p-2 border-b">{languageData[language].batch_stock}</th>
                                     <th className="p-2 border-b">total stock Price</th>
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
