@@ -273,59 +273,78 @@ export const listenForChanges = async (storeName, context) => {
   const itemsRef = ref(clientDatabase, storeName);
 
   // IndexedDB سے آخری Sync کا وقت حاصل کرو
-  
-const lastSyncTime = await getLastSyncTime(storeName);
+  const lastSyncTime = await getLastSyncTime(storeName);
 
-if(lastSyncTime === 0){
-const snapshot = await get(itemsRef);
-  if (snapshot.exists()) {
-    const allData = snapshot.val();
-    const timestamp = Date.now();
+  if (lastSyncTime === 0) {
+    const snapshot = await get(itemsRef);
+    if (snapshot.exists()) {
+      const allData = snapshot.val();
+      const timestamp = Date.now();
 
-    // 🔹 تمام آئٹمز میں updatedAt شامل کریں
-    const itemsArray = Object.keys(allData).map(key => ({
-      ...allData[key],  
-      updatedAt: allData[key].updatedAt || timestamp 
-  }));
-  
-    // 🔹 ایک ساتھ IndexedDB میں سیٹ کریں
-    await setItems(storeName, itemsArray);
+      const itemsArray = Object.keys(allData).map(key => ({
+        id: key,
+        ...allData[key],
+        updatedAt: allData[key].updatedAt || timestamp,
+      }));
 
-    // 🔹 Sync time اپڈیٹ کریں
-    await setLastSyncTime(storeName, timestamp);
-    getDebouncedRefresh(storeName)(context, storeName);
+      await setItems(storeName, itemsArray);
+      await setLastSyncTime(storeName, timestamp);
+      getDebouncedRefresh(storeName)(context, storeName);
+    }
   }
 
-}
+  const lastSyncUpdateTime = await getLastSyncTime(storeName);
+  console.log(`update last sync time and store ${storeName}: ${lastSyncUpdateTime}`);
 
-const lastSyncUpdateTime = await getLastSyncTime(storeName);
-
-console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
-  // Firebase سے صرف وہی ڈیٹا لو جو آخری Sync کے بعد اپڈیٹ ہوا ہو
   const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncUpdateTime || 0));
 
+  // ✅ Live Changes: Handle Add, Update, Delete
   onChildAdded(queryRef, async (snapshot) => {
-    const addedItem = { id: snapshot.id, ...snapshot.val() };
+    const addedItem = { id: snapshot.key, ...snapshot.val() };
     console.log(`New item added in store ${storeName}:`, addedItem);
 
     await addItem(storeName, addedItem, true);
-    await setLastSyncTime(storeName, Date.now()); // Sync ٹائم اپڈیٹ کرو
+    await setLastSyncTime(storeName, Date.now());
     getDebouncedRefresh(storeName)(context, storeName);
   });
 
   onChildChanged(queryRef, async (snapshot) => {
-    const updatedItem = { id: snapshot.id, ...snapshot.val() };
+    const updatedItem = { id: snapshot.key, ...snapshot.val() };
     console.log(`Item updated in store ${storeName}:`, updatedItem);
 
     await putItem(storeName, updatedItem, true);
-    await setLastSyncTime(storeName, Date.now()); // Sync ٹائم اپڈیٹ کرو
+    await setLastSyncTime(storeName, Date.now());
     getDebouncedRefresh(storeName)(context, storeName);
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
-
     const deletedItemId = snapshot.key;
+    console.log(`Item deleted from store ${storeName}: ${deletedItemId}`);
+
     await deleteItem(storeName, deletedItemId, true);
+    getDebouncedRefresh(storeName)(context, storeName);
+  });
+
+  // ✅ Handle Offline to Online Sync (Missing Deletions)
+  window.addEventListener("online", async () => {
+    console.log("Device is back online, syncing missing deletions...");
+
+    // Firebase سے تازہ ترین ڈیٹا لو
+    const firebaseSnapshot = await get(itemsRef);
+    const firebaseData = firebaseSnapshot.exists() ? firebaseSnapshot.val() : {};
+
+    // IndexedDB میں موجود تمام آئٹمز لو
+    const indexedDBData = await getAllItems(storeName);
+    const indexedDBIds = indexedDBData.map(item => item.id);
+
+    // 🛑 جو IDs IndexedDB میں ہیں، مگر Firebase میں نہیں، انہیں delete کرو
+    for (const id of indexedDBIds) {
+      if (!firebaseData[id]) {
+        console.log(`Deleting missing item from IndexedDB: ${id}`);
+        await deleteItem(storeName, id, true);
+      }
+    }
+
     getDebouncedRefresh(storeName)(context, storeName);
   });
 };
