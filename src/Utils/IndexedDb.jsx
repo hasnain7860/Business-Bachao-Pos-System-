@@ -323,12 +323,13 @@ console.log('update last sync time and store' + storeName + lastSyncUpdateTime)
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
-    console.log(snapshot.ref._path.pieces_[1])
-   const storeName = snapshot.ref._path.pieces_[0];
-    const deletedItemId = snapshot.ref._path.pieces_[1];
-    console.log(`console from ondelete Item deleted from store ${storeName}: ${deletedItemId}`);
-
-    await deleteItem(storeName, deletedItemId, true);
-    getDebouncedRefresh(storeName)(context, storeName);
+    console.log('test')
+  //   console.log(snapshot.ref._path.pieces_[1])
+  //  const storeName = snapshot.ref._path.pieces_[0];
+  //   const deletedItemId = snapshot.ref._path.pieces_[1];
+    // console.log(`console from ondelete Item deleted from store ${storeName}: ${deletedItemId}`);
+    //  console.log("check on delete id"+ typeof(deletedItemId)) 
+    // await deleteItem(storeName, deletedItemId, true);
+    // getDebouncedRefresh(storeName)(context, storeName);
   });
 };
