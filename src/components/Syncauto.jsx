@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
-import { listenForChanges, STORE_NAMES, processPendingQueries } from '../Utils/IndexedDb.jsx';
+import { listenForChanges, STORE_NAMES, processPendingQueries, syncDeletedItemsForAllStores } from '../Utils/IndexedDb.jsx';
 
 const Syncauto = () => {
   const context = useAppContext();
@@ -18,8 +18,20 @@ setInterval(() => {
   
       // Adding IndexedDB event listeners
       Object.values(STORE_NAMES).forEach((store_name) => {
+        
         listenForChanges(store_name, context);
+
       });
+      
+      if (!window._hasOnlineEventListener) {
+  window.addEventListener("online", ()=>{
+   Object.values(STORE_NAMES).forEach((store_name) => {
+    syncDeletedItemsForAllStores(store_name)
+   })
+  });
+  window._hasOnlineEventListener = true;
+}
+      
 
       listenersAdded.current = true;
     }

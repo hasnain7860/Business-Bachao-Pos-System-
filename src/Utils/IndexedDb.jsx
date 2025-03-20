@@ -325,26 +325,57 @@ export const listenForChanges = async (storeName, context) => {
     getDebouncedRefresh(storeName)(context, storeName);
   });
 
-  // ✅ Handle Offline to Online Sync (Missing Deletions)
-  window.addEventListener("online", async () => {
-    console.log("Device is back online, syncing missing deletions...");
+};
 
-    // Firebase سے تازہ ترین ڈیٹا لو
+
+export const syncDeletedItemsForAllStores = async (storeName) => {
+  if (!storeName) {
+    console.error("Error: Store name is missing or invalid.");
+    return;
+  }
+
+  console.log("Device is back online. Checking for missing deletions...");
+
+  try {
+    const itemsRef = ref(clientDatabase, storeName);
+
+    // 🔹 Firebase سے صرف IDs لو
     const firebaseSnapshot = await get(itemsRef);
-    const firebaseData = firebaseSnapshot.exists() ? firebaseSnapshot.val() : {};
-
-    // IndexedDB میں موجود تمام آئٹمز لو
-    const indexedDBData = await getAllItems(storeName);
-    const indexedDBIds = indexedDBData.map(item => item.id);
-
-    // 🛑 جو IDs IndexedDB میں ہیں، مگر Firebase میں نہیں، انہیں delete کرو
-    for (const id of indexedDBIds) {
-      if (!firebaseData[id]) {
-        console.log(`Deleting missing item from IndexedDB: ${id}`);
-        await deleteItem(storeName, id, true);
-      }
+    if (!firebaseSnapshot.exists()) {
+      console.warn(`Warning: No data found in Firebase for store: ${storeName}`);
+      return;
     }
 
-    getDebouncedRefresh(storeName)(context, storeName);
-  });
+    const firebaseIds = Object.keys(firebaseSnapshot.val() || {});
+    console.log('Firebase all IDs:', firebaseIds);
+
+    // 🔹 IndexedDB سے IDs لو
+    const indexedDBData = await getItems(storeName);
+    if (!Array.isArray(indexedDBData)) {
+      console.error(`Error: Failed to fetch IndexedDB data for store: ${storeName}`);
+      return;
+    }
+
+    const indexedDBIds = indexedDBData.map(item => item.id);
+
+    // 🔹 وہ IDs نکالو جو IndexedDB میں ہیں لیکن Firebase میں نہیں (یعنی deleted)
+    const idsToDelete = indexedDBIds.filter(id => !firebaseIds.includes(id));
+
+    if (idsToDelete.length === 0) {
+      console.log(`No missing deletions found for store: ${storeName}`);
+      return;
+    }
+
+    // 🔹 ان IDs کو IndexedDB سے delete کرو
+    for (const id of idsToDelete) {
+      console.log(`Deleting missing item from IndexedDB in store ${storeName}: ${id}`);
+      await deleteItem(storeName, id, true);
+    }
+
+    getDebouncedRefresh(storeName)(null, storeName);
+  } catch (error) {
+    console.error(`Error in syncing deleted items for store ${storeName}:`, error);
+  }
 };
+
+// ✅ Ensure the event listener is added only once
