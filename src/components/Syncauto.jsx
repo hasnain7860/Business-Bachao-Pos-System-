@@ -20,13 +20,13 @@ setInterval(() => {
       Object.values(STORE_NAMES).forEach((store_name) => {
         
         listenForChanges(store_name, context);
-
+setTimeout(syncDeletedItemsForAllStores(store_name,context),5000)
       });
       
       if (!window._hasOnlineEventListener) {
   window.addEventListener("online", ()=>{
    Object.values(STORE_NAMES).forEach((store_name) => {
-    syncDeletedItemsForAllStores(store_name)
+    syncDeletedItemsForAllStores(store_name,context)
    })
   });
   window._hasOnlineEventListener = true;

@@ -328,7 +328,7 @@ export const listenForChanges = async (storeName, context) => {
 };
 
 
-export const syncDeletedItemsForAllStores = async (storeName) => {
+export const syncDeletedItemsForAllStores = async (storeName,context) => {
   if (!storeName) {
     console.error("Error: Store name is missing or invalid.");
     return;
@@ -372,7 +372,7 @@ export const syncDeletedItemsForAllStores = async (storeName) => {
       await deleteItem(storeName, id, true);
     }
 
-    getDebouncedRefresh(storeName)(null, storeName);
+    getDebouncedRefresh(storeName)(context, storeName);
   } catch (error) {
     console.error(`Error in syncing deleted items for store ${storeName}:`, error);
   }
