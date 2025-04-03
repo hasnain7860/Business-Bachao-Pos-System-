@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 export const STORE_NAMES = {
   cost: 'cost',
@@ -19,6 +19,7 @@ export const STORE_NAMES = {
   customers: 'customers',
   settings: 'settings',
   creditManagement: 'creditManagement',
+  sellReturns:'sellReturns',
   notifications: 'notifications',
   notificationsDb: 'notificationsDb',
 };
@@ -40,9 +41,9 @@ export const processPendingQueries = async () => {
 
   const db = await getDB();
   const allPendingQueries = await db.getAll('pendingQuery');
- console.log(allPendingQueries)
+
   if (allPendingQueries.length === 0) {
-    console.log('No pending queries to process.');
+    
     isProcessing = false;
     return;
   }

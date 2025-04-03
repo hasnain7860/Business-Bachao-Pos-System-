@@ -282,7 +282,46 @@ const toggleLanguage = () => {
             </ul>
           </li>
 
-   
+    {/* Inventory Section */}
+    <li>
+            <button
+              onClick={() => toggleSection("return")}
+              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
+            >
+              <MdInventory className="mr-3" />
+                {languageData[language].return}
+              {collapsedSections["return"] ? (
+                <AiOutlineRight size={20} />
+              ) : (
+                <AiOutlineDown size={20} />
+              )}
+            </button>
+            <ul
+              className={`mt-2 space-y-2 ${
+                collapsedSections["return"] ? "hidden" : "block"
+              }`}
+            >
+              <li>
+                <Link
+                  to="/return/sell_return"
+                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
+                >
+                       {languageData[language].sell_return}
+                </Link>
+              </li>
+            
+             
+              <li>
+                <Link
+                  to="/return/purchase_return"
+                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
+                >
+                       {languageData[language].purchase_return}
+                </Link>
+              </li>
+             
+            </ul>
+          </li>
 
 
 
@@ -383,7 +422,7 @@ const toggleLanguage = () => {
           
         </ul>
         <div className="absolute bottom-0 pl-5">
-        version 1.0.8
+        version 1.0.9
           </div>
         </div>
         

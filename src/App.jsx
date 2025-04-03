@@ -34,6 +34,9 @@ import AddPayments from "./Pages/AddPayments";
 import ViewPayments from "./Pages/ViewPayments";
 import Notification from "./Pages/Notification";
 import ProductUploadPage from "./Pages/ProductUploadPage";
+import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
+import SellReturn from "./Pages/SellReturn.jsx";
+import AddSellReturn from "./Pages/AddSellReturn.jsx";
 // import eruda from 'eruda';
 
 function App() {
@@ -174,6 +177,36 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <ProductUploadPage />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                  <Route
+                    path="/return/sell_return"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                            <SellReturn/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                 <Route
+                    path="/return/sell_return/add"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                            <AddSellReturn/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                  <Route
+                    path="/return/purchase_return"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <PurchaseReturn/>
                             </Layout>
                         </ProtectedRoute>
                     }

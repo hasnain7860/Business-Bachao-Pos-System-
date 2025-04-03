@@ -12,6 +12,7 @@ import useSettingsContext from './Logic/Settings.jsx';
 import useCreditManagementContext from './Logic/CreditManagement.jsx';
 import useNotificationContext from './Logic/Notifications.jsx';
 import { ClientDatabaseInitializer } from './Utils/ClientFirebaseDb.jsx';
+import useSellReturnContext from './Logic/SellReturn.jsx';
 
 // Utility function for updating items in an array
 const updateItem = (items, id, updatedItem) =>
@@ -40,7 +41,7 @@ export const AppContextProvider = ({ children }) => {
   const creditManagementContext = useCreditManagementContext();
   const purchaseContext = usePurchaseContext();
   const SaleContext = useSalesContext();
-
+ const  SellReturnContext =  useSellReturnContext()
   const { settings } = settingContext;
   const [language, setLanguage] = useState('en');
   const [isOpen, setIsOpen] = useState(true);
@@ -75,6 +76,7 @@ export const AppContextProvider = ({ children }) => {
         purchaseContext,
         costContext,
         SaleContext,
+        SellReturnContext,
         settingContext,
         creditManagementContext,      
       }}
