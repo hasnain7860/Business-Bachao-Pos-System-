@@ -46,6 +46,7 @@ const toggleLanguage = () => {
   const [collapsedSections, setCollapsedSections] = useState({
   people: true,
   inventory: true,
+  return: true,
   sales: true,
   purchases: true,
 });
@@ -104,7 +105,7 @@ const toggleLanguage = () => {
       <Syncauto></Syncauto>
       {/* Navbar */}
       <nav 
-  className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 
+  className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 h-20
   justify-between  ${language === 'ur' ? 'flex-row-reverse' : ''}`}
 >
   {/* ☰ Menu Button */}
@@ -159,23 +160,17 @@ const toggleLanguage = () => {
       {/* Sidebar */}
       <div
   ref={sidebarRef}
-  className={`fixed top-0 ${
+  className={`fixed top-20 ${
     language === "ur" ? "right-0" : "left-0"
   } h-full bg-gray-800 text-white shadow-md z-40 transform ${
     isSidebarOpen ? "translate-x-0" : language === "ur" ? "translate-x-full" : "-translate-x-full"
   } transition-transform duration-300 w-64 overflow-y-auto`}
   style={{ direction: language === "ur" ? "rtl" : "ltr" }}
 >
-        <div className="p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">{languageData[language].menu}</h2>
-          <button
-            onClick={toggleSidebar}
-            className="text-lg font-bold bg-gray-700 p-1 rounded-md hover:bg-gray-600"
-          >
-            ✖
-          </button>
-        </div>
-        <ul className="p-4 space-y-2">
+       
+        <div className="flex flex-col justify-between h-full" >
+        <div className="">
+        <ul className="p-2  ">
           {/* Dashboard */}
           <li>
             <Link
@@ -421,8 +416,10 @@ const toggleLanguage = () => {
             </li>
           
         </ul>
-        <div className="absolute bottom-0 pl-5">
+        </div>
+         <div className="text-base pb-20 pl-5">
         version 1.0.9
+          </div>
           </div>
         </div>
         

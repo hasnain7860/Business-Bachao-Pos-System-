@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 export const STORE_NAMES = {
   cost: 'cost',
@@ -22,6 +22,7 @@ export const STORE_NAMES = {
   sellReturns:'sellReturns',
   notifications: 'notifications',
   notificationsDb: 'notificationsDb',
+  deletedStore:'deletedStore'
 };
 
 export const LOCAL_STORE = {
@@ -64,6 +65,13 @@ export const processPendingQueries = async () => {
       if (action === 'add' || action === 'update') {
         await set(itemRef, item); // Add or update item in Firebase
       } else if (action === 'delete') {
+        const deleteitem = {
+          id: uuidv4(),
+          deletedItemId:item,
+          deletedAt:Date.now(),
+        }
+      const deleteItemRef = ref(clientDatabase, `deletedStore/${deleteitem.id}`);  
+        await set(deleteItemRef, deleteitem);
         await remove(itemRef); // Delete item from Firebase
       }
 
@@ -303,10 +311,14 @@ export const listenForChanges = async (storeName, context) => {
   onChildAdded(queryRef, async (snapshot) => {
     const addedItem = { id: snapshot.key, ...snapshot.val() };
     console.log(`New item added in store ${storeName}:`, addedItem);
-
-    await addItem(storeName, addedItem, true);
-    await setLastSyncTime(storeName, Date.now());
+if(storeName == deletedStore){
+  await deleteItem(storeName, addedItem.deletedItemId, true);
     getDebouncedRefresh(storeName)(context, storeName);
+    getDebouncedRefresh(storeName)(context, storeName);
+}else{
+  await addItem(storeName, addedItem, true);
+}
+    
   });
 
   onChildChanged(queryRef, async (snapshot) => {
@@ -329,54 +341,54 @@ export const listenForChanges = async (storeName, context) => {
 };
 
 
-export const syncDeletedItemsForAllStores = async (storeName,context) => {
-  if (!storeName) {
-    console.error("Error: Store name is missing or invalid.");
-    return;
-  }
+// export const syncDeletedItemsForAllStores = async (storeName,context) => {
+//   if (!storeName) {
+//     console.error("Error: Store name is missing or invalid.");
+//     return;
+//   }
 
-  console.log("Device is back online. Checking for missing deletions...");
+//   console.log("Device is back online. Checking for missing deletions...");
 
-  try {
-    const itemsRef = ref(clientDatabase, storeName);
+//   try {
+//     const itemsRef = ref(clientDatabase, storeName);
 
-    // 🔹 Firebase سے صرف IDs لو
-    const firebaseSnapshot = await get(itemsRef);
-    if (!firebaseSnapshot.exists()) {
-      console.warn(`Warning: No data found in Firebase for store: ${storeName}`);
-      return;
-    }
+//     // 🔹 Firebase سے صرف IDs لو
+//     const firebaseSnapshot = await get(itemsRef);
+//     if (!firebaseSnapshot.exists()) {
+//       console.warn(`Warning: No data found in Firebase for store: ${storeName}`);
+//       return;
+//     }
 
-    const firebaseIds = Object.keys(firebaseSnapshot.val() || {});
-    console.log('Firebase all IDs:', firebaseIds);
+//     const firebaseIds = Object.keys(firebaseSnapshot.val() || {});
+//     console.log('Firebase all IDs:', firebaseIds);
 
-    // 🔹 IndexedDB سے IDs لو
-    const indexedDBData = await getItems(storeName);
-    if (!Array.isArray(indexedDBData)) {
-      console.error(`Error: Failed to fetch IndexedDB data for store: ${storeName}`);
-      return;
-    }
+//     // 🔹 IndexedDB سے IDs لو
+//     const indexedDBData = await getItems(storeName);
+//     if (!Array.isArray(indexedDBData)) {
+//       console.error(`Error: Failed to fetch IndexedDB data for store: ${storeName}`);
+//       return;
+//     }
 
-    const indexedDBIds = indexedDBData.map(item => item.id);
+//     const indexedDBIds = indexedDBData.map(item => item.id);
 
-    // 🔹 وہ IDs نکالو جو IndexedDB میں ہیں لیکن Firebase میں نہیں (یعنی deleted)
-    const idsToDelete = indexedDBIds.filter(id => !firebaseIds.includes(id));
+//     // 🔹 وہ IDs نکالو جو IndexedDB میں ہیں لیکن Firebase میں نہیں (یعنی deleted)
+//     const idsToDelete = indexedDBIds.filter(id => !firebaseIds.includes(id));
 
-    if (idsToDelete.length === 0) {
-      console.log(`No missing deletions found for store: ${storeName}`);
-      return;
-    }
+//     if (idsToDelete.length === 0) {
+//       console.log(`No missing deletions found for store: ${storeName}`);
+//       return;
+//     }
 
-    // 🔹 ان IDs کو IndexedDB سے delete کرو
-    for (const id of idsToDelete) {
-      console.log(`Deleting missing item from IndexedDB in store ${storeName}: ${id}`);
-      await deleteItem(storeName, id, true);
-    }
+//     // 🔹 ان IDs کو IndexedDB سے delete کرو
+//     for (const id of idsToDelete) {
+//       console.log(`Deleting missing item from IndexedDB in store ${storeName}: ${id}`);
+//       await deleteItem(storeName, id, true);
+//     }
 
-    getDebouncedRefresh(storeName)(context, storeName);
-  } catch (error) {
-    console.error(`Error in syncing deleted items for store ${storeName}:`, error);
-  }
-};
+//     getDebouncedRefresh(storeName)(context, storeName);
+//   } catch (error) {
+//     console.error(`Error in syncing deleted items for store ${storeName}:`, error);
+//   }
+// };
 
 // ✅ Ensure the event listener is added only once

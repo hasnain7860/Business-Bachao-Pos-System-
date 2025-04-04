@@ -58,9 +58,11 @@ const uniqueId = uuidv4();
   };
 
   const handleDelete = (id) => {
+  if (window.confirm(languageData[language].areYouSureDelete)) {
     // Delete company by ID
     deleteCompany(id);
-  };
+  }
+};
 
   const handleEdit = (company) => {
     // Select the company for editing

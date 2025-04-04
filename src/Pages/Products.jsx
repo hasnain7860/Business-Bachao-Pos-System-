@@ -281,7 +281,12 @@ const Products = () => {
                                                     </button>
                                                 </Link>
                                                 <button
-                                                    onClick={() => handleDelete(product.id)}
+                                                    onClick={
+              () => {
+    if (window.confirm(languageData[language].areYouSureDelete)) {
+      handleDelete(product.id)
+    }
+  }                                         }
                                                     className="btn btn-danger"
                                                 >
                                                     <FaTrashAlt />
@@ -354,7 +359,12 @@ const Products = () => {
                                                     </button>
                                                 </Link>
                                                 <button
-                                                    onClick={() => handleDelete(product.id)}
+                                                    onClick={
+                         () => {
+    if (window.confirm(languageData[language].areYouSureDelete)) {
+      handleDelete(product.id)}
+    }
+  }      
                                                     className="btn btn-danger"
                                                 >
                                                     <FaTrashAlt />

@@ -115,13 +115,18 @@ const Unit = () => {
                   >
                     {languageData[language].edit}
                   </button>
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => deleteUnit(unit.id)}
-                    className="py-1 px-3 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600"
-                  >
-                    {languageData[language].delete}
-                  </button>
+                  {/* Delete Button */}<button
+  onClick={() => {
+    if (window.confirm(languageData[language].areYouSureDelete)) {
+      deleteUnit(unit.id);
+    }
+  }}
+  className="py-1 px-3 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600"
+>
+  {languageData[language].delete}
+</button>
+
+            
                 </div>
               </li>
             ))}

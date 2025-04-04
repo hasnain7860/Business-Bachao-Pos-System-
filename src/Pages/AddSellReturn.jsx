@@ -132,15 +132,7 @@ useEffect(() => {
       amountToReturn: totalAmount
     };
   
-    // If reducing from credit, update the sale's credit amount
-    if (returnOption === 'credit' && selectedSale) {
-      const updatedSale = {
-        ...selectedSale,
-        credit: Number(selectedSale.credit) - Number(totalAmount)
-      };
-      context.SaleContext.edit(selectedSale.id, updatedSale);
-    }
-  
+
     addReturn(returnData);
   };
 

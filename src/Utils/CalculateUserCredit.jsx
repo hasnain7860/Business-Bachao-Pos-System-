@@ -5,8 +5,7 @@ export const CalculateUserCredit = (context, customerId) => {
 
         // Filter sales for specific customer
         const customerSales = salesData.filter(sale => sale.customerId === customerId);
-console.log(customerSales + 'customer sales')
-        // Calculate total sales amount for customer
+ // Calculate total sales amount for customer
         const totalSaleAmount = customerSales.reduce((total, sale) => {
             return total + (parseFloat(sale.totalBill) || 0);
         }, 0);
@@ -30,7 +29,7 @@ console.log(customerSales + 'customer sales')
         const pendingCredit = totalSaleAmount - (totalPayments + submittedPayments);
 
         return {
-            customerSales,
+            
             customerId: customerId,
             totalSales: totalSaleAmount,
             totalPayments: totalPayments + submittedPayments,
