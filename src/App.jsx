@@ -151,6 +151,16 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                 <Route
+                    path="/inventory/addProduct/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <AddProduct />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="/inventory/edit-product/:id"
                     element={

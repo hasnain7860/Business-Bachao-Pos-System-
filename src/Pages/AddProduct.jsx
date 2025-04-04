@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../Appfullcontext";
 import { FaPlus, FaSyncAlt } from "react-icons/fa";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate,useSearchParams  } from "react-router-dom";
 import { v4 as uuidv4 } from 'uuid';
 const AddProduct = () => {
-  const { id } = useParams(); // Get product ID from URL
+  const { id } = useParams(); 
+  const [searchParams] = useSearchParams();
+  const isCopy = searchParams.get("copy") === "true";
   const navigate = useNavigate();
   const context = useAppContext();
   const companies = context.companyContext.companies;
@@ -43,21 +45,33 @@ const [expirationDate, setExpirationDate] = useState()
         setSelectedCompany(product.companyId || "");
       
         setSelectedUnit(product.unitId || "");
-        if(!product.batchCode){
-      const nextBatchNumber = batches.length + 1;
-      const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
-      setBatchCode(newBatchCode);
-    }else{
-        setBatches(product.batchCode); // Set batches from product
-        setEdit(true);
-    }  }
+       
+
+   if (isCopy) {
+    const nextBatchNumber = batches.length + 1;
+    const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
+    setBatchCode(newBatchCode);
+          setEdit(false); // Edit mode disable karna hoga
+        } else {
+          if(!product.batchCode){
+            const nextBatchNumber = batches.length + 1;
+            const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
+            setBatchCode(newBatchCode);
+          }else{
+              setBatches(product.batchCode); // Set batches from product
+             }
+
+          setEdit(true);
+        }
+  
+  }
     } else {
       // Calculate the next batch code for a new product
       const nextBatchNumber = batches.length + 1;
       const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
       setBatchCode(newBatchCode);
     }
-  }, [id, context.productContext.products, batches.length]);
+  }, [id,isCopy, context.productContext.products, batches.length]);
 
   useEffect(() => {
     if (selectedBatch) {
@@ -111,7 +125,7 @@ const [expirationDate, setExpirationDate] = useState()
     }
 
     const productData = {
-      id: edit ? id : uuidv4(),
+      id: isCopy ? uuidv4() : edit ? id : uuidv4(),
       name: productName,
       nameInUrdu: productNameInUrdu,
       companyId: selectedCompany,

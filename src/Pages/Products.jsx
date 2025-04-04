@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaCopy } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
@@ -220,7 +220,11 @@ const Products = () => {
                         <tr className={language === 'ur' ? 'text-right' : 'text-left'}>
                             {language === 'ur' ? (
                                 <>
-                                    <th className="p-2 border-b">{languageData[language].actions}</th>
+                                    {/* <th className="p-2 border-b">{languageData[language].actions}</th> */}
+                                    <th className="p-2 border-b">Delete</th>
+        <th className="p-2 border-b">Edit</th>
+        <th className="p-2 border-b">Copy</th>
+       
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
@@ -250,7 +254,11 @@ const Products = () => {
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
-                                    <th className="p-2 border-b">{languageData[language].actions}</th>
+                                    <th className="p-2 border-b">Copy</th>
+        <th className="p-2 border-b">Edit</th>
+        <th className="p-2 border-b">Delete</th>
+   
+                                    {/* <th className="p-2 border-b">{languageData[language].actions}</th> */}
                                 </>
                             )}
                         </tr>
@@ -274,24 +282,36 @@ const Products = () => {
                                 <tr key={product.id} className="hover:bg-gray-100">
                                     {language === 'ur' ? (
                                         <>
-                                            <td className="p-2 border-b">
-                                                <Link to={`/inventory/edit-product/${product.id}`}>
-                                                    <button className="btn btn-warning mr-2">
-                                                        <FaEdit />
-                                                    </button>
-                                                </Link>
-                                                <button
-                                                    onClick={
-              () => {
-    if (window.confirm(languageData[language].areYouSureDelete)) {
-      handleDelete(product.id)
-    }
-  }                                         }
-                                                    className="btn btn-danger"
-                                                >
-                                                    <FaTrashAlt />
-                                                </button>
-                                            </td>
+  <td className="p-2 border-b">
+            <button
+                onClick={() => {
+                    if (window.confirm(languageData[language].areYouSureDelete)) {
+                        handleDelete(product.id)
+                    }
+                }}
+                className="btn btn-danger"
+            >
+                <FaTrashAlt />
+            </button>
+        </td>
+        <td className="p-2 border-b">
+            <Link to={`/inventory/edit-product/${product.id}`}>
+                <button className="btn btn-warning">
+                    <FaEdit />
+                </button>
+            </Link>
+        </td>
+        <td className="p-2 border-b">
+           
+           <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
+           <button className="btn btn-info">       
+               <FaCopy />
+               </button>
+               </Link>
+             
+        
+       </td>
+
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
@@ -353,23 +373,35 @@ const Products = () => {
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">
-                                                <Link to={`/inventory/edit-product/${product.id}`}>
-                                                    <button className="btn btn-warning mr-2">
-                                                        <FaEdit />
-                                                    </button>
-                                                </Link>
-                                                <button
-                                                    onClick={
-                         () => {
-    if (window.confirm(languageData[language].areYouSureDelete)) {
-      handleDelete(product.id)}
-    }
-  }      
-                                                    className="btn btn-danger"
-                                                >
-                                                    <FaTrashAlt />
-                                                </button>
-                                            </td>
+           
+            <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
+            <button className="btn btn-info">       
+                <FaCopy />
+                </button>
+                </Link>
+              
+         
+        </td>
+        <td className="p-2 border-b">
+            <Link to={`/inventory/edit-product/${product.id}`}>
+                <button className="btn btn-warning">
+                    <FaEdit />
+                </button>
+                </Link>
+        </td>
+        <td className="p-2 border-b">
+            <button
+                onClick={() => {
+                    if (window.confirm(languageData[language].areYouSureDelete)) {
+                        handleDelete(product.id)
+                    }
+                }}
+                className="btn btn-danger"
+            >
+                <FaTrashAlt />
+            </button>
+        </td>
+                                        
                                         </>
                                     )}
                                 </tr>

@@ -132,8 +132,8 @@ useEffect(() => {
       amountToReturn: totalAmount
     };
   
-
-    addReturn(returnData);
+console.log(returnData)
+    // addReturn(returnData);
   };
 
   return (

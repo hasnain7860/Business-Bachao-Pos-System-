@@ -418,7 +418,7 @@ const toggleLanguage = () => {
         </ul>
         </div>
          <div className="text-base pb-20 pl-5">
-        version 1.0.9
+        version 1.2.0
           </div>
           </div>
         </div>
