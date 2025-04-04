@@ -208,16 +208,15 @@ const handleSaveAndPrintSales = async () => {
     <h2 className="text-2xl font-bold text-primary mb-6">New Sales</h2>
     
     {message && <div className="text-red-500 mb-4">{message}</div>}
-    
-    {/* Main grid container with responsive columns */}
-    <div className="grid lg:grid-cols-3 gap-4">
-      {/* Left Column - Full width on mobile, 2/3 on large screens */}
-      <div className="lg:col-span-2 space-y-4">
+     
+    <div className="flex flex-col lg:flex-row gap-4">
+      {/* Left Content Area */}
+      <div className="flex-1 space-y-4">
         {/* Top Row with responsive grid */}
         <div className="grid md:grid-cols-2 gap-4">
           {/* Sales Reference */}
           <div className="bg-white rounded-lg p-4 shadow">
-            <label className="text-sm font-semibold text-gray-600">Sales Reference:</label>
+          <label className="text-sm font-semibold text-gray-600">Sales Reference:</label>
             <input
               type="text"
               value={salesRefNo}
@@ -227,8 +226,8 @@ const handleSaveAndPrintSales = async () => {
           </div>
 
          {/* Customer Selection */}
-<div className="bg-white rounded-lg p-4 shadow">
-  <div className="flex gap-2">
+         <div className="bg-white rounded-lg p-4 shadow">
+         <div className="flex gap-2">
     <div className="flex-1">
       <label className="text-sm font-semibold text-gray-600">Customer:</label>
       <div className="flex gap-2">
@@ -272,11 +271,11 @@ const handleSaveAndPrintSales = async () => {
     </div>
   </div>
 </div>
-        </div>
+</div> 
 
       {/* Product Search */}
-<div className="bg-white rounded-lg p-4 shadow">
-  <label className="text-sm font-semibold text-gray-600">Search Products:</label>
+      <div className="bg-white rounded-lg p-4 shadow">
+      <label className="text-sm font-semibold text-gray-600">Search Products:</label>
   <input
     type="text"
     value={searchProduct}
@@ -337,415 +336,161 @@ const handleSaveAndPrintSales = async () => {
   )}
 </div>
 
-         {/* Products Table with horizontal scroll on small screens */}
-         <div className="bg-white rounded-lg p-4 shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="table w-full min-w-[800px]"> {/* Set minimum width */}
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="whitespace-nowrap">Product</th>
-                  <th className="whitespace-nowrap">Batch</th>
-                  <th className="whitespace-nowrap">Qty</th>
-                  <th className="whitespace-nowrap">Price</th>
-                  <th className="whitespace-nowrap">Stock</th>
-                  <th className="whitespace-nowrap">Disc%</th>
-                  <th className="whitespace-nowrap">Total</th>
-                  <th className="whitespace-nowrap">Action</th>
-                </tr>
-              </thead>
-            <tbody>
-         {selectedProducts.map(product => (
-              <tr key={`${product.id}-${product.batchCode}`}>
-                <td>{product.name}</td>
-                <td>{product.batchCode}</td>
-               <td>
-  <input
-    type="number"
-    value={product.SellQuantity}
-    onChange={(e) => handleProductChange(product.id, product.batchCode, 'SellQuantity', e.target.value)}
-    min="0"
-    max={product.batchQuantity}
-    className="input input-bordered w-20"
-  />
-  {product.SellQuantity > product.batchQuantity && (
-    <div className="text-red-500 text-sm">Exceeds available stock</div>
-  )}
-</td>
-                <td>
-                  <input
-                    type="number"
-                    value={product.newSellPrice}
-                    onChange={(e) => handleSellingPriceChange(product.id, product.batchCode, e.target.value)}
-                    className={`input input-bordered w-20 ${validateSellingPrice(product) ? 'border-red-500' : ''}`}
-                  />
-                  {validateSellingPrice(product) && (
-                    <div className="text-red-500 text-sm">Selling price cannot be less than purchase price.</div>
-                  )}
-                </td>
-                <td>{product.batchQuantity - product.SellQuantity} (In Stock)</td>
-                <td>
-                  <input
-                    type="number"
-                    value={product.discount}
-                    readOnly
-                    className="input input-bordered w-20"
-                  />
-                </td>
-                <td>{(product.newSellPrice * product.SellQuantity).toFixed(2)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline"
-                    onClick={() => handleCancelProduct(product.id, product.batchCode)}
-                  >
-                    Cancel
-                  </button>
-                </td>
-              </tr>
-            ))}
-           </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      {/* Right Column - 1/3 width */}
-      <div className="lg:col-span-1">
-        <div className="bg-white rounded-lg p-4 shadow lg:sticky lg:top-4">
-          <h3 className="text-lg font-semibold mb-4 text-primary">Payment Details</h3>
-             
-          {/* Payment Mode */}
-          <div className="mb-4">
-            <label className="text-sm font-semibold text-gray-600">Payment Mode:</label>
-            <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="select select-bordered w-full bg-gray-50"
-            >
-              <option value="">Select Payment Mode</option>
-              <option value="cash">Cash</option>
-              <option value="online">Online</option>
-              <option value="bank">Bank</option>
-              <option value="cheque">Cheque</option>
-            </select>
-          </div>
+{/* Products Table with better responsiveness */}
+<div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 md:p-4 shadow-lg">
+  <div className="w-full">
+    <div className="overflow-x-auto">
+      <table className="table w-full table-auto">
+        <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <tr>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Product</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Batch</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Qty</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Price</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Stock</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Disc%</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Total</th>
+            <th className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {selectedProducts.map(product => (
+            <tr key={`${product.id}-${product.batchCode}`} className="hover:bg-blue-50 transition-colors">
+              <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{product.name}</td>
+              <td className="text-purple-600 font-medium text-xs md:text-sm px-2">{product.batchCode}</td>
+              <td className="px-2">
+                <input
+                  type="number"
+                  value={product.SellQuantity}
+                  onChange={(e) => handleProductChange(product.id, product.batchCode, 'SellQuantity', e.target.value)}
+                  min="0"
+                  max={product.batchQuantity}
+                  className="input input-bordered input-info w-16 md:w-20 text-center font-bold text-xs md:text-sm p-1"
+                />
+              </td>
+              <td className="px-2">
+                <input
+                  type="number"
+                  value={product.newSellPrice}
+                  onChange={(e) => handleSellingPriceChange(product.id, product.batchCode, e.target.value)}
+                  className={`input input-bordered w-16 md:w-20 text-center font-bold text-xs md:text-sm p-1 ${
+                    validateSellingPrice(product) ? 'input-error' : 'input-success'
+                  }`}
+                />
+              </td>
+              <td className="px-2">
+                <span className={`px-2 py-1 rounded-full font-medium text-center text-xs md:text-sm ${
+                  product.batchQuantity - product.SellQuantity > 10 
+                    ? 'bg-green-100 text-green-800'
+                    : product.batchQuantity - product.SellQuantity > 5
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.batchQuantity - product.SellQuantity}
+                </span>
+              </td>
+              <td className="px-2">
+                <input
+                  type="number"
+                  value={product.discount}
+                  readOnly
+                  className="input input-bordered input-warning w-14 md:w-16 text-center font-bold text-xs md:text-sm p-1"
+                />
+              </td>
+              <td className="text-blue-600 font-bold text-xs md:text-sm px-2 whitespace-nowrap">
+                Rs. {(product.newSellPrice * product.SellQuantity).toFixed(2)}
+              </td>
+              <td className="px-2">
+                <button
+                  type="button"
+                  className="btn btn-error btn-xs md:btn-sm hover:btn-error-focus transition-colors whitespace-nowrap"
+                  onClick={() => handleCancelProduct(product.id, product.batchCode)}
+                >
+                  Cancel
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div></div>
 
-          {/* Total Bill */}
-          <div className="bg-blue-50 p-3 rounded-lg mb-4">
-            <label className="text-sm font-semibold text-gray-600">Total Bill:</label>
-            <div className="text-2xl font-bold text-blue-600">
-              Rs. {calculateTotalPayment()}
-            </div>
-          </div>
+  {/* Right Sidebar - Payment Details */}
+  <div className="lg:w-1/4 lg:min-w-[300px] w-full">
+        <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
+        <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
+    
+    <div className="mb-6">
+      <label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label>
+      <select
+        value={paymentMode}
+        onChange={(e) => setPaymentMode(e.target.value)}
+        className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors"
+      >
+        <option value="">Select Payment Mode</option>
+        <option value="cash">Cash</option>
+        <option value="online">Online</option>
+        <option value="bank">Bank</option>
+        <option value="cheque">Cheque</option>
+      </select>
+    </div>
 
-          {/* Amount Paid */}
-          <div className="mb-4">
-            <label className="text-sm font-semibold text-gray-600">Amount Paid:</label>
-            <input
-              type="number"
-              value={amountPaid}
-              onChange={handleAmountPaidChange}
-              className="input input-bordered w-full bg-gray-50"
-            />
-          </div>
-
-          {/* Credit Amount */}
-          <div className="bg-red-50 p-3 rounded-lg mb-6">
-            <label className="text-sm font-semibold text-gray-600">Credit Amount:</label>
-            <div className="text-2xl font-bold text-red-600">
-              Rs. {credit}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <button
-            type="button"
-            onClick={handleSaveSales}
-            className="btn btn-primary w-full mb-2"
-          >
-            Save Sales
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveAndPrintSales}
-            className="btn btn-secondary w-full"
-          >
-            Save and Print
-          </button>
-        </div>
+    <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-6 shadow-md">
+      <label className="text-white text-sm font-semibold block mb-1">Total Bill:</label>
+      <div className="text-3xl font-bold text-white">
+        Rs. {calculateTotalPayment()}
       </div>
     </div>
-    {showAddModal && (
-  <AddProductModal
-    product={selectedModalProduct}
-    batch={selectedBatch}
-    onAdd={(product, batch, quantity) => handleAddProduct(product, batch, quantity)}
-    onClose={() => setShowAddModal(false)}
-  />
-)}
+
+    <div className="mb-6">
+      <label className="text-sm font-semibold text-gray-600 mb-2 block">Amount Paid:</label>
+      <input
+        type="number"
+        value={amountPaid}
+        onChange={handleAmountPaidChange}
+        className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold"
+      />
+    </div>
+
+    <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-8 shadow-md">
+      <label className="text-white text-sm font-semibold block mb-1">Credit Amount:</label>
+      <div className="text-3xl font-bold text-white">
+        Rs. {credit}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={handleSaveSales}
+      className="btn btn-primary w-full mb-3 text-lg font-bold hover:scale-105 transition-transform"
+    >
+      Save Sales
+    </button>
+    <button
+      type="button"
+      onClick={handleSaveAndPrintSales}
+      className="btn btn-secondary w-full text-lg font-bold hover:scale-105 transition-transform"
+    >
+      Save and Print
+    </button>
   </div>
+</div>
+    </div>
 
-
-
-
-
-
-
-
-
-
-
-
-//     <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6 mt-10">
-//       <h2 className="text-2xl font-bold text-center mb-6">New Sales</h2>
-
-//       {message && <div className="text-red-500 mb-4">{message}</div>}
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Sales Reference Number:</span>
-//         </label>
-//         <input
-//           type="text"
-//           value={salesRefNo}
-//           readOnly
-//           className="input input-bordered w-full"
-//         />
-//       </div>
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Select Customer:</span>
-//         </label>
-//         <div className="flex gap-2">
-//           <input
-//             type="text"
-//             value={searchCustomer}
-//             onChange={(e) => setSearchCustomer(e.target.value)}
-//             placeholder="Search customer"
-//             className="input input-bordered w-full"
-//           />
-//           <button
-//             type="button"
-//             className="btn btn-outline btn-sm"
-//             onClick={() => navigate('/people/customers')}
-//           >
-//             Add New
-//           </button>
-//         </div>
-//         <select
-//           value={selectedCustomer}
-//           onChange={(e) => setSelectedCustomer(e.target.value)}
-//           className="select select-bordered w-full mt-2"
-//         >
-//           <option value="">Select a Customer</option>
-//           {customers
-//             .filter(customer => customer.name.includes(searchCustomer))
-//             .map(customer => (
-//               <option key={customer.id} value={customer.id}>
-//                 {customer.name}
-//               </option>
-//             ))}
-//         </select>
-//       </div>
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Add Products:</span>
-//         </label>
-//         <input
-//           type="text"
-//           value={searchProduct}
-//           onChange={(e) => setSearchProduct(e.target.value)}
-//           placeholder="Search product"
-//           className="input input-bordered w-full"
-//         />
-//  <div className="overflow-y-auto max-h-60 mt-2">
-//   {products.length === 0 ? (
-//     <div>No products available.</div>
-//   ) : (
-//     products
-//     .filter(product => {
-//       const productName = product.name || ""; // Default to empty string if undefined
-//       const productNameUrdu = product.nameInUrdu || ""; // Default to empty string if undefined
+    {/* Modal */}
+    {showAddModal && (
+      <AddProductModal
+        product={selectedModalProduct}
+        batch={selectedBatch}
+        onAdd={(product, batch, quantity) => handleAddProduct(product, batch, quantity)}
+        onClose={() => setShowAddModal(false)}
+      />
+    )}
+  </div>
   
-//       return productName.includes(searchProduct) || productNameUrdu.includes(searchProduct);
-//   }).map(product => (
-//         product.batchCode && product.batchCode.length > 0 ? (
-//           <div key={product.id} className="py-2 border-b">
-//             <div className="pl-4">
-//               {product.batchCode.map(batch => (
-//                 <div key={batch.batchCode} className="flex justify-between items-center py-1">
-//                   <span>
-//                     {product.name || "Unnamed Product"} ({product.nameInUrdu || "نام نہیں"}) - 
-//                     Batch: {batch.batchCode} - Stock: {batch.quantity}
-//                   </span>
-//                   {batch.quantity > 0 ? (
-//                     <button
-//                       type="button"
-//                       className="btn btn-xs btn-outline"
-//                       onClick={() => handleAddProduct(product, batch)}
-//                     >
-//                       Add Batch
-//                     </button>
-//                   ) : (
-//                     <button
-//                       type="button"
-//                       className="btn btn-xs btn-outline"
-//                       disabled
-//                     >
-//                       Out of Stock
-//                     </button>
-//                   )}
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         ) : null
-//       ))
-//   )}
-// </div>
-
-
-//       </div>
-
-//       <div className="overflow-x-auto mt-4">
-//         <table className="table w-full">
-//           <thead>
-//             <tr>
-//               <th>Product</th>
-//               <th>Batch</th>
-//               <th>Quantity</th>
-//               <th>Price</th>
-//               <th>In Stock</th>
-//               <th>Discount (%)</th>
-//               <th>Total</th>
-//               <th>Action</th>
-//             </tr>
-//           </thead>
-//           <tbody>
-//             {selectedProducts.map(product => (
-//               <tr key={`${product.id}-${product.batchCode}`}>
-//                 <td>{product.name}</td>
-//                 <td>{product.batchCode}</td>
-//                 <td>
-//                   <input
-//                     type="number"
-//                     value={product.SellQuantity}
-//                     onChange={(e) => handleProductChange(product.id, product.batchCode, 'SellQuantity', e.target.value)}
-//                     className="input input-bordered w-20"
-//                   />
-//                 </td>
-//                 <td>
-//                   <input
-//                     type="number"
-//                     value={product.newSellPrice}
-//                     onChange={(e) => handleSellingPriceChange(product.id, product.batchCode, e.target.value)}
-//                     className={`input input-bordered w-20 ${validateSellingPrice(product) ? 'border-red-500' : ''}`}
-//                   />
-//                   {validateSellingPrice(product) && (
-//                     <div className="text-red-500 text-sm">Selling price cannot be less than purchase price.</div>
-//                   )}
-//                 </td>
-//                 <td>{product.batchQuantity - product.SellQuantity} (In Stock)</td>
-//                 <td>
-//                   <input
-//                     type="number"
-//                     value={product.discount}
-//                     readOnly
-//                     className="input input-bordered w-20"
-//                   />
-//                 </td>
-//                 <td>{(product.newSellPrice * product.SellQuantity).toFixed(2)}</td>
-//                 <td>
-//                   <button
-//                     type="button"
-//                     className="btn btn-sm btn-outline"
-//                     onClick={() => handleCancelProduct(product.id, product.batchCode)}
-//                   >
-//                     Cancel
-//                   </button>
-//                 </td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-
-//       <div className="form-control mb-4 mt-6">
-//         <label className="label">
-//           <span className="label-text">Payment Mode:</span>
-//         </label>
-//         <select
-//           value={paymentMode}
-//           onChange={(e) => setPaymentMode(e.target.value)}
-//           className="select select-bordered w-full"
-//         >
-//           <option value="">Select Payment Mode</option>
-//           <option value="online">Online</option>
-//           <option value="bank">Bank</option>
-//           <option value="cash">Cash</option>
-//           <option value="cheque">Cheque</option>
-//         </select>
-//       </div>
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Total Payment:</span>
-//         </label>
-//         <input
-//           type="text"
-//           value={calculateTotalPayment()}
-//           readOnly
-//           className="input input-bordered w-full"
-//         />
-//       </div>
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Amount Paid:</span>
-//         </label>
-//         <input
-//           type="number"
-//           value={amountPaid}
-//           onChange={handleAmountPaidChange}
-//           className="input input-bordered w-full"
-//         />
-//       </div>
-
-//       <div className="form-control mb-4">
-//         <label className="label">
-//           <span className="label-text">Credit:</span>
-//         </label>
-//         <input
-//           type="text"
-//           value={credit}
-//           readOnly
-//           className="input input-bordered w-full"
-//         />
-//       </div>
-
-//       <div className="form-control mt-6">
-//         <button
-//           type="button"
-//           onClick={handleSaveSales}
-//           className="btn btn-primary w-full"
-//         >
-//           Save Sales
-//         </button>
-//       </div>
-//       <div className="form-control mt-6">
-//   <button
-//     type="button"
-//     onClick={handleSaveAndPrintSales}
-//     className="btn btn-secondary w-full"
-//   >
-//     Save and Print
-//   </button>
-// </div>
-//     </div>
-  );
+  )
 };
 
 export default NewSales;
-
-
