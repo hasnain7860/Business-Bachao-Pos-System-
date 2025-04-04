@@ -225,50 +225,79 @@ const handleSaveAndPrintSales = async () => {
             />
           </div>
 
-         {/* Customer Selection */}
          <div className="bg-white rounded-lg p-4 shadow">
-         <div className="flex gap-2">
+  <div className="flex gap-2">
     <div className="flex-1">
       <label className="text-sm font-semibold text-gray-600">Customer:</label>
-      <div className="flex gap-2">
-        <div className="relative w-full">
-          <input
-            type="text"
-            value={searchCustomer}
-            onChange={(e) => setSearchCustomer(e.target.value)}
-            placeholder="Search customer"
-            className="input input-bordered w-full"
-          />
-          {searchCustomer && (
-            <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {customers
-                .filter(customer => 
-                  customer.name.toLowerCase().includes(searchCustomer.toLowerCase())
-                )
-                .map(customer => (
-                  <div
-                    key={customer.id}
-                    className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                    onClick={() => {
-                      setSelectedCustomer(customer.id);
-                      setSearchCustomer(customer.name);
-                    }}
-                  >
-                    <span>{customer.name}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={() => navigate('/people/customers')}
-        >
-          + New
-        </button>
+      <div className="flex flex-col gap-2">
+        {/* Selected Customer Display */}
+        {selectedCustomer && (
+          <select 
+            className="select select-bordered w-full"
+            value={selectedCustomer}
+            onChange={(e) => setSelectedCustomer(e.target.value)}
+          >
+            <option value={selectedCustomer}>
+              {customers.find(c => c.id === selectedCustomer)?.name || "Selected Customer"}
+            </option>
+          </select>
+        )}
+
+        {/* Search Input */}
+        {!selectedCustomer && (
+          <div className="relative w-full">
+            <input
+              type="text"
+              value={searchCustomer}
+              onChange={(e) => setSearchCustomer(e.target.value)}
+              placeholder="Search customer"
+              className="input input-bordered w-full"
+            />
+            {searchCustomer && (
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {customers
+                  .filter(customer => 
+                    customer.name.toLowerCase().includes(searchCustomer.toLowerCase())
+                  )
+                  .map(customer => (
+                    <div
+                      key={customer.id}
+                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      onClick={() => {
+                        setSelectedCustomer(customer.id);
+                        setSearchCustomer('');
+                      }}
+                    >
+                      <span>{customer.name}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Clear Selection Button */}
+        {selectedCustomer && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCustomer('');
+              setSearchCustomer('');
+            }}
+            className="btn btn-sm btn-ghost text-red-500"
+          >
+            Change Customer
+          </button>
+        )}
       </div>
     </div>
+    <button
+      type="button"
+      className="btn btn-primary btn-sm h-10"
+      onClick={() => navigate('/people/customers')}
+    >
+      + New
+    </button>
   </div>
 </div>
 </div> 
