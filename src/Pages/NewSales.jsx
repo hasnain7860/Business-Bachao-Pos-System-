@@ -3,7 +3,7 @@ import React, { useState, useEffect , useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
-import AddProductModal from '../Components/element/AddProductModal';
+import AddProductModal from '../components/element/AddProductModal';
 
 const NewSales = () => {
   const navigate = useNavigate();
