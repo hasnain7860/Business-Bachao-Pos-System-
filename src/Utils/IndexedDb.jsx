@@ -67,6 +67,7 @@ export const processPendingQueries = async () => {
       } else if (action === 'delete') {
         const deleteitem = {
           id: uuidv4(),
+          storeName,
           deletedItemId:item,
           deletedAt:Date.now(),
         }
@@ -311,8 +312,8 @@ export const listenForChanges = async (storeName, context) => {
   onChildAdded(queryRef, async (snapshot) => {
     const addedItem = { id: snapshot.key, ...snapshot.val() };
     console.log(`New item added in store ${storeName}:`, addedItem);
-if(storeName == deletedStore){
-  await deleteItem(storeName, addedItem.deletedItemId, true);
+if(storeName == 'deletedStore'){
+  await deleteItem(addedItem.storeName, addedItem.deletedItemId, true);
     getDebouncedRefresh(storeName)(context, storeName);
     getDebouncedRefresh(storeName)(context, storeName);
 }else{
