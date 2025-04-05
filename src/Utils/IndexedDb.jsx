@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 export const STORE_NAMES = {
   cost: 'cost',
@@ -15,6 +15,7 @@ export const STORE_NAMES = {
   purchases: 'purchases',
   sales: 'sales',
   units: 'units',
+  people: 'people',
   suppliers: 'suppliers',
   customers: 'customers',
   settings: 'settings',
@@ -29,6 +30,29 @@ export const LOCAL_STORE = {
   pendingQuery: 'pendingQuery',
   syncTimes: 'syncTimes',
 }
+
+
+// export const addcustomerstoredatatopeople = async () => {  
+ 
+//   getItems(STORE_NAMES.customers).then(async(data) => {
+//   console.log('customer data',data)
+//   data.forEach(async (item) => {
+//   await addPendingQuery(STORE_NAMES.people, {
+//     id: item.id,
+//     name: item.name,
+//     phone: item.phone,
+//     email: item.email,
+//     address: item.address,
+//     createdAt: Date.now(),
+//   }, 'add');
+//   })
+// })
+// }
+
+
+
+
+
 
 let isProcessing = false; // Flag to prevent duplicate calls
 

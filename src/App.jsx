@@ -13,6 +13,7 @@ import Login from "./Pages/Login.jsx";
 import Profile from "./Pages/Profile.jsx";
 import CreditManagement from "./Pages/CreditManagement.jsx";
 import Settings from "./Pages/Settings.jsx";
+import People from "./Pages/People.jsx";    
 import Suppliers from "./Pages/suppliers.jsx";
 import Customer from "./Pages/customer.jsx";
 import Company from "./Pages/Company.jsx";
@@ -96,6 +97,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Settings />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                 <Route
+                    path="/people"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <People/>
                             </Layout>
                         </ProtectedRoute>
                     }

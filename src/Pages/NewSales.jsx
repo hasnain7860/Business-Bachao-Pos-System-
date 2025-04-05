@@ -8,13 +8,18 @@ import AddProductModal from '../components/element/AddProductModal';
 const NewSales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
-  const customers = context.supplierCustomerContext.customers;
+
+  const people = context.peopleContext.people;
+ 
   const products = context.productContext.products;
   const editProduct = context.productContext.edit;
 const isPrint = useRef(false);
   const [salesRefNo, setSalesRefNo] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [searchCustomer, setSearchCustomer] = useState('');
+ 
+  const [selectedPerson, setSelectedPerson] = useState(''); 
+  const [searchPerson, setSearchPerson] = useState('');
+  
+ 
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
@@ -122,8 +127,8 @@ const handleOpenAddModal = (product, batch) => {
   };
 
 const handleSaveSales = async () => {
-  if (!selectedCustomer) {
-    setMessage('Please add a customer first.');
+  if (!selectedPerson) {
+    setMessage('Please add a person first.');
     return;
   }
 
@@ -140,7 +145,8 @@ const handleSaveSales = async () => {
   const salesData = {
     id: uniqueId,
     salesRefNo,
-    customerId: selectedCustomer,
+    personId: selectedPerson,
+   
     products: selectedProducts,
     paymentMode,
     totalBill: calculateTotalPayment(),
@@ -180,7 +186,8 @@ if(isPrint.current){
 }
 
   // Reset form
-  setSelectedCustomer('');
+setSelectedPerson('');
+  setSearchPerson('');
   setSelectedProducts([]);
   setPaymentMode('');
   setAmountPaid('');
@@ -228,73 +235,73 @@ const handleSaveAndPrintSales = async () => {
          <div className="bg-white rounded-lg p-4 shadow">
   <div className="flex gap-2">
     <div className="flex-1">
-      <label className="text-sm font-semibold text-gray-600">Customer:</label>
+      <label className="text-sm font-semibold text-gray-600">Person:</label>
       <div className="flex flex-col gap-2">
         {/* Selected Customer Display */}
-        {selectedCustomer && (
-          <select 
-            className="select select-bordered w-full"
-            value={selectedCustomer}
-            onChange={(e) => setSelectedCustomer(e.target.value)}
-          >
-            <option value={selectedCustomer}>
-              {customers.find(c => c.id === selectedCustomer)?.name || "Selected Customer"}
-            </option>
-          </select>
-        )}
+        {selectedPerson && (
+                <select 
+                  className="select select-bordered w-full"
+                  value={selectedPerson}
+                  onChange={(e) => setSelectedPerson(e.target.value)}
+                >
+                  <option value={selectedPerson}>
+                    {people.find(p => p.id === selectedPerson)?.name || "Selected Person"}
+                  </option>
+                </select>
+              )}
 
-        {/* Search Input */}
-        {!selectedCustomer && (
-          <div className="relative w-full">
-            <input
-              type="text"
-              value={searchCustomer}
-              onChange={(e) => setSearchCustomer(e.target.value)}
-              placeholder="Search customer"
-              className="input input-bordered w-full"
-            />
-            {searchCustomer && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {customers
-                  .filter(customer => 
-                    customer.name.toLowerCase().includes(searchCustomer.toLowerCase())
-                  )
-                  .map(customer => (
-                    <div
-                      key={customer.id}
-                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                      onClick={() => {
-                        setSelectedCustomer(customer.id);
-                        setSearchCustomer('');
-                      }}
-                    >
-                      <span>{customer.name}</span>
+  {/* Search Input */}
+  {!selectedPerson && (
+                <div className="relative w-full">
+                  <input
+                    type="text"
+                    value={searchPerson}
+                    onChange={(e) => setSearchPerson(e.target.value)}
+                    placeholder="Search people"
+                    className="input input-bordered w-full"
+                  />
+                  {searchPerson && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {people
+                        .filter(person => 
+                          person.name.toLowerCase().includes(searchPerson.toLowerCase())
+                        )
+                        .map(person => (
+                          <div
+                            key={person.id}
+                            className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                            onClick={() => {
+                              setSelectedPerson(person.id);
+                              setSearchPerson('');
+                            }}
+                          >
+                            <span>{person.name}</span>
+                          </div>
+                        ))}
                     </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        )}
+                  )}
+                </div>
+              )}
 
         {/* Clear Selection Button */}
-        {selectedCustomer && (
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCustomer('');
-              setSearchCustomer('');
-            }}
-            className="btn btn-sm btn-ghost text-red-500"
-          >
-            Change Customer
-          </button>
-        )}
+        {selectedPerson && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPerson('');
+                    setSearchPerson('');
+                  }}
+                  className="btn btn-sm btn-ghost text-red-500"
+                >
+                  Change Person
+                </button>
+              )}
       </div>
     </div>
     <button
       type="button"
       className="btn btn-primary btn-sm h-10"
-      onClick={() => navigate('/people/customers')}
+      onClick={() => navigate('/people')}
     >
       + New
     </button>

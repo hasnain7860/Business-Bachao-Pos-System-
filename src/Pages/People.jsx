@@ -4,19 +4,19 @@ import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
 
-const Customers = () => {
+const People = () => {
   const context = useAppContext();
-  const customers = context.supplierCustomerContext.customers;
-  const addCustomer = context.supplierCustomerContext.addCustomer;
-  const editCustomer = context.supplierCustomerContext.editCustomer;
-  const deleteCustomer = context.supplierCustomerContext.deleteCustomer;
+  const people = context.peopleContext.people;
+  const addPerson = context.peopleContext.add;
+  const editPerson = context.peopleContext.edit;
+  const deletePerson = context.peopleContext.delete;
   const { language } = context;
-console.log(customers)
+
   const navigate = useNavigate();
 
   const [columns, setColumns] = useState(3);
   const [currentPage, setCurrentPage] = useState(1);
-  const [customersPerPage] = useState(10);
+  const [peoplePerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -56,24 +56,24 @@ console.log(customers)
   const handleFormSubmission = (e) => {
     e.preventDefault();
     if (isEditingMode) {
-      editCustomer(formData.id, formData);
+      editPerson(formData.id, formData);
     } else {
-      addCustomer({ ...formData, id: uuidv4() });
+      addPerson({ ...formData, id: uuidv4() });
     }
     closeModal();
   };
 
-  const initiateEdit = (customer) => {
-    setFormData(customer);
+  const initiateEdit = (person) => {
+    setFormData(person);
     setIsEditingMode(true);
     setIsModalVisible(true);
   };
 
-  const removeCustomer = (id) => {
-    deleteCustomer(id);
+  const removePerson = (id) => {
+    deletePerson(id);
   };
 
-  const openCustomerModal = () => {
+  const openModal = () => {
     setFormData({
       id: null,
       name: "",
@@ -98,8 +98,8 @@ console.log(customers)
         const reader = new FileReader();
         reader.onload = (event) => {
           const vcfContent = event.target.result;
-          const customersList = extractCustomersFromVcf(vcfContent);
-          customersList.forEach(customer => addCustomer(customer));
+          const peopleList = extractPeopleFromVcf(vcfContent);
+          peopleList.forEach(person => addPerson(person));
         };
         reader.readAsText(file);
       } else {
@@ -117,8 +117,8 @@ console.log(customers)
     });
   };
 
-  const extractCustomersFromVcf = (vcfContent) => {
-    const customers = [];
+  const extractPeopleFromVcf = (vcfContent) => {
+    const people = [];
     const entries = vcfContent.split("END:VCARD");
 
     entries.forEach(entry => {
@@ -145,32 +145,32 @@ console.log(customers)
           console.error("Text decoding error:", e);
         }
 
-        customers.push({ id: uuidv4(), name, phone, email, address });
+        people.push({ id: uuidv4(), name, phone, email, address });
       }
     });
 
-    return customers;
+    return people;
   };
 
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredCustomers = customers.filter((customer) =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone.includes(searchQuery) ||
-    customer.address.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredPeople = people.filter((person) =>
+    person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    person.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    person.phone.includes(searchQuery) ||
+    person.address.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Pagination Logic
-  const indexOfLastCustomer = currentPage * customersPerPage;
-  const indexOfFirstCustomer = indexOfLastCustomer - customersPerPage;
-  const currentCustomers = filteredCustomers.slice(indexOfFirstCustomer, indexOfLastCustomer);
+  const indexOfLastPerson = currentPage * peoplePerPage;
+  const indexOfFirstPerson = indexOfLastPerson - peoplePerPage;
+  const currentPeople = filteredPeople.slice(indexOfFirstPerson, indexOfLastPerson);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const totalPages = Math.ceil(filteredCustomers.length / customersPerPage);
+  const totalPages = Math.ceil(filteredPeople.length / peoplePerPage);
   const pageNumbers = [];
   for (let i = 1; i <= totalPages; i++) {
     pageNumbers.push(i);
@@ -187,7 +187,7 @@ console.log(customers)
     } else if (currentPage + halfMaxPageNumbersToShow >= totalPages) {
       startPage = Math.max(1, totalPages - maxPageNumbersToShow + 1);
     }
-
+    
     const pageNumbersToShow = pageNumbers.slice(startPage - 1, endPage);
 
     return (
@@ -241,18 +241,18 @@ console.log(customers)
       </div>
 
       <h1 className={`text-2xl font-bold mb-2 ${language === "ur" ? "text-right" : "text-left"}`}>
-        {languageData[language].customer_management}
+        {languageData[language].people_management}
       </h1>
       <div className={`mb-4 flex justify-between items-center ${language === "ur" ? "flex-row-reverse" : ""}`}>
         <span className="text-lg font-medium">
-          {languageData[language].total} {languageData[language].customers} : {customers.length}
+          {languageData[language].total} {languageData[language].people} : {people.length}
         </span>
        
         <button
-          onClick={openCustomerModal}
+          onClick={openModal}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          {languageData[language].add_customer}
+          {languageData[language].add_person}
         </button>
       </div>
       <div className={`mb-4 flex justify-between items-center ${language === "ur" ? "flex-row-reverse" : ""}`}>
@@ -274,7 +274,7 @@ console.log(customers)
             className="hidden"
           />
           <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-            {languageData[language].upload_customer}
+            {languageData[language].upload_person}
           </span>
         </label>
         <span className="ml-2 text-gray-500">{languageData[language].upload_vcf}</span>
@@ -289,7 +289,7 @@ console.log(customers)
         </a>
       </div>
 
-      {/* Customer List Display */}
+      {/* People List Display */}
       <div
         className={`grid gap-4 w-full ${language === "ur" ? "text-right" : "text-left"}`}
         style={{
@@ -297,30 +297,30 @@ console.log(customers)
         }}
         dir={language === "ur" ? "rtl" : "ltr"}
       >
-        {currentCustomers.map((customer) => (
+        {currentPeople.map((person) => (
           <div
-            key={customer.id}
+            key={person.id}
             className="p-4 bg-white shadow rounded-lg flex flex-col items-center"
           >
-            {customer.image && (
+            {person.image && (
               <img
-                src={customer.image}
-                alt={customer.name}
+                src={person.image}
+                alt={person.name}
                 className="w-20 h-20 rounded-full mb-4 object-cover"
               />
             )}
-            <h3 className="text-lg font-bold">{customer.name}</h3>
-            <p>{languageData[language].phone}: {customer.phone}</p>
-            <p>{languageData[language].address}: {customer.address}</p>
+            <h3 className="text-lg font-bold">{person.name}</h3>
+            <p>{languageData[language].phone}: {person.phone}</p>
+            <p>{languageData[language].address}: {person.address}</p>
             <div className={`flex space-x-2 mt-4 ${language === "ur" ? "flex-row-reverse" : ""}`}>
               <button
-                onClick={() => initiateEdit(customer)}
+                onClick={() => initiateEdit(person)}
                 className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
               >
                 {languageData[language].edit}
               </button>
               <button
-                onClick={() => removeCustomer(customer.id)}
+                onClick={() => removePerson(person.id)}
                 className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
               >
                 {languageData[language].remove}
@@ -357,12 +357,12 @@ console.log(customers)
         </nav>
       </div>
 
-      {/* Modal for Adding and Editing Customers */}
+      {/* Modal for Adding and Editing People */}
       {isModalVisible && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`}>
             <h2 className="text-xl font-bold mb-4">
-              {isEditingMode ? languageData[language].edit_customer : languageData[language].add_customer}
+              {isEditingMode ? languageData[language].edit_person : languageData[language].add_person}
             </h2>
             <form onSubmit={handleFormSubmission}>
               <div className="grid grid-cols-1 gap-4">
@@ -439,4 +439,24 @@ console.log(customers)
   );
 };
 
-export default Customers;
+export default People;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

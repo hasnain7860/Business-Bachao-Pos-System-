@@ -17,6 +17,10 @@ const refreshData = async (context, storeName) => {
       await context.purchaseContext.refreshData();
       console.log("✅ Purchases context refreshed!");
       break;
+      case "people":
+      await context.peopleContext.refreshData();
+      console.log("✅ People context refreshed!");
+      break;
     case "sales":
       await context.SaleContext.refreshData();
       console.log("✅ Sales context refreshed!");

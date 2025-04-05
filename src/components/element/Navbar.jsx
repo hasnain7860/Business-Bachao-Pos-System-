@@ -182,7 +182,22 @@ const toggleLanguage = () => {
             </Link>
           </li>
 
-          {/* People Section */}
+
+
+          <li>
+            <Link
+              to="/people"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            >
+                  <FiUsers className="mr-3" />
+          {languageData[language].people}
+            </Link>
+          </li>
+
+
+
+
+          {/* People Section
           <li>
             <button
               onClick={() => toggleSection("people")}
@@ -219,7 +234,7 @@ const toggleLanguage = () => {
                 </Link>
               </li>
             </ul>
-          </li>
+          </li> */}
 
           {/* Inventory Section */}
           <li>
@@ -418,7 +433,7 @@ const toggleLanguage = () => {
         </ul>
         </div>
          <div className="text-base pb-20 pl-5">
-        version 1.3.3
+        version 1.4.3
           </div>
           </div>
         </div>

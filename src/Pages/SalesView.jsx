@@ -30,13 +30,14 @@ const SalesView = () => {
       const handleAfterPrint = () => {
         navigate(-1);
       };
-      
+      window.addEventListener("afterprint", handleAfterPrint);
       // Small delay to ensure the component is fully rendered
       setTimeout(() => {
+        
         document.title = `Sale - ${sale?.salesRefNo}`;
         window.print();
        
-        window.addEventListener("afterprint", handleAfterPrint);
+       
        
       }, 500);
   

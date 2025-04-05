@@ -79,7 +79,7 @@ const AddPayments = () => {
 
     if (ref === 'sales') {
       editSale(itemToMatch.id, updatedItem);
-    } else {
+    } else if(ref === 'purchases'){
       editPurchase(itemToMatch.id, updatedItem);
     }
 

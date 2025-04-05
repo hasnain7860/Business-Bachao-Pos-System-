@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import {  useNavigate } from "react-router-dom";
 const NewPurchases = () => {
   const context = useAppContext();
-  const suppliers = context.supplierCustomerContext.suppliers;
+
+  const peoples = context.peopleContext.people;
+  
   const products = context.productContext.products;
   const companies = context.companyContext.companies;
 
@@ -13,7 +15,9 @@ const NewPurchases = () => {
   const updateProduct = context.productContext.edit;
   const addPurchase = context.purchaseContext.add;
   const navigate = useNavigate();
-  const [selectedSupplier, setSelectedSupplier] = useState('');
+
+  const [selectedPeople, setselectedPeople] = useState('');
+
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -122,7 +126,7 @@ const NewPurchases = () => {
    
   
       // Validation: Supplier required
-  if (!selectedSupplier) {
+  if (!selectedPeople) {
     alert("Please select a supplier.");
     return;
   }
@@ -193,7 +197,7 @@ const NewPurchases = () => {
     // Ab purchase add karte waqt naya batch wala product use karo
     const newPurchase1 = {
       id: uuidv4(),
-      supplierName: suppliers.find((s) => s.id == selectedSupplier)?.name || '',
+      peopleId: selectedPeople,
       date: currentDate,
       paymentMode,
       products: selectedProducts.map((p) => ({
@@ -237,17 +241,17 @@ const NewPurchases = () => {
           <div className="flex gap-2">
             <select
               className="select select-bordered w-full text-xs sm:text-sm bg-white"
-              value={selectedSupplier}
-              onChange={(e) => setSelectedSupplier(e.target.value)}
+              value={selectedPeople}
+              onChange={(e) => setselectedPeople(e.target.value)}
             >
                   <option value="" disabled>Select a Supplier</option>
-                  {suppliers.map((supplier) => (
+                  {peoples.map((supplier) => (
                     <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
                   ))}
                </select>
             <button 
               className="btn btn-primary btn-sm hidden sm:flex"
-              onClick={() => navigate("/people/suppliers")}
+              onClick={() => navigate("/people")}
             >
               <AiOutlinePlus /> New
             </button>

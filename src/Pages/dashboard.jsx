@@ -9,6 +9,7 @@ import checkExpiringProducts from "../Utils/checkExpiringProducts.jsx";
 
 const POSDashboard = () => {
   const context = useAppContext();
+  const people = context.peopleContext.people;
   const customers = context.supplierCustomerContext.customers;
   const suppliers = context.supplierCustomerContext.suppliers;
   const products = context.productContext.products;
@@ -47,19 +48,20 @@ const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$'
           <div className="card bg-green-500 text-white p-4 shadow-lg rounded-lg">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
               <FaUsers />
-              <span>{languageData[language].customers}</span>
+              <span>{languageData[language].people}</span>
             </h2>
-            <p className="text-2xl font-bold mt-2">{customers.length}</p>
-            <Link to="/people/customers" className="btn bg-white text-green-500 mt-4">View Customers</Link>
+            <p className="text-2xl font-bold mt-2">{people.length}</p>
+            <Link to="/people" className="btn bg-white text-green-500 mt-4">
+            {languageData[language].view} {languageData[language].people}</Link>
           </div>
-          <div className="card bg-yellow-500 text-white p-4 shadow-lg rounded-lg">
+          {/* <div className="card bg-yellow-500 text-white p-4 shadow-lg rounded-lg">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
               <FaUsers />
               <span>{languageData[language].suppliers}</span>
             </h2>
             <p className="text-2xl font-bold mt-2">{suppliers.length}</p>
             <Link to="/people/suppliers" className="btn bg-white text-yellow-500 mt-4">View Suppliers</Link>
-          </div>
+          </div> */}
           <div className="card bg-purple-500 text-white p-4 shadow-lg rounded-lg">
             <h2 className="text-lg font-semibold flex items-center space-x-2">
               <MdInventory />

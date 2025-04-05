@@ -6,7 +6,8 @@ const Sales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const sales = context.SaleContext.Sales;
-  const customers = context.supplierCustomerContext.customers;
+  const peoples = context.peopleContext.people;
+  
   const userAndBusinessDetail = context.settingContext.settings;
   const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$';
   const {language} = context;
@@ -23,9 +24,9 @@ console.log(sales)
   const isAnyMenuOpen = Object.values(openMenu).some(value => value);
 
 
-  const handleCustomerNameViaId = (sale) => {
-    const existCustomer = customers.find((customer) => customer.id === sale.customerId);
-    return existCustomer ? existCustomer.name : "Name not found";
+  const handlePeopleNameViaId = (sale) => {
+    const existPeople = peoples.find((people) => people.id === sale.personId);
+    return existPeople ? existPeople.name : "Name not found";
   };
 
   const handleMenuAction = (action, id) => {
@@ -37,12 +38,12 @@ console.log(sales)
       case 'print':
         navigate(`/sales/view/${id}/print`);
         break;
-      case 'addPayment':
-        navigate(`/sales/addPayments/${id}`);
-        break;
-      case 'viewPayment':
-        navigate(`/sales/viewPayments/${id}`);
-        break;
+      // case 'addPayment':
+      //   navigate(`/sales/addPayments/${id}`);
+      //   break;
+      // case 'viewPayment':
+      //   navigate(`/sales/viewPayments/${id}`);
+      //   break;
       case 'saleReturn':  // Sale Return Option
         navigate(`/sales/return/${id}`);
         break;
@@ -67,7 +68,7 @@ console.log(sales)
 
   // ** Filtered Sales List Based on Search Query **
   const filteredSales = sales.filter((sale) => {
-    const customerName = handleCustomerNameViaId(sale).toLowerCase();
+    const customerName = handlePeopleNameViaId(sale).toLowerCase();
     return customerName.includes(searchQuery.toLowerCase()) || sale.totalBill.toString().includes(searchQuery) || sale.salesRefNo.toString().includes(searchQuery);
   });
 
@@ -128,7 +129,7 @@ console.log(sales)
                       languageData[language].paid_bill,
                       languageData[language].credit,
                       languageData[language].payment_mode,
-                      languageData[language].status,
+                      // languageData[language].status,
                       languageData[language].actions
                     ].map((header, index) => (
                       <th
@@ -162,19 +163,19 @@ console.log(sales)
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.salesRefNo}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{handleCustomerNameViaId(sale)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{handlePeopleNameViaId(sale)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.dateTime}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{currency} {sale.totalBill - returnTotal}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{currency} {updatedAmountPaid}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{currency} {updatedCredit}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.paymentMode}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        {/* <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             updatedCredit === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             {updatedCredit === 0 ? languageData[language].paid : languageData[language].pending}
                           </span>
-                        </td>
+                        </td> */}
                        
 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
   <div className="relative inline-block text-left">
@@ -214,7 +215,7 @@ console.log(sales)
             {languageData[language].print}
           </button>
         </div>
-
+{/* 
         {updatedCredit > 0 && (
           <div className="py-1">
             <button
@@ -237,7 +238,7 @@ console.log(sales)
               {languageData[language].view_payment}
             </button>
           </div>
-        )}
+        )} */}
 
         <div className="py-1">
           <button

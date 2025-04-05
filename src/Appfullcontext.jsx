@@ -13,6 +13,7 @@ import useCreditManagementContext from './Logic/CreditManagement.jsx';
 import useNotificationContext from './Logic/Notifications.jsx';
 import { ClientDatabaseInitializer } from './Utils/ClientFirebaseDb.jsx';
 import useSellReturnContext from './Logic/SellReturn.jsx';
+import usePeopleContext from './Logic/People.jsx';
 
 // Utility function for updating items in an array
 const updateItem = (items, id, updatedItem) =>
@@ -34,6 +35,7 @@ export const AppContextProvider = ({ children }) => {
  
   const unitContext = useUnitsContext();
   const productContext = useProductContext();
+  const peopleContext = usePeopleContext();
   const supplierCustomerContext = useSupplierAndCustomerContext();
   const settingContext = useSettingsContext();
   const costContext = useCostContext();
@@ -69,7 +71,7 @@ export const AppContextProvider = ({ children }) => {
         setIsAuthenticated,
         notificationContext,
         companyContext,
-     
+        peopleContext,
         unitContext,
         productContext,
         supplierCustomerContext,
