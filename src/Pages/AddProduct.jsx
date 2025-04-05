@@ -86,7 +86,39 @@ const [expirationDate, setExpirationDate] = useState()
       }
     }
   }, [selectedBatch, batches]);
+// Add this after the existing state declarations
+const [showNewBatchForm, setShowNewBatchForm] = useState(false);
 
+// Add this function before the return statement
+const handleAddNewBatch = () => {
+  if (!purchasePrice || !sellPrice || !retailPrice || !quantity) {
+    alert("Please fill all the required fields for the current batch first");
+    return;
+  }
+
+  const batchData = {
+    batchCode: batchCode,
+    expirationDate: expirationDate || "",
+    purchasePrice: purchasePrice,
+    sellPrice: sellPrice,
+    retailPrice: retailPrice,
+    quantity: quantity
+  };
+
+  setBatches([...batches, batchData]);
+
+  // Generate new batch code
+  const nextBatchNumber = batches.length + 2;
+  const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
+  setBatchCode(newBatchCode);
+
+  // Clear the form fields
+  setExpirationDate("");
+  setPurchasePrice("");
+  setSellPrice("");
+  setRetailPrice("");
+  setQuantity("");
+};
   const handleSaveProduct = () => {
     if (!productName || !productNameInUrdu || !selectedCompany || !selectedUnit) {
       alert("Please fill all required fields.");
@@ -185,109 +217,130 @@ const [expirationDate, setExpirationDate] = useState()
 
   // Filter brands based on selected company
  
-  return (
-    <div className="max-w-xl mx-auto bg-white shadow-lg rounded-lg p-6 mt-10">
-      <h2 className="text-2xl font-bold text-center mb-6">
-        {edit ? "Update Product" : "Add Product"}
+// ...existing imports and initial code...
+
+return (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4">
+    <div className="max-w-2xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+      <h2 className="text-3xl font-bold text-center mb-8 text-indigo-700 border-b pb-4">
+        {edit ? "✏️ Update Product" : "➕ Add New Product"}
       </h2>
 
-      {/* Product Name in English */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Product Name in English*:</span>
-        </label>
-        <input
-          type="text"
-          value={productName}
-          onChange={(e) => setProductName(e.target.value)}
-          placeholder="Enter product name"
-          className="input input-bordered w-full"
-          required
-        />
-      </div>   
-      {/* Product Name  in Urdu*/}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Product Name in Urdu *:</span>
-        </label>
-        <input
-          type="text"
-          value={productNameInUrdu}
-          onChange={(e) => setProductNameInUrdu(e.target.value)}
-          placeholder="Enter product name"
-          className="input input-bordered w-full"
-          required
-        />
-      </div>
-
-      {/* Company */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Company*:</span>
-        </label>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
-            className="select select-bordered w-full"
-          >
-            <option value="">Select a Company</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => navigate("/inventory/Company")}
-          >
-            New
-          </button>
-        </div>
-      </div>
-
-   
-      {/* Unit */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Unit*:</span>
-        </label>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedUnit}
-            onChange={(e) => setSelectedUnit(e.target.value)}
-            className="select select-bordered w-full"
-          >
-            <option value="">Select a Unit</option>
-            {units.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unit.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => navigate("/inventory/units")}
-            
-          >
-            New
-          </button>
-        </div>
-      </div>
-
-      {/* Batch Code */}
-      {edit ? (
-        <div className="form-control mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Product Name in English */}
+        <div className="form-control">
           <label className="label">
-            <span className="label-text">Batch Code:</span>
+            <span className="label-text font-semibold text-gray-700">Product Name (English)*</span>
           </label>
+          <input
+            type="text"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder="Enter product name"
+            className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Product Name in Urdu */}
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text font-semibold text-gray-700">Product Name (Urdu)*</span>
+          </label>
+          <input
+            type="text"
+            value={productNameInUrdu}
+            onChange={(e) => setProductNameInUrdu(e.target.value)}
+            placeholder="اردو میں نام درج کریں"
+            className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Company */}
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text font-semibold text-gray-700">Company*</span>
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+              className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
+            >
+              <option value="">Select a Company</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm hover:bg-indigo-600"
+              onClick={() => navigate("/inventory/Company")}
+            >
+              New
+            </button>
+          </div>
+        </div>
+
+        {/* Unit */}
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text font-semibold text-gray-700">Unit*</span>
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedUnit}
+              onChange={(e) => setSelectedUnit(e.target.value)}
+              className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
+            >
+              <option value="">Select a Unit</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm hover:bg-indigo-600"
+              onClick={() => navigate("/inventory/units")}
+            >
+              New
+            </button>
+          </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+{/* Batch Section */}
+<div className="col-span-full bg-gray-50 p-4 rounded-lg mb-4">
+  <div className="flex justify-between items-center mb-4">
+    <h3 className="font-semibold text-lg text-gray-700">Batch Information</h3>
+  </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* Batch Code */}
+    <div className="form-control">
+      <label className="label">
+        <span className="label-text font-semibold text-gray-700">
+          {edit ? "Batch Code" : "New Batch Code"}
+        </span>
+      </label>
+      <div className="flex items-center gap-2">
+        {edit ? (
           <select
             value={selectedBatch || ""}
             onChange={(e) => setSelectedBatch(e.target.value)}
-            className="select select-bordered w-full"
+            className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
           >
             <option value="">Select a Batch</option>
             {batches.map((batch) => (
@@ -296,148 +349,198 @@ const [expirationDate, setExpirationDate] = useState()
               </option>
             ))}
           </select>
-        </div>
-      ) : (
-        <div className="form-control mb-4">
-          <label className="label">
-            <span className="label-text">New Batch Code:</span>
-          </label>
-          <input
-            type="text"
-            value={batchCode}
-            readOnly
-            className="input input-bordered w-full"
-          />
-        </div>
-      )}
+        ) : (
+          <>
+            <input
+              type="text"
+              value={batchCode}
+              readOnly
+              className="input input-bordered w-full bg-gray-100"
+            />
+          </>
+        )}
+      </div>
+    </div>
 
- {/* Expiration Date */}
- <div className="form-control mb-4">
+    {/* Expiration Date */}
+    <div className="form-control">
       <label className="label">
-        <span className="label-text">Expiration Date:</span>
+        <span className="label-text font-semibold text-gray-700">Expiration Date</span>
       </label>
       <input
         type="date"
-        value={expirationDate}
+        value={expirationDate || ""}
         onChange={(e) => setExpirationDate(e.target.value)}
-        className="input input-bordered w-full"
-        
+        className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
       />
     </div>
+  </div>
 
-      {/* Purchase Price */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Purchase Price *:</span>
-        </label>
-        <input
-        required
-          type="text"
-          value={purchasePrice}
-          onChange={(e) => setPurchasePrice(e.target.value)}
-          placeholder="Enter purchase price"
-          className="input input-bordered w-full"
-        />
-      </div>
+  {/* Add Batch Button */}
+  {!edit && (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={handleAddNewBatch}
+        className="btn btn-primary btn-block gap-2"
+        disabled={!purchasePrice || !sellPrice || !retailPrice || !quantity || !expirationDate}
+      >
+        <FaPlus /> Add Batch
+      </button>
+    </div>
+  )}
+</div>
 
-      {/* Sell Price */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Sell Price *:</span>
-        </label>
-        <input
-        required
-          type="number"
-          value={sellPrice}
-          onChange={(e) => setSellPrice(e.target.value)}
-          placeholder="Enter sell price"
-          className="input input-bordered w-full"
-        />
-      </div>
+{/* Batches List */}
+{!edit && batches.length > 0 && (
+  <div className="col-span-full">
+    <h3 className="font-semibold text-lg text-gray-700 mb-2">Added Batches</h3>
+    <div className="overflow-x-auto">
+      <table className="table table-compact w-full">
+        <thead>
+          <tr>
+            <th>Batch Code</th>
+            <th>Expiry Date</th>
+            <th>Purchase Price</th>
+            <th>Sell Price</th>
+            <th>Retail Price</th>
+            <th>Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {batches.map((batch) => (
+            <tr key={batch.batchCode}>
+              <td>{batch.batchCode}</td>
+              <td>{new Date(batch.expirationDate).toLocaleDateString()}</td>
+              <td>{batch.purchasePrice}</td>
+              <td>{batch.sellPrice}</td>
+              <td>{batch.retailPrice}</td>
+              <td>{batch.quantity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
-      {/* Retail Price */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Retail Price *:</span>
-        </label>
-        <input
-        required
-          type="number"
-          value={retailPrice}
-          onChange={(e) => setRetailPrice(e.target.value)}
-          placeholder="Enter retail price"
-          className="input input-bordered w-full"
-        />
-      </div>
 
-      {/* Quantity */}
-      <div className="form-control mb-4">
-        <label className="label">
-          <span className="label-text">Quantity *:</span>
-        </label>
-        <input
-        required
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-          placeholder="Enter quantity"
-          className="input input-bordered w-full"
-        />
-      </div>
 
-      {/* Product Image Upload */}
-      {/* <div className="product-image-upload">
-        <label className="block mb-2 text-sm font-medium">
-          Upload Product Image
-        </label>
-        {preview ? (
-          <div className="relative">
-            <img
-              src={preview}
-              alt="Product Preview"
-              className="w-32 h-32 object-cover rounded-md border mb-2"
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-error"
-              onClick={handleRemoveImage}
-            >
-              Remove
-            </button>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
+
+
+
+
+
+        {/* Prices Section */}
+        <div className="col-span-full bg-gray-50 p-4 rounded-lg space-y-4 mt-4">
+          <h3 className="font-semibold text-lg text-gray-700 mb-2">Price Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Purchase Price */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-700">Purchase Price*</span>
+              </label>
+              <input
+                required
+                type="text"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                placeholder="Enter price"
+                className="input input-bordered w-full bg-white focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Sell Price */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-700">Sell Price*</span>
+              </label>
+              <input
+                required
+                type="number"
+                value={sellPrice}
+                onChange={(e) => setSellPrice(e.target.value)}
+                placeholder="Enter price"
+                className="input input-bordered w-full bg-white focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Retail Price */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-700">Retail Price*</span>
+              </label>
+              <input
+                required
+                type="number"
+                value={retailPrice}
+                onChange={(e) => setRetailPrice(e.target.value)}
+                placeholder="Enter price"
+                className="input input-bordered w-full bg-white focus:border-indigo-500"
+              />
+            </div>
           </div>
-        ) : (
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="file-input file-input-bordered file-input-primary w-full max-w-xs"
-          />
-        )}
-      </div> */}
+        </div>
 
-      {/* Add or Update Product Button */}
-      <div className="form-control mt-6">
+        {/* Quantity */}
+        <div className="col-span-full">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-700">Quantity*</span>
+            </label>
+            <input
+              required
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Enter quantity"
+              className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col md:flex-row gap-4 mt-8">
         <button
           type="button"
           onClick={handleSaveProduct}
-          className="btn btn-primary w-full"
+          className="btn btn-primary flex-1 hover:bg-indigo-600 transition-colors duration-200"
         >
-          {edit ? "Update Product" : "Add Product"}
+          {edit ? "💾 Update Product" : "➕ Add Product"}
         </button>
-      </div>
-
-      {/* Back Button */}
-      <div className="form-control mt-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="btn btn-outline w-full"
+          className="btn btn-outline hover:bg-gray-100 flex-1 transition-colors duration-200"
         >
-          Back
+          ← Back
         </button>
       </div>
     </div>
-  );
+  </div>
+);
+
+// ...rest of the component
 };
 
 export default AddProduct;
