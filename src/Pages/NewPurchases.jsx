@@ -100,8 +100,22 @@ const NewPurchases = () => {
   };
 
   const handleTotalPaymentChange = (e) => {
-    setTotalPayment(parseFloat(e.target.value) || 0);
-    calculateCredit();
+    let value = e.target.value;
+    // Remove leading zeros except if it's just "0"
+    value = value.replace(/^0+(?=\d)/, '');
+    const totalBill = calculateTotalBill();
+    const newPayment = value === '' ? 0 : parseFloat(value);
+  
+    // Check if new payment exceeds total bill
+    if (newPayment > totalBill) {
+      alert("Paid amount cannot exceed total bill amount!");
+      setTotalPayment(totalBill);
+      setCredit(0);
+      return;
+    }
+  
+    setTotalPayment(value === '' ? '' : newPayment);
+    setCredit(totalBill - newPayment);
   };
 
   const handleAddPurchase = () => {
@@ -207,224 +221,235 @@ const NewPurchases = () => {
   );
 
   return (
-    <div className="container mx-auto p-6 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl font-bold text-center mb-6">New Purchase</h1>
-
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">Supplier *</label>
-        <div className="flex items-center space-x-2">
-          <select
-            className="select select-bordered w-full"
-            value={selectedSupplier}
-            onChange={(e) => setSelectedSupplier(e.target.value)}
-          >
-            <option value="" disabled>
-              Select a Supplier
-            </option>
-            {suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+    <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
+    <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">New Purchase</h2>
+  
+      {/* Adjust the main layout flex */}
+  <div className="flex flex-col lg:flex-row gap-4">
+     {/* Left Content Area - make it full width on mobile */}
+     <div className="flex-1  min-w-0 space-y-3 sm:space-y-4">
+         {/* Top Row Grid - stack on mobile */}
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         
-          <button className="btn btn-primary btn-sm flex items-center"  onClick={() => navigate("/people/suppliers")}>
-            <AiOutlinePlus className="mr-1" /> Add Supplier
-          </button>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">Purchase Date</label>
-        <input type="date"  value={currentDate} max={currentDate}  onChange={(e) => setCurrentDate(e.target.value)} className="input input-bordered w-full" />
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">Product</label>
-        <input
-          type="text"
-          className="input input-bordered w-full"
-          placeholder="Search product"
-          value={productSearch}
-          onChange={(e) => setProductSearch(e.target.value)}
-        />
-        <div className="overflow-y-auto max-h-40 border mt-2">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="p-2 border-b cursor-pointer hover:bg-gray-100"
-              onClick={() => handleAddProductToTable(product)}
+        {/* Supplier Selection - adjust padding and text size */}
+        <div className="bg-white rounded-lg p-3 sm:p-4 shadow">
+          <label className="text-xs sm:text-sm font-semibold text-gray-600">Supplier *:</label>
+          <div className="flex gap-2">
+            <select
+              className="select select-bordered w-full text-xs sm:text-sm bg-white"
+              value={selectedSupplier}
+              onChange={(e) => setSelectedSupplier(e.target.value)}
             >
-              {product.name}
+                  <option value="" disabled>Select a Supplier</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                  ))}
+               </select>
+            <button 
+              className="btn btn-primary btn-sm hidden sm:flex"
+              onClick={() => navigate("/people/suppliers")}
+            >
+              <AiOutlinePlus /> New
+            </button>
+          </div>
+        </div>
+            {/* Purchase Date */}
+            <div className="bg-white rounded-lg p-4 shadow">
+              <label className="text-sm font-semibold text-gray-600">Purchase Date:</label>
+              <input 
+                type="date" 
+                value={currentDate} 
+                max={currentDate} 
+                onChange={(e) => setCurrentDate(e.target.value)} 
+                className="input input-bordered w-full bg-white"
+              />
             </div>
-          ))}
+          </div>
+
+          {/* Product Search */}
+          <div className="bg-white rounded-lg p-4 shadow">
+            <label className="text-sm font-semibold text-gray-600">Search Products:</label>
+            <input
+              type="text"
+              className="input input-bordered w-full"
+              placeholder="Search product by name"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+            />
+            {productSearch && (
+              <div className="overflow-y-auto max-h-60 mt-2 border rounded-lg">
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="p-2 border-b last:border-b-0 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleAddProductToTable(product)}
+                  >
+                    {product.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Products Table */}
+           {/* Products Table - make it scroll horizontally on mobile */}
+           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 sm:p-4 shadow-lg">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="max-h-[calc(100vh-450px)] overflow-y-auto">
+              <table className="table w-full table-auto min-w-[800px] sm:min-w-full"> {/* Force minimum width on mobile */}
+           <thead className="bg-gradient-to-r from-blue-600 to-purple-600 sticky top-0 z-10"> {/* Made header sticky */}
+          <tr>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Product</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Company</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Unit</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Batch</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Expire</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Sell ₨</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Retail ₨</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Purchase ₨</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Qty</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Total</th>
+            <th className="text-white font-semibold text-xs md:text-sm px-2">Action</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {selectedProducts.length > 0 ? (
+            selectedProducts.map((product, index) => (
+            <tr key={product.id} className="hover:bg-blue-50 transition-colors">
+                      <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{product.name}</td>
+                      <td className="text-xs md:text-sm px-2">{companies.find((c) => c.id === product.companyId)?.name || 'N/A'}</td>
+                      <td className="text-xs md:text-sm px-2">{units.find((u) => u.id === product.unitId)?.name || 'N/A'}</td>
+                      <td className="text-xs md:text-sm px-2">
+                        <select
+                          value={product.batchCode}
+                          onChange={(e) => updateBatchCode(index, e.target.value)}
+                          className="select select-bordered select-sm w-full max-w-xs"
+                        >
+                          {(batchCodes[product.id] || []).map((batch) => (
+                            <option key={batch.batchCode} value={batch.batchCode}>{batch.batchCode}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="text-xs md:text-sm px-2">
+                        <input
+                          type="date"
+                          value={product.expirationDate || ''}
+                          onChange={(e) => updateProductField(index, 'expirationDate', e.target.value)}
+                          className="input input-bordered input-sm w-full max-w-xs"
+                        />
+                      </td>
+                      <td className="text-xs md:text-sm px-2">
+                        <input
+                          type="number"
+                          className="input input-bordered input-sm w-20"
+                          value={product.sellPrice}
+                          onChange={(e) => updateProductField(index, 'sellPrice', parseFloat(e.target.value) || '')}
+                        />
+                      </td>
+                      <td className="text-xs md:text-sm px-2">
+                        <input
+                          type="number"
+                          className="input input-bordered input-sm w-20"
+                          value={product.retailPrice}
+                          onChange={(e) => updateProductField(index, 'retailPrice', parseFloat(e.target.value) || '')}
+                        />
+                      </td>
+                      <td className="text-xs md:text-sm px-2">
+                        <input
+                          type="number"
+                          className="input input-bordered input-sm w-20"
+                          value={product.purchasePrice}
+                          onChange={(e) => updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || '')}
+                        />
+                      </td>
+                      <td className="text-xs md:text-sm px-2">
+                        <input
+                          type="number"
+                          className="input input-bordered input-sm w-20"
+                          value={product.quantity}
+                          onChange={(e) => updateProductField(index, 'quantity', parseInt(e.target.value, 10) || 0)}
+                        />
+                      </td>
+                      <td className="text-blue-600 font-bold text-xs md:text-sm px-2">
+                        ₨ {product.total.toFixed(2)}
+                      </td>
+                      <td className="px-2">
+                        <button
+                          className="btn btn-error btn-xs md:btn-sm"
+                          onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== index))}
+                        >
+                          ❌
+                        </button>
+                      </td>
+                    </tr>
+                 ))
+                ) : (
+                  <tr>
+                    <td colSpan="11" className="text-center text-gray-500 py-4">
+                      No products added yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        </div>
+
+         {/* Right Sidebar - Payment Details */}
+         <div className="lg:w-1/4 lg:min-w-[300px] w-full">
+          <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
+            <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
+
+            <div className="mb-6">
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label>
+              <select
+                value={paymentMode}
+                onChange={(e) => setPaymentMode(e.target.value)}
+                className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors"
+              >
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank</option>
+              </select>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-6 shadow-md">
+              <label className="text-white text-sm font-semibold block mb-1">Total Bill:</label>
+              <div className="text-3xl font-bold text-white">
+                ₨ {calculateTotalBill().toFixed(2)}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">Amount Paid:</label>
+             <input
+  type="number"
+  value={totalPayment === 0 ? '' : totalPayment}
+  onChange={handleTotalPaymentChange}
+  className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold"
+/>
+            </div>
+
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-8 shadow-md">
+              <label className="text-white text-sm font-semibold block mb-1">Credit Amount:</label>
+              <div className="text-3xl font-bold text-white">
+                ₨ {credit.toFixed(2)}
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddPurchase}
+              className="btn btn-primary w-full mb-3 text-lg font-bold hover:scale-105 transition-transform"
+            >
+              Save Purchase
+            </button>
+          </div>
         </div>
       </div>
-
-      <div className="overflow-x-auto mb-6">
-        <table className="table w-full">
-          <thead>
-            <tr>
-              <th>Product Name</th>
-              <th>Company</th>
-            
-              <th>Units</th>
-              <th>Batch Code</th>
-              <th>Expire Date</th>
-              <th>Per Sell Price</th>
-              <th>Per Retail Price</th>
-              <th>Per Purchase Price</th>
-              <th>Purchase Quantity</th>
-              <th>Total</th>
-              <th className="">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {selectedProducts.length > 0 ? (
-              selectedProducts.map((product, index) => {
-                const company = companies.find((c) => c.id === product.companyId);
-                
-                const unit = units.find((u) => u.id === product.unitId);
-                const productBatches = batchCodes[product.id] || [];
-
-                return (
-                  <tr key={product.id}>
-                    <td>{product.name}</td>
-                    <td>{company ? company.name : 'Unknown Company'}</td>
-              
-                    <td>{unit ? unit.name : 'Unknown Unit'}</td>
-                    <td>
-                      <select
-                        value={product.batchCode}
-                        onChange={(e) => updateBatchCode(index, e.target.value)}
-                        className="select select-bordered input-sm"
-                      >
-                        {productBatches.map((batch) => (
-                          <option key={batch.batchCode} value={batch.batchCode}>
-                            {batch.batchCode}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                    <input
-  type="date"
-  value={selectedProducts[index].expirationDate || ''}
-  onChange={(e) => updateProductField(index, 'expirationDate', e.target.value)}
-  className="input input-bordered"
-/>
-
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="input input-bordered input-sm"
-                        placeholder="Per Sell Price"
-                        value={product.sellPrice}
-                        onChange={(e) =>
-                          updateProductField(index, 'sellPrice', parseFloat(e.target.value) || '')
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="input input-bordered input-sm"
-                        placeholder="Per Retail Price"
-                        value={product.retailPrice}
-                        onChange={(e) =>
-                          updateProductField(index, 'retailPrice', parseFloat(e.target.value) || '')
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="input input-bordered input-sm"
-                        placeholder="Per Purchase Price"
-                        value={product.purchasePrice}
-                        onChange={(e) =>
-                          updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || '')
-                        }
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="input input-bordered input-sm"
-                        placeholder="Purchase Quantity"
-                        value={product.quantity}
-                        onChange={(e) =>
-                          updateProductField(index, 'quantity', parseInt(e.target.value, 10) || 0)
-                        }
-                      />
-                    </td>
-                    <td>{product.total.toFixed(2)}</td>
-                    <td className="border border-gray-300 px-4 py-2">
-          <button
-            className="btn btn-error text-white px-3 py-1 rounded-md"
-            onClick={() => {
-              const updatedProducts = selectedProducts.filter((_, i) => i !== index);
-              setSelectedProducts(updatedProducts);
-            }}
-          >
-            ❌
-          </button>
-        </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan="10" className="text-center text-gray-500">
-                  No products added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-2">Payment Mode</label>
-        <select
-          className="select select-bordered w-full"
-          value={paymentMode}
-          onChange={(e) => setPaymentMode(e.target.value)}
-        >
-          <option value="Cash">Cash</option>
-          <option value="Bank">Bank</option>
-        </select>
-      </div>
-
-      <div className="mb-6">
-        <label className="block text-gray-700 font-medium mb-2">Total Payment</label>
-        <input
-          type="number"
-          className="input input-bordered w-full mb-2"
-          placeholder="Total Payment to Supplier"
-          value={totalPayment}
-          onChange={handleTotalPaymentChange}
-        />
-        <label className="block text-gray-700 font-medium mb-2">Credit</label>
-        <input
-          type="number"
-          className="input input-bordered w-full"
-          placeholder="Credit Amount"
-          value={credit}
-          readOnly
-        />
-      </div>
-
-      <div className="mb-4">
-        <h2 className="text-xl font-bold">Total Bill: ${calculateTotalBill().toFixed(2)}</h2>
-      </div>
-
-      <button className="btn btn-success w-full" onClick={handleAddPurchase}>
-        Add Purchase
-      </button>
     </div>
   );
 };
+
 
 export default NewPurchases;

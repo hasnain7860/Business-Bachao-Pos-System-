@@ -8,6 +8,7 @@ import languageData from "../assets/languageData.json";
 const Purchases = () => {
   const navigate = useNavigate();
   const context = useAppContext();
+  const [isAnyMenuOpen, setIsAnyMenuOpen] = useState(false);
 
   const {language} = context;
   const purchasesData = context.purchaseContext.purchases;
@@ -19,17 +20,21 @@ const userAndBusinessDetail = context.settingContext.settings;
     navigate('/purchases/new');
   };
 
-  const toggleMenu = (index) => {
-    setMenuOpen(menuOpen === index ? null : index);
-  };
+ // Modify your toggleMenu function
+const toggleMenu = (index) => {
+  const willOpen = menuOpen === index ? false : true;
+  setMenuOpen(menuOpen === index ? null : index);
+  setIsAnyMenuOpen(willOpen);
+};
 
-  const handleView = (purchase) => {
-    // Logic for viewing details
-  };
 
-  const handleEdit = (purchase) => {
-    navigate(`/purchases/edit/${purchase.id}`);
-  };
+  // const handleView = (purchase) => {
+  //   // Logic for viewing details
+  // };
+
+  // const handleEdit = (purchase) => {
+  //   navigate(`/purchases/edit/${purchase.id}`);
+  // };
 
   
 
@@ -52,64 +57,76 @@ const userAndBusinessDetail = context.settingContext.settings;
           {languageData[language].back}
         </button>
       </div>
-  
-      <div className="overflow-x-auto">
-        <table className="table w-full">
-          <thead>
-            <tr>
-              <th>{languageData[language].purchase_no}</th>
-              <th>{languageData[language].supplier}</th>
-              <th>{languageData[language].total_bill}</th>
-              <th>{languageData[language].payment_mode}</th>
-              <th>{languageData[language].date}</th>
-              <th>{languageData[language].payment_status}</th>
-              <th>{languageData[language].credit}</th>
-              <th>{languageData[language].action}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {purchasesData.map((purchase, index) => (
-              <tr key={purchase.id}>
-                <td>{index + 1}</td>
-                <td>{purchase.supplierName}</td>
-                <td>{purchase.totalBill}</td>
-                <td>{purchase.paymentMode}</td>
-                <td>{purchase.date}</td>
-                <td>{(purchase.totalBill - purchase.totalPayment) == 0 ? languageData[language].full : languageData[language].due}</td>
-                <td>{purchase.totalBill - purchase.totalPayment}</td>
-                <td>
-                  <div className="relative">
-                    <button onClick={() => toggleMenu(index)} className="btn btn-sm">
-                      <FaEllipsisV />
-                    </button>
-                    {menuOpen == index && (
-                      <div className="absolute right-0 mt-2 bg-white border rounded shadow-lg z-10">
-                        <button onClick={() => handleView(purchase)} className="block px-4 py-2 hover:bg-gray-100">
-                          {languageData[language].view}
-                        </button>
-                        <button onClick={() => handleEdit(purchase)} className="block px-4 py-2 hover:bg-gray-100">
-                          {languageData[language].edit}
-                        </button>
-                        <button onClick={() => handleDelete(purchase.id)} className="block px-4 py-2 hover:bg-gray-100">
-                          {languageData[language].delete}
-                        </button>
-                        {(purchase.totalBill - purchase.totalPayment) !== 0 && (
-                          <button onClick={() => handleAddPayment(purchase)} className="block px-4 py-2 text-red-600 hover:bg-gray-100">
-                            {languageData[language].add_payment}
-                          </button>
-                        )}
-                        <button onClick={() => handleViewPayment(purchase)} className="block px-4 py-2 text-red-600 hover:bg-gray-100">
-                          {languageData[language].view_payment}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
+     
+      <div className="relative mb-4">
+  <div className={`overflow-x-auto shadow-lg rounded-lg ${isAnyMenuOpen ? 'min-h-[500px]' : ''} transition-all duration-300`}>
+    <table className="min-w-full bg-white border-collapse">
+     <thead>
+              <tr className="bg-gradient-to-r from-blue-600 to-blue-400">
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].purchase_no}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].supplier}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].total_bill}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_mode}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].date}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_status}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].credit}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].action}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {purchasesData.map((purchase, index) => (
+                <tr key={purchase.id} className="hover:bg-gray-50 transition-colors duration-200">
+                  <td className="px-6 py-4 text-gray-800">{index + 1}</td>
+                  <td className="px-6 py-4 text-gray-800 font-medium">{purchase.supplierName}</td>
+                  <td className="px-6 py-4 text-gray-800">{purchase.totalBill}</td>
+                  <td className="px-6 py-4 text-gray-800">{purchase.paymentMode}</td>
+                  <td className="px-6 py-4 text-gray-800">{purchase.date}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-sm ${(purchase.totalBill - purchase.totalPayment) === 0 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'}`}>
+                      {(purchase.totalBill - purchase.totalPayment) === 0 ? languageData[language].full : languageData[language].due}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-800">{purchase.totalBill - purchase.totalPayment}</td>
+                  <td className="px-6 py-4 relative">
+  <button onClick={() => toggleMenu(index)} className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200">
+    <FaEllipsisV className="text-gray-600" />
+  </button>
+  {menuOpen === index && (
+    <div className="absolute right-0 lg:right-auto lg:transform lg:translate-x-[-90%] mt-2 w-48 bg-white border rounded-lg shadow-xl z-50"
+         style={{
+           top: '100%',
+           maxHeight: '300px',
+           overflowY: 'auto'
+         }}>
+      {/* <button onClick={() => handleView(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
+        {languageData[language].view}
+      </button>
+      <button onClick={() => handleEdit(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
+        {languageData[language].edit}
+      </button> */}
+      <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600">
+        {languageData[language].delete}
+      </button>
+      {(purchase.totalBill - purchase.totalPayment) !== 0 && (
+        <button onClick={() => handleAddPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-green-50 text-green-600">
+          {languageData[language].add_payment}
+        </button>
+      )}
+      <button onClick={() => handleViewPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-600">
+        {languageData[language].view_payment}
+      </button>
+    </div>
+  )}
+</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
     </div>
   );
   
