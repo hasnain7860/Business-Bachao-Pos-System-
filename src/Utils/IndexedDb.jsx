@@ -314,10 +314,11 @@ export const listenForChanges = async (storeName, context) => {
     console.log(`New item added in store ${storeName}:`, addedItem);
 if(storeName == 'deletedStore'){
   await deleteItem(addedItem.storeName, addedItem.deletedItemId, true);
-    getDebouncedRefresh(storeName)(context, storeName);
-    getDebouncedRefresh(storeName)(context, storeName);
+    getDebouncedRefresh(addedItem.storeName)(context, addedItem.storeName);
+   
 }else{
   await addItem(storeName, addedItem, true);
+  getDebouncedRefresh(storeName)(context, storeName);
 }
     
   });
