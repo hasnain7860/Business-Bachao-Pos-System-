@@ -30,14 +30,19 @@ const SalesView = () => {
       const handleAfterPrint = () => {
         navigate(-1);
       };
-      window.addEventListener("afterprint", handleAfterPrint);
-      document.title = `Sale - ${sale?.salesRefNo}`;
-      window.print();
+      
+      // Small delay to ensure the component is fully rendered
+      setTimeout(() => {
+        window.addEventListener("afterprint", handleAfterPrint);
+        document.title = `Sale - ${sale?.salesRefNo}`;
+        window.print();
+      }, 500);
+  
       return () => {
         window.removeEventListener("afterprint", handleAfterPrint);
       };
     }
-  }, [isPrintMode, loading, sale]);
+  }, [isPrintMode, loading, sale, navigate]);
   const handlePrint = () => {
     navigate(`/sales/view/${id}/print`);
   };
