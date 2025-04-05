@@ -197,7 +197,7 @@ const NewPurchases = () => {
     // Ab purchase add karte waqt naya batch wala product use karo
     const newPurchase1 = {
       id: uuidv4(),
-      peopleId: selectedPeople,
+      personId: selectedPeople,
       date: currentDate,
       paymentMode,
       products: selectedProducts.map((p) => ({

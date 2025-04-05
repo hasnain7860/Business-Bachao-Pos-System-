@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEdit, FaTrashAlt, FaEllipsisV } from 'react-icons/fa';
@@ -9,7 +8,7 @@ const Purchases = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   const [isAnyMenuOpen, setIsAnyMenuOpen] = useState(false);
-
+  const peoples = context.peopleContext.people;
   const {language} = context;
   const purchasesData = context.purchaseContext.purchases;
   console.log(purchasesData)
@@ -38,14 +37,14 @@ const toggleMenu = (index) => {
 
   
 
-  const handleAddPayment = (purchase) => {
-    // Logic for adding payment
-    navigate(`/purchases/addPayments/${purchase.id}`);
-  };
+//   const handleAddPayment = (purchase) => {
+//     // Logic for adding payment
+//     navigate(`/purchases/addPayments/${purchase.id}`);
+//   };
   
- const  handleViewPayment = (purchase) => {
-    navigate(`/purchases/viewPayments/${purchase.id}`);
-  }
+//  const  handleViewPayment = (purchase) => {
+//     navigate(`/purchases/viewPayments/${purchase.id}`);
+//   }
 
   return (
     <div className={`p-4 ${language === 'ur' ? 'rtl' : 'ltr'}`} dir={language === 'ur' ? 'rtl' : 'ltr'}>
@@ -77,7 +76,9 @@ const toggleMenu = (index) => {
               {purchasesData.map((purchase, index) => (
                 <tr key={purchase.id} className="hover:bg-gray-50 transition-colors duration-200">
                   <td className="px-6 py-4 text-gray-800">{index + 1}</td>
-                  <td className="px-6 py-4 text-gray-800 font-medium">{purchase.supplierName}</td>
+                  <td className="px-6 py-4 text-gray-800 font-medium">
+                    {peoples.find((p) => p.id === purchase.personId)?.name || 'Unknown'}
+                  </td>
                   <td className="px-6 py-4 text-gray-800">{purchase.totalBill}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.paymentMode}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.date}</td>
@@ -109,14 +110,14 @@ const toggleMenu = (index) => {
       <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600">
         {languageData[language].delete}
       </button>
-      {(purchase.totalBill - purchase.totalPayment) !== 0 && (
+      {/* {(purchase.totalBill - purchase.totalPayment) !== 0 && (
         <button onClick={() => handleAddPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-green-50 text-green-600">
           {languageData[language].add_payment}
         </button>
-      )}
-      <button onClick={() => handleViewPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-600">
+      )} */}
+      {/* <button onClick={() => handleViewPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-600">
         {languageData[language].view_payment}
-      </button>
+      </button> */}
     </div>
   )}
 </td>
