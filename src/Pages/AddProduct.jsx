@@ -383,7 +383,7 @@ return (
         type="button"
         onClick={handleAddNewBatch}
         className="btn btn-primary btn-block gap-2"
-        disabled={!purchasePrice || !sellPrice || !retailPrice || !quantity || !expirationDate}
+        disabled={!purchasePrice || !sellPrice || !retailPrice || !quantity }
       >
         <FaPlus /> Add Batch
       </button>

@@ -33,9 +33,11 @@ const SalesView = () => {
       
       // Small delay to ensure the component is fully rendered
       setTimeout(() => {
-        window.addEventListener("afterprint", handleAfterPrint);
         document.title = `Sale - ${sale?.salesRefNo}`;
         window.print();
+       
+        window.addEventListener("afterprint", handleAfterPrint);
+       
       }, 500);
   
       return () => {
