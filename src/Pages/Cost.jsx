@@ -53,7 +53,10 @@ const Cost = () => {
   };
 
   const handleDelete = (id) => {
+  if (window.confirm(languageData[language].areYouSureDelete)) {
     deleteCostData(id)
+  }
+ 
   };
 const handleEdit = (id) => {
   // Find the cost entry by id
@@ -68,114 +71,128 @@ const handleEdit = (id) => {
 };
   
 
-  return (
-    <div className="p-6 max-w-xl mx-auto">
-      {/* Add Button */}
+return (
+  <div className="p-6 max-w-6xl mx-auto bg-gray-50">
+    {/* Header Section */}
+    <div className="mb-8 text-center">
+      <h1 className="text-3xl font-bold text-gray-800 mb-2">{languageData[language].cost_entries}</h1>
       <button
-        className="btn btn-primary mb-6 hover:bg-blue-600 transition-all ease-in-out duration-200"
+        className="btn bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-800 transition-all duration-300 shadow-md"
         onClick={handleAddClick}
       >
         <span className="mr-2">+</span> {languageData[language].add_new_cost}
       </button>
+    </div>
 
-      {/* Form Section */}
-      {showForm && (
-        <div className="card shadow-xl p-6 bg-gradient-to-r from-teal-100 via-blue-200 to-indigo-200">
-          <h2 className="text-2xl text-center text-blue-800 mb-6">{languageData[language].add_new_cost}</h2>
-          <div className="space-y-4">
-            {/* Date Input */}
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">{languageData[language].date}</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="input input-bordered w-full border-2 border-blue-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
+    {/* Form Section with improved styling */}
+    {showForm && (
+      <div className="card shadow-xl p-8 mb-8 bg-white rounded-xl border border-gray-200">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          {isEditing ? languageData[language].edit_cost : languageData[language].add_new_cost}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">{languageData[language].date}</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+          </div>
 
-            {/* Note Input */}
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">{languageData[language].note}</label>
-              <textarea
-                name="note"
-                value={formData.note}
-                onChange={handleChange}
-                className="textarea textarea-bordered w-full border-2 border-blue-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder={languageData[language].enter_note}
-              ></textarea>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">{languageData[language].cost}</label>
+            <input
+              type="number"
+              name="cost"
+              value={formData.cost}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              placeholder={languageData[language].enter_cost}
+            />
+          </div>
 
-            {/* Cost Input */}
-            <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700">{languageData[language].cost}</label>
-              <input
-                type="number"
-                name="cost"
-                value={formData.cost}
-                onChange={handleChange}
-                className="input input-bordered w-full border-2 border-blue-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder={languageData[language].enter_cost}
-              />
-            </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2 text-gray-700">{languageData[language].note}</label>
+            <textarea
+              name="note"
+              value={formData.note}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              placeholder={languageData[language].enter_note}
+              rows="3"
+            ></textarea>
+          </div>
 
-            {/* Save/Cancel Buttons */}
-            <div className="flex justify-between items-center mt-4">
-              <button
-                onClick={handleSave}
-                className="btn btn-success px-6 py-2 rounded-md hover:bg-green-600 transition-all ease-in-out duration-200"
-              >
-                {languageData[language].save}
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className="btn btn-secondary px-6 py-2 rounded-md hover:bg-gray-500 transition-all ease-in-out duration-200"
-              >
-                {languageData[language].cancel}
-              </button>
-            </div>
+          <div className="md:col-span-2 flex justify-end space-x-4">
+            <button
+              onClick={() => setShowForm(false)}
+              className="btn px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all duration-300"
+            >
+              {languageData[language].cancel}
+            </button>
+            <button
+              onClick={handleSave}
+              className="btn px-6 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300"
+            >
+              {languageData[language].save}
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Cost Entries Section */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">{languageData[language].cost_entries}</h3>
-        {costData.length === 0 ? (
-          <p className="text-center text-gray-500">{languageData[language].no_cost_entries}</p>
-        ) : (
-          <ul className="space-y-6">
-            {costData.map((data) => (
-              <li key={data.id} className="card p-6 shadow-lg flex justify-between items-center bg-gradient-to-r from-indigo-50 to-teal-100">
-                <div className="flex flex-col text-gray-700">
-                  <p className="font-semibold">{data.date}</p>
-                  <p>{data.note}</p>
-                  <p className="font-bold text-xl text-gray-800">{currency} {data.cost}</p>
-                </div>
-
-                {/* Edit and Delete Options */}
-                <div className="flex space-x-4">
+    {/* Cost Entries Section with improved layout */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {costData.length === 0 ? (
+        <div className="col-span-full text-center py-10">
+          <p className="text-gray-500 text-lg">{languageData[language].no_cost_entries}</p>
+        </div>
+      ) : (
+        costData.map((data) => (
+          <div
+            key={data.id}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-sm font-medium text-gray-500">{data.date}</span>
+                <div className="flex space-x-3">
                   <button
                     onClick={() => handleEdit(data.id)}
-                    className="text-blue-500 hover:text-blue-700 transition-all ease-in-out duration-200"
+                    className="text-blue-500 hover:text-blue-700 transition-colors"
                   >
-                    <FaEdit size={20} />
+                    <FaEdit size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(data.id)}
-                    className="text-red-500 hover:text-red-700 transition-all ease-in-out duration-200"
+                    className="text-red-500 hover:text-red-700 transition-colors"
                   >
-                    <FaTrash size={20} />
+                    <FaTrash size={16} />
                   </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              </div>
+              
+              <div className="mb-3">
+                <p className="text-gray-600 text-sm line-clamp-2"><span className="text-gray-600 text-sm">Note: </span>{data.note}</p>
+              </div>
+              
+              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span className="text-gray-600 text-sm">Amount:</span>
+                <span className="text-lg font-semibold text-green-600">
+                  {currency} {data.cost}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
     </div>
-  );
+  </div>
+);
+
 };
 
 export default Cost;

@@ -175,7 +175,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
               <AiOutlineDashboard className="mr-3" />
              {languageData[language].dashboard}
@@ -325,7 +325,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/sales"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
                  <FiClipboard className="mr-3" />
           {languageData[language].sales}
@@ -343,7 +343,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/purchases"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
                  <FiClipboard className="mr-3" />
                  {languageData[language].purchases}
@@ -355,7 +355,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/CreditManagement"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
                 {languageData[language].credit_management}
            
@@ -365,7 +365,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/Cost"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
                    {languageData[language].cost_management}
             </Link>
@@ -386,7 +386,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/data"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
   {languageData[language].data_sync}
               
@@ -397,7 +397,7 @@ const toggleLanguage = () => {
           <li>
             <Link
               to="/settings"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
             >
               <FiSettings className="mr-3" />
               {languageData[language].settings}
@@ -418,7 +418,7 @@ const toggleLanguage = () => {
         </ul>
         </div>
          <div className="text-base pb-20 pl-5">
-        version 1.3.0
+        version 1.3.1
           </div>
           </div>
         </div>

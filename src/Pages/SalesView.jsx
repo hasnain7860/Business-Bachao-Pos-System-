@@ -26,7 +26,7 @@ const SalesView = () => {
   }, [salesData]);
 
   useEffect(() => {
-    if (isPrintMode && !loading) {
+    if (isPrintMode && !loading && sale) {
       const handleAfterPrint = () => {
         navigate(-1);
       };
