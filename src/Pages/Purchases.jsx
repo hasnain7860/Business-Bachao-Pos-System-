@@ -63,6 +63,7 @@ const toggleMenu = (index) => {
      <thead>
               <tr className="bg-gradient-to-r from-blue-600 to-blue-400">
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].purchase_no}</th>
+                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].purchase_ref_no}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].supplier}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].total_bill}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_mode}</th>
@@ -76,6 +77,7 @@ const toggleMenu = (index) => {
               {purchasesData.map((purchase, index) => (
                 <tr key={purchase.id} className="hover:bg-gray-50 transition-colors duration-200">
                   <td className="px-6 py-4 text-gray-800">{index + 1}</td>
+                  <td className="px-6 py-4 text-gray-800">{purchase.purchaseRefNo}</td>
                   <td className="px-6 py-4 text-gray-800 font-medium">
                     {peoples.find((p) => p.id === purchase.personId)?.name || 'Unknown'}
                   </td>

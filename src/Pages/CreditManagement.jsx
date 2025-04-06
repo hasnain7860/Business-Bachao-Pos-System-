@@ -18,6 +18,7 @@ const CreditManagement = () => {
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
   console.log(submittedRecords);
+  const purchasesData = context.purchaseContext.purchases;
   const [searchTerm, setSearchTerm] = useState("");
   const sellReturns = context.SellReturnContext.sellReturns
   const [selectedPeople, setSelectedPeople] = useState(null)
@@ -204,6 +205,50 @@ const CreditManagement = () => {
           ) : (
             ""
           )}
+         
+
+
+         {selectedPeople && purchasesData.filter((purchase) => purchase.personId === selectedPeople.id).length > 0 && (
+  <div className="mt-4 max-h-64 overflow-y-auto">
+    <h3 className="text-md font-bold mt-4">{t.purchaseData}</h3>
+    <table className="min-w-full bg-white border border-gray-200 mt-2">
+      <thead>
+        <tr>
+          <th className="border px-4 py-2">{t.date}</th>
+          <th className="border px-4 py-2">{t.totalBill}</th>
+          <th className="border px-4 py-2">{t.totalPayment}</th>
+          <th className="border px-4 py-2">{t.credit}</th>
+          <th className="border px-4 py-2">{t.products}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {purchasesData
+          .filter((purchase) => purchase.personId === selectedPeople.id)
+          .map((purchase) => (
+            <tr key={purchase.id} className={`${purchase.credit === 0 ? "bg-red-200" : "bg-white"} border-b`}>
+              <td className="border px-4 py-2">{new Date(purchase.date).toLocaleDateString()}</td>
+              <td className="border px-4 py-2">{purchase.totalBill}</td>
+              <td className="border px-4 py-2">{purchase.totalPayment}</td>
+              <td className="border px-4 py-2">{purchase.credit}</td>
+              <td className="border px-4 py-2">
+                {purchase.products.map(p => `${p.name} (${p.quantity})`).join(', ')}
+              </td>
+            </tr>
+          ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
+
+
+
+
+
+
+
+
+
           {selectedPeople && salesData.some(sale => 
   sale.personId === selectedPeople.id && sale.returns?.length > 0
 ) && (
@@ -317,24 +362,28 @@ const CreditManagement = () => {
   
   <div className="grid grid-cols-2 gap-4">
     <div>
-      <h3 className="text-md font-bold text-gray-700">Initial Sales</h3>
+      <h3 className="text-md font-bold text-gray-700">Sales Credits</h3>
       <ul className="list-disc pl-4 space-y-2">
-        <li>Total Bills Amount: {salesData
+        <li>Total Sales Amount: {salesData
           .filter((sale) => sale.personId === selectedPeople?.id)
           .reduce((acc, sale) => acc + Number(sale.totalBill), 0)}</li>
-        <li>Initial Payments: {salesData
-          .filter((sale) => sale.personId === selectedPeople?.id)
-          .reduce((acc, sale) => acc + Number(sale.amountPaid), 0)}</li>
-        <li>Initial Credit: {totalSalesCredit}</li>
+        <li>Sales Payments: {totalSalesPayment}</li>
+        <li>Sales Credit: {totalSalesCredit}</li>
       </ul>
     </div>
 
     <div>
-      <h3 className="text-md font-bold text-gray-700">Later Transactions</h3>
+      <h3 className="text-md font-bold text-gray-700">Purchase Credits</h3>
       <ul className="list-disc pl-4 space-y-2">
-        <li>Additional Payments: {totalRecordsPayment}</li>
-        <li>Additional Credit: {totalExistRecordCredit}</li>
-        <li>Returns Adjusted: {totalReturns}</li>
+        <li>Total Purchase Amount: {purchasesData
+          .filter((purchase) => purchase.personId === selectedPeople?.id)
+          .reduce((acc, purchase) => acc + Number(purchase.totalBill), 0)}</li>
+        <li>Purchase Payments: {purchasesData
+          .filter((purchase) => purchase.personId === selectedPeople?.id)
+          .reduce((acc, purchase) => acc + Number(purchase.totalPayment), 0)}</li>
+        <li>Purchase Credit: {purchasesData
+          .filter((purchase) => purchase.personId === selectedPeople?.id)
+          .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
       </ul>
     </div>
   </div>
@@ -342,33 +391,20 @@ const CreditManagement = () => {
   <div className="mt-4 border-t pt-4">
     <h3 className="text-lg font-bold text-gray-800">Final Summary</h3>
     <ul className="list-disc pl-4 space-y-2">
-      <li>Total Credit: {grandCredit}</li>
-      <li>Total Payments: {totalPayment}</li>
+      <li>Total Sales Credit: {grandCredit}</li>
+      <li>Total Purchase Credit: {purchasesData
+        .filter((purchase) => purchase.personId === selectedPeople?.id)
+        .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
+      <li>Total Payments Made: {totalPayment}</li>
       <li>Total Returns: {totalReturns}</li>
       <li className="text-xl font-bold text-blue-600">
-        Remaining Credit: {remainingCredit}
+        Net Credit Balance: {remainingCredit - purchasesData
+          .filter((purchase) => purchase.personId === selectedPeople?.id)
+          .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}
       </li>
     </ul>
   </div>
-
-  <div className="mt-4 p-4 bg-yellow-100 rounded">
-    <p className="text-sm">
-      To add new payment for this person, click the "Add Payment" button below
-    </p>
-  </div>
 </div>
-
-
-
-
-
-
-
-
-
-
-
-        
           <div className="mt-4 flex space-x-2">
             <button
               className="bg-green-500 text-white px-4 py-2 rounded"

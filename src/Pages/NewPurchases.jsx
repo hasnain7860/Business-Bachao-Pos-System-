@@ -28,6 +28,9 @@ const NewPurchases = () => {
 
  
 
+  const generatePurchaseRefNo = () => {
+    return `PURCHASE-${Math.floor(100000 + Math.random() * 900000)}`;
+  };
 
  
 
@@ -50,7 +53,7 @@ const NewPurchases = () => {
         id: product.id,
         name: product.name,
         companyId: product.companyId || '',
-       
+        purchaseRefNo: generatePurchaseRefNo(),
         unitId: product.unitId || '',
         sellPrice: batchInfo.sellPrice,
         retailPrice: batchInfo.retailPrice,
@@ -197,6 +200,7 @@ const NewPurchases = () => {
     // Ab purchase add karte waqt naya batch wala product use karo
     const newPurchase1 = {
       id: uuidv4(),
+      purchaseRefNo: generatePurchaseRefNo(),
       personId: selectedPeople,
       date: currentDate,
       paymentMode,

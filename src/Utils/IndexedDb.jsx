@@ -21,6 +21,7 @@ export const STORE_NAMES = {
   settings: 'settings',
   creditManagement: 'creditManagement',
   sellReturns:'sellReturns',
+  purchaseReturns:'purchaseReturns',
   notifications: 'notifications',
   notificationsDb: 'notificationsDb',
   deletedStore:'deletedStore'
