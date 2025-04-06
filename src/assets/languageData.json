@@ -9,7 +9,6 @@
     "company": "Company",
     "brands": "Brands",
     "products": "Products",
-   
     "remainingCreditAmount": "Remaining Credit Amount",
     "areYouSureDelete":"Are you sure you want to delete this item ?",
     "units": "Units",
@@ -34,6 +33,8 @@
     "profit": "Profit",
     "loss": "Loss",
     "credit": "Credit",
+    "people_management": "People Management",
+    "add_person": "Add Person",
     "payment": "Payment",
     "cost": "Cost",
     "download_demo": "Demo File Download",
@@ -150,6 +151,7 @@
     "type": "Type",
     "add_new_cost": "Add New Cost",
     "note": "Note",
+    "cashReturn": "Cash Return",
     "enter_note": "Enter a note",
     "enter_cost": "Enter the cost",
     "save": "Save",
@@ -163,7 +165,14 @@
     "currency": "Currency",
     "totalPayment": "Total Payment",
     "grandCredit": "Grand Credit",
-    "addCredit": "Add Credit"
+    "addCredit": "Add Credit",
+    "returnRecords": "Return Records",
+    "returnDate": "Return Date",
+    "returnAmount": "Return Amount",
+    "returnedProducts": "Returned Products",
+    "totalReturns": "Total Returns",
+    "returnRefNo": "Return Reference",
+    "creditAdjustment": "Credit Adjustment"
   },
   "ur": {
     "menu": "مینو",
@@ -230,7 +239,7 @@
     "total_suppliers": "کل سپلائرز ",
     "add_supplier": "نیا سپلائر شامل کریں",
     "upload_contacts": "سپلائر رابطے اپ لوڈ کریں",
-  
+  "people_management": "افراد کا انتظام",
     "add_company": "کمپنی شامل کریں",
     "edit_company": "کمپنی میں ترمیم کریں",
     "company_name": "کمپنی کا نام",
@@ -266,6 +275,7 @@
     "purchase_price": "خریداری قیمت",
     "sell_price": "فروخت قیمت",
     "retail_price": "ریٹیل قیمت",
+    "add_person": "شخص شامل کریں",
     "actions": "کارروائیاں",
     "batch_not_available": "بیچ کی مقدار دستیاب نہیں ہے",
     "not_available": "دستیاب نہیں",
@@ -275,6 +285,7 @@
     "sales_ref_no": "فروخت حوالہ نمبر",
     "customer_name": "گاہک کا نام",
     "date": "تاریخ",
+    "cashReturn": "نقد واپسی",
     "total_bill": "کل بل",
     "paid_bill": "ادا شدہ بل",
     "payment_mode": "ادائیگی کا طریقہ",
@@ -327,6 +338,13 @@
   "currency": "کرنسی",
   "totalPayment": "کل ادائیگی",
   "grandCredit": "کل کریڈٹ",
-  "addCredit": "کریڈٹ شامل کریں"
-}
+  "addCredit": "کریڈٹ شامل کریں",
+  "returnRecords": "واپسی کے ریکارڈز",
+  "returnDate": "واپسی کی تاریخ",
+  "returnAmount": "واپسی کی رقم",
+  "returnedProducts": "واپس شدہ مصنوعات",
+  "totalReturns": "کل واپسیاں",
+    "returnRefNo": "واپسی ریفرنس",
+    "creditAdjustment": "کریڈٹ ایڈجسٹمنٹ"
+  }
 }

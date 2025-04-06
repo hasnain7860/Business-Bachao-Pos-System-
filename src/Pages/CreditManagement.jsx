@@ -11,14 +11,16 @@ const CreditManagement = () => {
   const context = useAppContext();
   const { language } = context;
   const navigate = useNavigate();
-  const customers = context.supplierCustomerContext.customers;
+  const peoples = context.peopleContext.people;
+ 
   const salesData = context.SaleContext.Sales;
   const t = languageData[language];
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
   console.log(submittedRecords);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const sellReturns = context.SellReturnContext.sellReturns
+  const [selectedPeople, setSelectedPeople] = useState(null)
   const [showPopup, setShowPopup] = useState(false);
   const [formType, setFormType] = useState("");
   const [formData, setFormData] = useState({
@@ -28,16 +30,16 @@ const CreditManagement = () => {
     note: "",
   });
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  const filteredCustomers = useMemo(
+  const filteredPeoples = useMemo(
     () =>
-      customers.filter((c) =>
+      peoples.filter((c) =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
       ),
-    [searchTerm, customers]
+    [searchTerm, peoples]
   );
 
-  const handleCustomerSelect = (customer) => {
-    setSelectedCustomer(customer);
+  const handlePeopleSelect = (people) => {
+    setSelectedPeople(people);
     setSearchTerm("");
   };
 
@@ -46,7 +48,7 @@ const CreditManagement = () => {
 
     const newRecord = {
       id: uuidv4(),
-      customerId: selectedCustomer.id,
+      personId: selectedPeople.id,
       type: formType,
       amount: parseFloat(formData.amount),
       date: formData.date,
@@ -70,12 +72,12 @@ const CreditManagement = () => {
   const totalRecordsPayment = submittedRecords
     .filter(
       (record) =>
-        record.type === "payment" && record.customerId === selectedCustomer?.id
+        record.type === "payment" && record.personId === selectedPeople?.id
     )
     .reduce((acc, record) => acc + record.amount, 0);
 
   const totalSalesPayment = salesData
-    .filter((sale) => sale.customerId === selectedCustomer?.id)
+    .filter((sale) => sale.personId === selectedPeople?.id)
     .reduce((acc, sale) => acc + Number(sale.amountPaid), 0);
 
  
@@ -87,16 +89,27 @@ const CreditManagement = () => {
   const totalExistRecordCredit = submittedRecords
     .filter(
       (record) =>
-        record.type === "credit" && record.customerId === selectedCustomer?.id
+        record.type === "credit" && record.personId === selectedPeople?.id
     )
     .reduce((acc, record) => acc + record.amount, 0);
 
   const totalSalesCredit = salesData
-    .filter((sale) => sale.customerId === selectedCustomer?.id)
+    .filter((sale) => sale.personId === selectedPeople?.id)
     .reduce((acc, sale) => acc + sale.credit, 0);
 
   const grandCredit = Number(totalSalesCredit) + Number(totalExistRecordCredit);
-  const remainingCredit = Number(grandCredit) - Number(totalPayment);
+
+  // Replace the existing totalReturns calculation
+  const totalReturns = useMemo(() => {
+    return sellReturns
+      .filter(returnItem => returnItem.people === selectedPeople?.id)
+      .reduce((acc, returnItem) => {
+        return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
+      }, 0);
+  }, [sellReturns, selectedPeople]);
+
+  // Update the remaining credit calculation
+  const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Number(totalReturns);
 
   return (
     <div className="p-4 bg-gray-50">
@@ -112,7 +125,7 @@ const CreditManagement = () => {
       <h1 className="text-lg font-bold mb-4 text-blue-600">
         {t.creditManagement}
       </h1>
-      {!selectedCustomer ? (
+      {!selectedPeople ? (
         <div className="relative mb-4">
           <input
             type="text"
@@ -121,15 +134,15 @@ const CreditManagement = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {filteredCustomers.length > 0 && (
+          {filteredPeoples.length > 0 && (
             <div className="absolute z-10 bg-white border rounded shadow-md w-full mt-1 max-h-40 overflow-y-auto">
-              {filteredCustomers.map((customer) => (
+              {filteredPeoples.map((people) => (
                 <div
-                  key={customer.id}
+                  key={people.id}
                   className="p-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handleCustomerSelect(customer)}
+                  onClick={() => handlePeopleSelect(people)}
                 >
-                  {customer.name}
+                  {people.name}
                 </div>
               ))}
             </div>
@@ -138,15 +151,15 @@ const CreditManagement = () => {
       ) : (
         <div className="border p-4 rounded-lg bg-white shadow">
           <h2 className="text-lg font-semibold text-blue-500">
-            {selectedCustomer.name}
+            {selectedPeople.name}
           </h2>
           <button
             className="text-red-500 float-right"
-            onClick={() => setSelectedCustomer(null)}
+            onClick={() => setSelectedPeople(null)}
           >
             <FaTimes />
           </button>
-          {salesData.filter((sale) => sale.customerId === selectedCustomer.id)
+          {salesData.filter((sale) => sale.personId === selectedPeople.id)
             .length > 0 ? (
             <>
               <div className="mt-4 max-h-64 overflow-y-auto">
@@ -164,7 +177,7 @@ const CreditManagement = () => {
                   </thead>
                   <tbody>
                     {salesData
-                      .filter((sale) => sale.customerId === selectedCustomer.id)
+                      .filter((sale) => sale.personId === selectedPeople.id)
                       .map((sale) => {
 
                         return (
@@ -191,9 +204,81 @@ const CreditManagement = () => {
           ) : (
             ""
           )}
-          {selectedCustomer &&
+          {selectedPeople && salesData.some(sale => 
+  sale.personId === selectedPeople.id && sale.returns?.length > 0
+) && (
+  <div className="mt-4 max-h-64 overflow-y-auto">
+    <h3 className="text-lg font-semibold">{t.returnRecords}</h3>
+    <table className="min-w-full bg-white border border-gray-300 mt-2">
+      <thead>
+        <tr className="bg-gray-200">
+          <th className="border px-4 py-2">{t.saleRefNo}</th>
+          <th className="border px-4 py-2">{t.returnDate}</th>
+          <th className="border px-4 py-2">{t.returnAmount}</th>
+          <th className="border px-4 py-2">{t.returnedProducts}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {salesData
+          .filter(sale => sale.personId === selectedPeople.id && sale.returns?.length > 0)
+          .map(sale => (
+            sale.returns.map((ret, index) => (
+              <tr key={`${sale.id}-${index}`} className="border-b">
+                <td className="border px-4 py-2">{sale.salesRefNo}</td>
+                <td className="border px-4 py-2">
+                  {new Date(ret.dateTime).toLocaleDateString()}
+                </td>
+                <td className="border px-4 py-2">{ret.returnPrice}</td>
+                <td className="border px-4 py-2">
+                  {ret.returnedProducts.map(p => 
+                    `${p.name} (${p.returnQuantity})`
+                  ).join(', ')}
+                </td>
+              </tr>
+            ))
+          ))}
+      </tbody>
+    </table>
+  </div>
+)}
+          {selectedPeople && sellReturns.some(ret => ret.people === selectedPeople.id) && (
+  <div className="mt-4 max-h-64 overflow-y-auto">
+    <h3 className="text-lg font-semibold">{t.returnRecords}</h3>
+    <table className="min-w-full bg-white border border-gray-300 mt-2">
+      <thead>
+        <tr className="bg-gray-200">
+          <th className="border px-4 py-2">{t.returnRefNo}</th>
+          <th className="border px-4 py-2">{t.saleRefNo}</th>
+          <th className="border px-4 py-2">{t.returnAmount}</th>
+          <th className="border px-4 py-2">{t.cashReturn}</th>
+          <th className="border px-4 py-2">{t.creditAdjustment}</th>
+      
+        </tr>
+      </thead>
+      <tbody>
+        {sellReturns
+          .filter(ret => ret.people === selectedPeople.id)
+          .map((ret) => (
+            <tr key={ret.id} className="border-b">
+              <td className="border px-4 py-2">{ret.returnRefNo}</td>
+              <td className="border px-4 py-2">{ret.salesRef || '-'}</td>
+              <td className="border px-4 py-2">{ret.totalAmount}</td>
+              <td className="border px-4 py-2">
+                {ret.paymentDetails?.cashReturn || 0}
+              </td>
+              <td className="border px-4 py-2">
+                {ret.paymentDetails?.creditAdjustment || 0}
+              </td>
+              
+            </tr>
+          ))}
+      </tbody>
+    </table>
+  </div>
+)}
+          {selectedPeople &&
             submittedRecords.filter(
-              (record) => record.customerId === selectedCustomer.id
+              (record) => record.personId === selectedPeople.id
             ).length > 0 && (
               <div className="mt-4 max-h-64 overflow-y-auto">
                 <h3 className="text-lg font-semibold">{t.existingRecords}</h3>
@@ -209,7 +294,7 @@ const CreditManagement = () => {
                   <tbody>
                     {submittedRecords
                       .filter(
-                        (record) => record.customerId === selectedCustomer.id
+                        (record) => record.personId === selectedPeople.id
                       )
                       .map((record) => (
                         <tr key={record.id} className="border-b">
@@ -225,15 +310,65 @@ const CreditManagement = () => {
                 </table>
               </div>
             )}
-          <h3 className="text-md font-bold mt-4">
-            {t.totalPayment}: {totalPayment}
-          </h3>
-          <h3 className="text-md font-bold mt-4">
-            {t.grandCredit}: {grandCredit}
-          </h3>
-          <h3 className="text-md font-bold mt-4">
-            {t.remainingCreditAmount}: {remainingCredit}
-          </h3>
+
+
+<div className="mt-8 bg-gray-100 p-4 rounded-lg">
+  <h2 className="text-xl font-bold mb-4 border-b pb-2">Credit Summary</h2>
+  
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <h3 className="text-md font-bold text-gray-700">Initial Sales</h3>
+      <ul className="list-disc pl-4 space-y-2">
+        <li>Total Bills Amount: {salesData
+          .filter((sale) => sale.personId === selectedPeople?.id)
+          .reduce((acc, sale) => acc + Number(sale.totalBill), 0)}</li>
+        <li>Initial Payments: {salesData
+          .filter((sale) => sale.personId === selectedPeople?.id)
+          .reduce((acc, sale) => acc + Number(sale.amountPaid), 0)}</li>
+        <li>Initial Credit: {totalSalesCredit}</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 className="text-md font-bold text-gray-700">Later Transactions</h3>
+      <ul className="list-disc pl-4 space-y-2">
+        <li>Additional Payments: {totalRecordsPayment}</li>
+        <li>Additional Credit: {totalExistRecordCredit}</li>
+        <li>Returns Adjusted: {totalReturns}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div className="mt-4 border-t pt-4">
+    <h3 className="text-lg font-bold text-gray-800">Final Summary</h3>
+    <ul className="list-disc pl-4 space-y-2">
+      <li>Total Credit: {grandCredit}</li>
+      <li>Total Payments: {totalPayment}</li>
+      <li>Total Returns: {totalReturns}</li>
+      <li className="text-xl font-bold text-blue-600">
+        Remaining Credit: {remainingCredit}
+      </li>
+    </ul>
+  </div>
+
+  <div className="mt-4 p-4 bg-yellow-100 rounded">
+    <p className="text-sm">
+      To add new payment for this person, click the "Add Payment" button below
+    </p>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+        
           <div className="mt-4 flex space-x-2">
             <button
               className="bg-green-500 text-white px-4 py-2 rounded"

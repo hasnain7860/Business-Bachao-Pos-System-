@@ -67,7 +67,7 @@ const toggleMenu = (index) => {
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].total_bill}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_mode}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].date}</th>
-                <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_status}</th>
+                {/* <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_status}</th> */}
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].credit}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].action}</th>
               </tr>
@@ -82,13 +82,13 @@ const toggleMenu = (index) => {
                   <td className="px-6 py-4 text-gray-800">{purchase.totalBill}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.paymentMode}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.date}</td>
-                  <td className="px-6 py-4">
+                  {/* <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-sm ${(purchase.totalBill - purchase.totalPayment) === 0 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-yellow-100 text-yellow-800'}`}>
                       {(purchase.totalBill - purchase.totalPayment) === 0 ? languageData[language].full : languageData[language].due}
                     </span>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 text-gray-800">{purchase.totalBill - purchase.totalPayment}</td>
                   <td className="px-6 py-4 relative">
   <button onClick={() => toggleMenu(index)} className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200">

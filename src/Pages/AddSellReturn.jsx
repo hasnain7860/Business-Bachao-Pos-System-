@@ -11,26 +11,28 @@ const AddSellReturn = () => {
   const [selectedSale, setSelectedSale] = useState(null);
   const [returnItems, setReturnItems] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
-  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [selectedPeople, setSelectedPeople] = useState('')
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [price, setPrice] = useState(0);
-  const [returnOption, setReturnOption] = useState('credit'); // 'credit' or 'cash'
-const [customerCredit, setCustomerCredit] = useState(0);
+  const [customerCredit, setCustomerCredit] = useState(0);
 
   const addReturn = context.SellReturnContext.add
 
   // Sample data (replace with your actual data)
   const salesData = context.SaleContext.Sales;
   const products = context.productContext.products;
-  const customers = context.supplierCustomerContext.customers;
+  const peoples = context.peopleContext.people;
+  const [cashReturn, setCashReturn] = useState(0);
+  const [creditAdjustment, setCreditAdjustment] = useState(0);
+  
   useEffect(() => {
-    if (selectedCustomer) {
-      const { pendingCredit } =     CalculateUserCredit(context, selectedCustomer);
-    console.log(   CalculateUserCredit(context, selectedCustomer))
+    if (selectedPeople) {
+      const { pendingCredit } =     CalculateUserCredit(context, selectedPeople);
+    console.log(   CalculateUserCredit(context, selectedPeople))
       setCustomerCredit(pendingCredit);
     }
-  }, [selectedCustomer]);
+  }, [selectedPeople]);
   
 
   const handleSearch = (value) => {
@@ -63,13 +65,13 @@ const [customerCredit, setCustomerCredit] = useState(0);
     setSalesRef('');
     setFilteredSales([]);
 
-    // Find the customer that matches the sale's customerId
-    const matchedCustomer = customers.find(customer => customer.id === sale.customerId);
-    if (matchedCustomer) {
+   
+    const matchedPeople = peoples.find(people => people.id === sale.personId);
+    if (matchedPeople) {
     
-        setSelectedCustomer(matchedCustomer.id); // Set the entire customer object
+        setSelectedPeople(matchedPeople.id); 
     } else {
-        console.log('Customer not found for sale:', sale.customerId);
+        console.log('People not found for sale:', sale.personId);
     }
     
     
@@ -111,6 +113,7 @@ useEffect(() => {
     }
   };
 
+
   const handleRemoveItem = (id) => {
     setReturnItems(returnItems.filter(item => item.id !== id));
     calculateTotal();
@@ -118,23 +121,52 @@ useEffect(() => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!selectedPeople) {
+        alert("Please select a person for the return");
+        return;
+    }
+
+    if (returnItems.length === 0) {
+        alert("Please add items to return");
+        return;
+    }
+
+    if (creditAdjustment + cashReturn !== totalAmount) {
+        alert("Credit adjustment and cash return must equal total return amount");
+        return;
+    }
+
     const returnRefNo = `RET-${uuidv4().slice(0, 8).toUpperCase()}`;
   
     const returnData = {
-      id: uuidv4(),
-      returnRefNo,
-      salesRef: selectedSale?.salesRefNo,
-      customer: selectedCustomer,
-      items: returnItems,
-      totalAmount,
-      returnDate: new Date(),
-      returnType: returnOption,
-      amountToReturn: totalAmount
+        id: uuidv4(),
+        returnRefNo,
+        salesRef: selectedSale?.salesRefNo,
+        people: selectedPeople,
+        items: returnItems,
+        totalAmount,
+        returnDate: new Date(),
+        paymentDetails: {
+            creditAdjustment,
+            cashReturn,
+            previousCreditBalance: customerCredit,
+            newCreditBalance: customerCredit - creditAdjustment
+        }
     };
   
-console.log(returnData)
-    // addReturn(returnData);
-  };
+    console.log(returnData);
+    addReturn(returnData);
+
+    // Reset form
+    setReturnItems([]);
+    setSelectedSale(null);
+    setSalesRef('');
+    setTotalAmount(0);
+    setCreditAdjustment(0);
+    setCashReturn(0);
+    setSelectedPeople('');
+};
 
   return (
     <div className="p-4">
@@ -182,17 +214,17 @@ console.log(returnData)
         {/* Customer Selection */}
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Customer</span>
+            <span className="label-text">People</span>
           </label>
           <select 
             className="select select-bordered w-full"
-            value={selectedCustomer}
-            onChange={(e) => setSelectedCustomer(e.target.value)}
+            value={selectedPeople}
+            onChange={(e) => setSelectedPeople(e.target.value)}
           >
-            <option value="">Select customer</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
+            <option value="">Select People</option>
+            {peoples.map((people) => (
+              <option key={people.id} value={people.id}>
+                {people.name}
               </option>
             ))}
           </select>
@@ -300,14 +332,14 @@ console.log(returnData)
       </div>
 
 
-{/* Return Payment Options */}
+{/* Return Payment Details */}
 <div className="card bg-base-100 shadow-xl mt-6">
   <div className="card-body">
     <h2 className="card-title">Return Payment Details</h2>
     
     <div className="form-control">
       <label className="label">
-        <span className="label-text">Customer Credit Balance:</span>
+        <span className="label-text">Current Credit Balance:</span>
       </label>
       <input 
         type="text" 
@@ -319,38 +351,7 @@ console.log(returnData)
 
     <div className="form-control">
       <label className="label">
-        <span className="label-text">Return Method</span>
-      </label>
-      <div className="flex gap-4">
-        <label className="label cursor-pointer">
-          <input
-            type="radio"
-            name="returnOption"
-            className="radio radio-primary"
-            value="credit"
-            checked={returnOption === 'credit'}
-            onChange={(e) => setReturnOption(e.target.value)}
-          />
-          <span className="label-text ml-2">Reduce from Credit</span>
-        </label>
-        
-        <label className="label cursor-pointer">
-          <input
-            type="radio"
-            name="returnOption"
-            className="radio radio-primary"
-            value="cash"
-            checked={returnOption === 'cash'}
-            onChange={(e) => setReturnOption(e.target.value)}
-          />
-          <span className="label-text ml-2">Return Cash</span>
-        </label>
-      </div>
-    </div>
-
-    <div className="form-control">
-      <label className="label">
-        <span className="label-text">Amount to Return:</span>
+        <span className="label-text">Total Return Amount:</span>
       </label>
       <input 
         type="text" 
@@ -358,6 +359,52 @@ console.log(returnData)
         className="input input-bordered"
         disabled
       />
+    </div>
+
+    <div className="divider">Return Breakdown</div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text">Credit Adjustment:</span>
+        </label>
+        <input 
+          type="number" 
+          value={creditAdjustment}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setCreditAdjustment(value);
+            setCashReturn(totalAmount - value);
+          }}
+          className="input input-bordered"
+          max={totalAmount}
+          min={0}
+        />
+      </div>
+
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text">Cash Return:</span>
+        </label>
+        <input 
+          type="number" 
+          value={cashReturn}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setCashReturn(value);
+            setCreditAdjustment(totalAmount - value);
+          }}
+          className="input input-bordered"
+          max={totalAmount}
+          min={0}
+        />
+      </div>
+    </div>
+
+    <div className="mt-4">
+      <div className="text-sm">
+        New Credit Balance will be: <span className="font-bold">{customerCredit - creditAdjustment}</span>
+      </div>
     </div>
   </div>
 </div>

@@ -1,48 +1,53 @@
-export const CalculateUserCredit = (context, customerId) => {
+export const CalculateUserCredit = (context, personId) => {
     try {
         const salesData = context.SaleContext.Sales;
         const submittedRecords = context.creditManagementContext.submittedRecords;
 
-        // Filter sales for specific customer
-        const customerSales = salesData.filter(sale => sale.customerId === customerId);
- // Calculate total sales amount for customer
-        const totalSaleAmount = customerSales.reduce((total, sale) => {
+        // Filter sales for specific person
+        const personSales = salesData.filter(sale => sale.personId === personId);
+
+        // Calculate total sales amount for person
+        const totalSaleAmount = personSales.reduce((total, sale) => {
             return total + (parseFloat(sale.totalBill) || 0);
         }, 0);
 
-        // Calculate total payments made by customer
-        const totalPayments = customerSales.reduce((total, sale) => {
-            const basePayment = parseFloat(sale.amountPaid) || 0;
-            const additionalPayments = sale.addPayment 
-                ? sale.addPayment.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0)
-                : 0;
-            return total + basePayment + additionalPayments;
+        // Calculate total payments made by person
+        const totalPayments = personSales.reduce((total, sale) => {
+            return total + (parseFloat(sale.amountPaid) || 0);
         }, 0);
 
         // Calculate submitted records (payments/credits)
-        const customerSubmittedRecords = submittedRecords.filter(record => record.customerId === customerId);
-        const submittedPayments = customerSubmittedRecords
+        const personSubmittedRecords = submittedRecords.filter(record => record.personId === personId);
+        const submittedPayments = personSubmittedRecords
             .filter(record => record.type === 'payment')
             .reduce((total, record) => total + (parseFloat(record.amount) || 0), 0);
 
+
+            const submittedCredits = personSubmittedRecords
+            .filter(record => record.type === 'credit')
+            .reduce((total, record) => total + (parseFloat(record.amount) || 0), 0);
         // Calculate final credit
-        const pendingCredit = totalSaleAmount - (totalPayments + submittedPayments);
+        const pendingCredit = (submittedCredits + totalSaleAmount) - (totalPayments + submittedPayments);
+        
+        // Check if there's excess payment
+        const hasExcessPayment = pendingCredit < 0;
+        const excessAmount = Math.abs(Math.min(pendingCredit, 0));
 
         return {
-            
-            customerId: customerId,
+            personId: personId,
             totalSales: totalSaleAmount,
             totalPayments: totalPayments + submittedPayments,
             pendingCredit: Math.max(pendingCredit, 0),
+            excessPayment: excessAmount,
+            hasExcessPayment: hasExcessPayment,
             isOverLimit: pendingCredit > 0,
-            creditStatus: pendingCredit > 0 ? 'PENDING' : 'CLEAR'
+            creditStatus: pendingCredit > 0 ? 'PENDING' : 
+                         hasExcessPayment ? 'EXCESS_PAYMENT' : 'CLEAR'
         };
-
     } catch (error) {
         console.error('Error calculating credit:', error);
         return {
-       
-            customerId: customerId,
+            personId: personId,
             totalSales: 0,
             totalPayments: 0,
             pendingCredit: 0,

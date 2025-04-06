@@ -31,16 +31,21 @@ const SalesView = () => {
         navigate(-1);
       };
       window.addEventListener("afterprint", handleAfterPrint);
-      // Small delay to ensure the component is fully rendered
+      
       setTimeout(() => {
-        
         document.title = `Sale - ${sale?.salesRefNo}`;
-        window.print();
-       
-       
-       
+        
+      
+        const printOptions = {
+          silent: true,
+          printBackground: true,
+          deviceWidth: '80mm',
+        };
+        
+        window.print(printOptions);
+        
       }, 500);
-  
+
       return () => {
         window.removeEventListener("afterprint", handleAfterPrint);
       };
@@ -78,15 +83,18 @@ const SalesView = () => {
   const remainingQuantity = totalSoldQuantity - totalReturnQuantity;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      {userAndBusinessDetail[0]?.business ? (
+  
+    
+<div className="w-[302px] mx-auto p-2 bg-white text-sm"> 
+   {userAndBusinessDetail[0]?.business ? (
         <>
-          <h2 className="text-2xl font-bold text-center mb-4">
-            {userAndBusinessDetail[0].business.businessName}
-          </h2>
-          <p className="text-center">{userAndBusinessDetail[0].business.email}</p>
-          <p className="text-center">{userAndBusinessDetail[0].business.phoneNo}</p>
-          <hr className="my-4" />
+       
+<h2 className="text-center font-bold text-base mb-1">
+  {userAndBusinessDetail[0].business.businessName}
+</h2>
+<p className="text-center text-xs mb-1">{userAndBusinessDetail[0].business.email}</p>
+<p className="text-center text-xs mb-1">{userAndBusinessDetail[0].business.phoneNo}</p>
+<hr className="my-2 border-dashed" />
         </>
       ) : (
         <p className="text-center text-red-500">Business details not found</p>
@@ -103,49 +111,36 @@ const SalesView = () => {
       {/* 🔵 Products Table */}
       <h4 className="text-lg font-semibold mt-4">Products:</h4>
       <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse border border-gray-200 mt-2">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-200 p-2">Product Name</th>
-              <th className="border border-gray-200 p-2">Sell Price</th>
-              <th className="border border-gray-200 p-2">Quantity Sold</th>
-              <th className="border border-gray-200 p-2">Discount</th>
-              <th className="border border-gray-200 p-2">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sale.products.length > 0 ? (
-              sale.products.map((product) => {
-                const sellingPrice = product.sellPrice;
-                const quantity = parseInt(product.SellQuantity, 10);
-                const discountPercentage = product.discount;
-                const totalSellingPrice = sellingPrice * quantity;
-                const discountAmount = totalSellingPrice * (discountPercentage / 100);
-                const finalTotal = totalSellingPrice - discountAmount;
-
-                return (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-200 p-2">{product.name}</td>
-                    <td className="border border-gray-200 p-2">
-                      {userAndBusinessDetail[0]?.business?.currency} {sellingPrice}
-                    </td>
-                    <td className="border border-gray-200 p-2">{quantity}</td>
-                    <td className="border border-gray-200 p-2">{discountPercentage} %</td>
-                    <td className="border border-gray-200 p-2">
-                      {userAndBusinessDetail[0]?.business?.currency} {finalTotal.toFixed(2)}
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan="5" className="text-center text-gray-500 p-2">
-                  No products found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      
+<table className="w-full text-xs border-collapse mt-2">
+  <thead>
+    <tr>
+      <th className="py-1 text-left">Item</th>
+      <th className="py-1 text-right">Qty</th>
+      <th className="py-1 text-right">Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    {sale.products.length > 0 ? (
+      sale.products.map((product) => {
+        const finalTotal = (product.sellPrice * parseInt(product.SellQuantity, 10)) * (1 - product.discount/100);
+        return (
+          <tr key={product.id}>
+            <td className="py-1">{product.name}</td>
+            <td className="py-1 text-right">{product.SellQuantity}</td>
+            <td className="py-1 text-right">
+              {userAndBusinessDetail[0]?.business?.currency} {finalTotal.toFixed(2)}
+            </td>
+          </tr>
+        );
+      })
+    ) : (
+      <tr>
+        <td colSpan="3" className="text-center py-1">No products</td>
+      </tr>
+    )}
+  </tbody>
+</table>
       </div>
 
       {/* 🔴 Sales Returns Section (Only If Returns Exist) */}

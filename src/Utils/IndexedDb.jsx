@@ -49,6 +49,31 @@ export const LOCAL_STORE = {
 // })
 // }
 
+export const creditdataupdate = async () => {
+getItems(STORE_NAMES.creditManagement).then(async(data) => {
+  console.log('credit data',data)
+  data.forEach(async (item) => {
+  await putItem(STORE_NAMES.creditManagement, {
+    id: item.id, 
+amount
+:item.amount,
+personId
+:item.customerId,
+date
+:item.date,
+note
+:
+item.note,
+type
+:
+item.type,
+updatedAt
+:
+Date.now(),
+  });
+  })
+
+})}
 
 
 
