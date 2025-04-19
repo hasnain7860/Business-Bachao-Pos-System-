@@ -6,6 +6,7 @@ import languageData from "../assets/languageData.json";
 const SellReturn = () => {
   const context = useAppContext();
   const sellReturnsData = context.SellReturnContext.sellReturns;
+  console.log(sellReturnsData)
   const deleteSellReturn = context.SellReturnContext.delete;
   const { language } = context;
   // Get currency from settings
@@ -50,16 +51,16 @@ const SellReturn = () => {
             </tr>
           </thead>
           <tbody>
-            {sellReturnsData.map((row) => (
-              <tr key={row.id}>
-                <td>{row.returnRefNo}</td>
-                <td>{formatDate(row.returnDate)}</td>
-                <td>{row.salesRef}</td>
-                <td>{row.items.length}</td>
-                <td>{currency}{row.totalAmount}</td>
-                <td>{currency}{row.paymentDetails.cashReturn}</td>
-                <td>{currency}{row.paymentDetails.creditAdjustment}</td>
-                <td>
+            {sellReturnsData.map((row) => ( <tr key={row.id}>
+    <td>{row.returnRefNo || 'N/A'}</td>
+    <td>{row.returnDate ? formatDate(row.returnDate) : 'N/A'}</td>
+    <td>{row.salesRef || 'N/A'}</td>
+    <td>{row.items?.length ?? 0}</td>
+    <td>{currency}{row.totalAmount ?? 0}</td>
+    <td>{currency}{row.paymentDetails?.cashReturn ?? 0}</td>
+    <td>{currency}{row.paymentDetails?.creditAdjustment ?? 0}</td>
+  
+             <td>
                   <div className="flex gap-2">
                 
                     <button 

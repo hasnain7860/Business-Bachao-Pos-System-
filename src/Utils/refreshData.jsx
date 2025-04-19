@@ -4,10 +4,14 @@ const refreshData = async (context, storeName) => {
       await context.costContext.refreshData();
       console.log("✅ Cost context refreshed!");
       break;
-    case "company":
-      await context.companyContext.refreshData();
+      case "company":
+        await context.companyContext.refreshData();
+        console.log("✅ Company context refreshed!");
+        break;
+     case "purchaseReturns":
+      await context.purchaseReturnContext.refreshData();
       console.log("✅ Company context refreshed!");
-      break;
+      break; 
   
     case "products":
       await context.productContext.refreshData();

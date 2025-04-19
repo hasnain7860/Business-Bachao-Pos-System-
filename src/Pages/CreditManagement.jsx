@@ -12,7 +12,7 @@ const CreditManagement = () => {
   const { language } = context;
   const navigate = useNavigate();
   const peoples = context.peopleContext.people;
- 
+ const purchaseReturnsData = context.purchaseReturnContext?.purchaseReturns || [];
   const salesData = context.SaleContext.Sales;
   const t = languageData[language];
   const submittedRecords = context.creditManagementContext.submittedRecords;
@@ -70,12 +70,23 @@ const CreditManagement = () => {
     });
   };
 
-  const totalRecordsPayment = submittedRecords
-    .filter(
-      (record) =>
-        record.type === "payment" && record.personId === selectedPeople?.id
-    )
-    .reduce((acc, record) => acc + record.amount, 0);
+
+
+
+
+
+
+
+
+
+    
+    const totalRecordsPayment = submittedRecords
+  .filter(
+    (record) =>
+      record.type === "payment" && record.personId === selectedPeople?.id
+  )
+  .reduce((acc, record) => acc + record.amount, 0);
+    
 
   const totalSalesPayment = salesData
     .filter((sale) => sale.personId === selectedPeople?.id)
@@ -100,17 +111,61 @@ const CreditManagement = () => {
 
   const grandCredit = Number(totalSalesCredit) + Number(totalExistRecordCredit);
 
-  // Replace the existing totalReturns calculation
-  const totalReturns = useMemo(() => {
-    return sellReturns
-      .filter(returnItem => returnItem.people === selectedPeople?.id)
-      .reduce((acc, returnItem) => {
-        return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
-      }, 0);
-  }, [sellReturns, selectedPeople]);
 
-  // Update the remaining credit calculation
-  const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Number(totalReturns);
+// Sell Returns Total
+const totalSellReturns = useMemo(() => {
+  return sellReturns
+    .filter(returnItem => returnItem.people === selectedPeople?.id)
+    .reduce((acc, returnItem) => {
+      return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
+    }, 0);
+}, [sellReturns, selectedPeople]);
+// Purchase Returns Total
+const totalPurchaseReturns = useMemo(() => {
+  return (
+    context.purchaseReturnContext?.purchaseReturns
+      ?.filter(returnItem => returnItem.people === selectedPeople?.id)
+      ?.reduce((acc, returnItem) => {
+        return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
+      }, 0) || 0
+  );
+}, [context.purchaseReturnContext?.purchaseReturns, selectedPeople]);
+
+
+// Updated Remaining Credit Calculation
+const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Number(totalSellReturns) - Number(totalPurchaseReturns);
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
 
   return (
     <div className="p-4 bg-gray-50">
@@ -286,6 +341,42 @@ const CreditManagement = () => {
     </table>
   </div>
 )}
+{selectedPeople &&
+  purchaseReturnsData.some(
+    (ret) => ret.people === selectedPeople.id
+  ) && (
+    <div className="mt-4 max-h-64 overflow-y-auto">
+      <h3 className="text-lg font-semibold">{t.purchaseReturnRecords}</h3>
+      <table className="min-w-full bg-white border border-gray-300 mt-2">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="border px-4 py-2">{t.returnRefNo}</th>
+            <th className="border px-4 py-2">{t.purchaseRefNo}</th>
+            <th className="border px-4 py-2">{t.returnAmount}</th>
+            <th className="border px-4 py-2">{t.cashReturn}</th>
+            <th className="border px-4 py-2">{t.creditAdjustment}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {context.purchaseReturnContext?.purchaseReturns
+            .filter((ret) => ret.people === selectedPeople.id)
+            .map((ret) => (
+              <tr key={ret.id} className="border-b">
+                <td className="border px-4 py-2">{ret.returnRefNo}</td>
+                <td className="border px-4 py-2">{ret.purchaseRef || '-'}</td>
+                <td className="border px-4 py-2">{ret.totalAmount}</td>
+                <td className="border px-4 py-2">
+                  {ret.paymentDetails?.cashReturn || 0}
+                </td>
+                <td className="border px-4 py-2">
+                  {ret.paymentDetails?.creditAdjustment || 0}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  )}
           {selectedPeople && sellReturns.some(ret => ret.people === selectedPeople.id) && (
   <div className="mt-4 max-h-64 overflow-y-auto">
     <h3 className="text-lg font-semibold">{t.returnRecords}</h3>
@@ -396,12 +487,24 @@ const CreditManagement = () => {
         .filter((purchase) => purchase.personId === selectedPeople?.id)
         .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
       <li>Total Payments Made: {totalPayment}</li>
-      <li>Total Returns: {totalReturns}</li>
-      <li className="text-xl font-bold text-blue-600">
-        Net Credit Balance: {remainingCredit - purchasesData
-          .filter((purchase) => purchase.personId === selectedPeople?.id)
-          .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}
-      </li>
+      <li>Total Sales Returns: {totalSellReturns}</li>
+{(() => {
+  const totalCredit = purchasesData
+    .filter(purchase => purchase.personId === selectedPeople?.id)
+    .reduce((acc, purchase) => acc + Number(purchase.credit), 0);
+
+  const netBalance = remainingCredit - totalCredit;
+
+  return (
+    <li className="text-xl font-bold text-blue-600">
+      {netBalance >= 0
+        ? `Net Credit Balance: ${netBalance}`
+        : `Net Payable: ${Math.abs(netBalance)}`}
+    </li>
+  );
+})()}
+    
+
     </ul>
   </div>
 </div>

@@ -6,8 +6,10 @@ import languageData from "../assets/languageData.json";
 
 const PurchaseReturn = () => {
   const context = useAppContext();
-  const purchaseReturnsData = context.PurchaseReturnContext?.purchaseReturns || [];
-  const deletePurchaseReturn = context.PurchaseReturnContext?.delete;
+  const purchaseReturnsData = context.purchaseReturnContext?.purchaseReturns || [];
+  console.log(purchaseReturnsData)
+  console.log(purchaseReturnsData)
+  const deletePurchaseReturn = context.purchaseReturnContext?.delete;
   const { language } = context;
   
   // Get currency from settings

@@ -21,13 +21,14 @@ const AddPurchaseReturn = () => {
   const [creditAdjustment, setCreditAdjustment] = useState(0);
   const [selectedPeople, setSelectedPeople] = useState('')
  
-  const addReturn = context.PurchaseReturnContext?.add;
+  const addReturn = context.purchaseReturnContext?.add;
   const purchasesData = context.purchaseContext?.purchases || [];
   const products = context.productContext?.products || [];
   const peoples = context.peopleContext.people;
   useEffect(() => {
     if (selectedPeople) {
       const { pendingCredit } =CalculateUserCredit(context, selectedPeople);
+      console.log(CalculateUserCredit(context,selectedPeople))
       setSupplierCredit(pendingCredit);
     }
   }, [selectedPeople]);
@@ -36,6 +37,7 @@ const AddPurchaseReturn = () => {
     const filtered = purchasesData.filter((purchase) =>
       purchase.purchaseRefNo.toLowerCase().includes(value.toLowerCase())
     );
+    
     setFilteredPurchases(filtered);
   };
 
@@ -62,7 +64,7 @@ const AddPurchaseReturn = () => {
 
     const matchedSupplier = peoples.find(people => people.id === purchase.peopleId);
     if (matchedSupplier) {
-      setSelectedSupplier(matchedSupplier.id);
+      setSelectedPeople(matchedSupplier.id);
     }
   };
 
@@ -139,7 +141,7 @@ const AddPurchaseReturn = () => {
         newCreditBalance: peopleCredit - creditAdjustment
       }
     };
-  
+  console.log(returnData)
     addReturn(returnData);
 
     // Reset form
@@ -149,7 +151,7 @@ const AddPurchaseReturn = () => {
     setTotalAmount(0);
     setCreditAdjustment(0);
     setCashReturn(0);
-    setSelectedSupplier('');
+    setSelectedPeople('');
   };
 
   return (
@@ -198,7 +200,7 @@ const AddPurchaseReturn = () => {
           <select 
             className="select select-bordered w-full"
             value={selectedPeople}
-            onChange={(e) => setSelectedSupplier(e.target.value)}
+            onChange={(e) => setSelectedPeople(e.target.value)}
           >
             <option value="">Select Supplier</option>
             {peoples.map((people) => (

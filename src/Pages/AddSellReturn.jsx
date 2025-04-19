@@ -146,6 +146,7 @@ useEffect(() => {
         people: selectedPeople,
         items: returnItems,
         totalAmount,
+        
         returnDate: new Date(),
         paymentDetails: {
             creditAdjustment,
