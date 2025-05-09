@@ -477,6 +477,17 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
           .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
       </ul>
     </div>
+
+
+    <div>
+    <h3 className="text-md font-bold text-gray-700">Existing Records</h3>
+    <ul className="list-disc pl-4 space-y-2">
+      <li>Total Existing payment: {totalRecordsPayment}</li>
+      <li>Total Existing Credit: {totalExistRecordCredit}</li>
+    </ul>
+  </div>
+
+
   </div>
 
   <div className="mt-4 border-t pt-4">
@@ -486,7 +497,7 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
       <li>Total Purchase Credit: {purchasesData
         .filter((purchase) => purchase.personId === selectedPeople?.id)
         .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
-      <li>Total Payments Made: {totalPayment}</li>
+      <li>Total Customer Payments Made: {totalPayment}</li>
       <li>Total Sales Returns: {totalSellReturns}</li>
 {(() => {
   const totalCredit = purchasesData

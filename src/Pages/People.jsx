@@ -50,9 +50,21 @@ const People = () => {
   };
 
   const handleImageSelection = (e) => {
-    setFormData({ ...formData, image: URL.createObjectURL(e.target.files[0]) });
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    const reader = new FileReader();
+  
+    reader.onloadend = () => {
+      // reader.result contains the base64 image string
+      setFormData({ ...formData, image: reader.result });
+      console.log(FormData)
+    };
+  
+    // Convert to base64 string
+    reader.readAsDataURL(file);
   };
-
+  
   const handleFormSubmission = (e) => {
     e.preventDefault();
     if (isEditingMode) {
