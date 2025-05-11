@@ -145,9 +145,9 @@ const NewSales = () => {
     const handleAmountPaidChange = e => {
         setAmountPaid(e.target.value);
     };
-
+    let amountPaidcheck = amountPaid === "" ? 0 : Number(amountPaid);
     const handleCalculateCredit = () => {
-        let amountPaidcheck = amountPaid === "" ? 0 : Number(amountPaid);
+        
         setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck));
     };
 
@@ -161,6 +161,11 @@ const NewSales = () => {
             setMessage("Please add at least one product to the sale.");
             return;
         }
+
+if(amountPaidcheck > calculateTotalPayment()){  
+        setMessage("Amount paid cannot be greater than total bill.");
+        return
+}
 
         if (amountPaid === "") {
             setAmountPaid("0");

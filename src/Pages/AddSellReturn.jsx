@@ -3,8 +3,10 @@ import { FaSearch, FaTrash, FaPlus } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
 import { CalculateUserCredit } from '../Utils/CalculateUserCredit';
+import { useParams, useNavigate,useSearchParams  } from "react-router-dom";
 const AddSellReturn = () => {
       const context = useAppContext();
+      const { id } = useParams(); 
   const [salesRef, setSalesRef] = useState('');
   const [filteredSales, setFilteredSales] = useState([]);
   const [addCustomProduct, setAddCustomProduct] = useState([])
@@ -18,18 +20,74 @@ const AddSellReturn = () => {
   const [customerCredit, setCustomerCredit] = useState(0);
 
   const addReturn = context.SellReturnContext.add
+  const sellReturns = context.SellReturnContext.sellReturns
 
   // Sample data (replace with your actual data)
   const salesData = context.SaleContext.Sales;
   const products = context.productContext.products;
+  const updateProduct = context.productContext.edit;
   const peoples = context.peopleContext.people;
   const [cashReturn, setCashReturn] = useState(0);
   const [creditAdjustment, setCreditAdjustment] = useState(0);
   
+
+useEffect(() => {
+  if(id){
+   const data = salesData.find((sale) => sale.id === id)
+    if (data) {
+      console.log(data, 'data of sale')
+      setSalesRef(data.salesRefNo);
+      setSelectedSale(data);
+
+      setReturnItems(data.products.map((item, index) => ({
+        id: item.id,
+        
+batchCode:item.
+batchCode,
+
+
+      productName: item.name,
+      quantity: 1,
+      maxQuantity: (() => {
+        // Get all returns for this sale
+        const saleReturns = sellReturns.filter(r => r.salesRef === data.salesRefNo);
+        
+        // Start with original sell quantity
+        let remainingQty = Number(item.SellQuantity);
+        
+        // Subtract all previously returned quantities
+        saleReturns.forEach(returnDoc => {
+          returnDoc.items.forEach(returnItem => {
+            if (returnItem.id === item.id) {
+              remainingQty -= Number(returnItem.quantity);
+            }
+          });
+        });
+        
+        return remainingQty;
+      })(),
+      price: Number(item.newSellPrice)
+      ,
+      total: Number(item.newSellPrice) * Number(item.SellQuantity),
+      })));
+      calculateTotal();
+
+      const matchedPeople = peoples.find(people => people.id === data.personId);
+      if (matchedPeople) {
+      
+          setSelectedPeople(matchedPeople.id); 
+      } else {
+          console.log('People not found for sale:', sale.personId);
+      }
+    }
+  }
+},[id])
+
+
   useEffect(() => {
     if (selectedPeople) {
       const { pendingCredit } =     CalculateUserCredit(context, selectedPeople);
-    console.log(   CalculateUserCredit(context, selectedPeople))
+   
       setCustomerCredit(pendingCredit);
     }
   }, [selectedPeople]);
@@ -51,12 +109,30 @@ const AddSellReturn = () => {
 
 
   const handleSaleSelect = (sale) => {
+    console.log(sale, 'selected sale clg')
     setSelectedSale(sale);
     setReturnItems(sale.products.map((item, index) => ({
       id: item.id,
       productName: item.name,
-      quantity: Number(item.SellQuantity),
-      maxQuantity: Number(item.SellQuantity),
+      quantity: 1,
+      maxQuantity: (() => {
+        // Get all returns for this sale
+        const saleReturns = sellReturns.filter(r => r.salesRef === sale.salesRefNo);
+        
+        // Start with original sell quantity
+        let remainingQty = Number(item.SellQuantity);
+        
+        // Subtract all previously returned quantities
+        saleReturns.forEach(returnDoc => {
+          returnDoc.items.forEach(returnItem => {
+            if (returnItem.id === item.id) {
+              remainingQty -= Number(returnItem.quantity);
+            }
+          });
+        });
+        
+        return remainingQty;
+      })(),
       price: Number(item.newSellPrice)
       ,
       total: Number(item.newSellPrice) * Number(item.SellQuantity),
@@ -142,11 +218,10 @@ useEffect(() => {
     const returnData = {
         id: uuidv4(),
         returnRefNo,
-        salesRef: selectedSale?.salesRefNo,
-        people: selectedPeople,
+        salesRef: selectedSale?.salesRefNo,  
+        peopleId: selectedPeople,
         items: returnItems,
-        totalAmount,
-        
+        totalAmount,   
         returnDate: new Date(),
         paymentDetails: {
             creditAdjustment,
@@ -155,9 +230,24 @@ useEffect(() => {
             newCreditBalance: customerCredit - creditAdjustment
         }
     };
-  
-    console.log(returnData);
-    addReturn(returnData);
+
+    returnItems.forEach(returnItem => {
+      // Find matching product
+      const product = products.find(p => p.id === returnItem.id);
+      if (product) {
+        // Find matching batch code
+        const batch = product.batchCode.find(b => b.batchCode === returnItem.batchCode);  
+        if (batch) {
+          // Update batch quantity by adding return quantity
+          batch.quantity = batch.quantity + returnItem.quantity;  
+          // Send updated product to test function   
+          updateProduct(product.id, product);
+        }
+      }
+    });
+
+
+     addReturn(returnData);
 
     // Reset form
     setReturnItems([]);
@@ -233,6 +323,7 @@ useEffect(() => {
       </div>
 
       {/* Add Custom Product */}
+      {selectedSale ? "" :
       <div className="card bg-base-100 shadow-xl mt-6">
         <div className="card-body">
           <h2 className="card-title">Add Custom Product</h2>
@@ -272,16 +363,18 @@ useEffect(() => {
           </div>
         </div>
       </div>
-
+}
       {/* Return Items Table */}
       <div className="overflow-x-auto">
+        <h1>Product Return</h1>
         <table className="table w-full">
           <thead>
             <tr>
               <th>Product</th>
+              <th>Total Quantity</th>
               <th>Quantity</th>
-              <th>Price</th>
-              <th>Total</th>
+              <th>Unit Price</th>
+              <th>Total Price</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -289,11 +382,13 @@ useEffect(() => {
             {returnItems.map((item) => (
               <tr key={item.id}>
                 <td>{item.productName}</td>
+                <td>{item.maxQuantity}</td>
                 <td>
                   <input
                     type="number"
                     className="input input-bordered w-24"
                     value={item.quantity}
+                    
                     min="1"
                     max={item.maxQuantity}
                     onChange={(e) => {
@@ -301,12 +396,14 @@ useEffect(() => {
                         let newValue = parseInt(e.target.value) || 0;
                         newValue = Math.min(Math.max(newValue, 1), item.maxQuantity);
                         
-                        const newItems = returnItems.map((i) =>
-                          i.id === item.id
+                        const newItems = returnItems.map((i) => 
+                           i.id === item.id
                             ? { ...i, quantity: newValue, total: i.price * newValue }
                             : i
-                        );
+                     );
+                   
                         setReturnItems(newItems);
+                      
                       }}
                   />
                 </td>

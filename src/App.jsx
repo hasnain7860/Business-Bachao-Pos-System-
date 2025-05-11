@@ -222,6 +222,16 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/return/sell_return/add/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                            <AddSellReturn/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
                   <Route
                     path="/return/purchase_return"
                     element={
@@ -234,6 +244,16 @@ function App() {
                 />
                  <Route
                     path="/return/purchase_return/add"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <AddPurchaseReturn/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                 <Route
+                    path="/return/purchase_return/add/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>

@@ -377,9 +377,9 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
       </table>
     </div>
   )}
-          {selectedPeople && sellReturns.some(ret => ret.people === selectedPeople.id) && (
+          {selectedPeople && sellReturns.some(ret => ret.peopleId === selectedPeople.id) && (
   <div className="mt-4 max-h-64 overflow-y-auto">
-    <h3 className="text-lg font-semibold">{t.returnRecords}</h3>
+    <h3 className="text-lg font-semibold">{t.salesReturnRecords}</h3>
     <table className="min-w-full bg-white border border-gray-300 mt-2">
       <thead>
         <tr className="bg-gray-200">
@@ -393,7 +393,7 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
       </thead>
       <tbody>
         {sellReturns
-          .filter(ret => ret.people === selectedPeople.id)
+          .filter(ret => ret.peopleId === selectedPeople.id)
           .map((ret) => (
             <tr key={ret.id} className="border-b">
               <td className="border px-4 py-2">{ret.returnRefNo}</td>

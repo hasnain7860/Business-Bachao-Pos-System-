@@ -45,7 +45,7 @@ console.log(sales)
       //   navigate(`/sales/viewPayments/${id}`);
       //   break;
       case 'saleReturn':  // Sale Return Option
-        navigate(`/sales/return/${id}`);
+        navigate(`/return/sell_return/add/${id}`);
         break;
       case 'delete':
         context.SaleContext.delete(id);

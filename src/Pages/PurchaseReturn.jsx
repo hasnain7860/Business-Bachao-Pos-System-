@@ -71,6 +71,7 @@ const PurchaseReturn = () => {
                     >
                       <FaTrash className="text-error" />
                     </button>
+                    
                   </div>
                 </td>
               </tr>

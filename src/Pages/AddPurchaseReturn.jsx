@@ -3,9 +3,13 @@ import { FaSearch, FaTrash, FaPlus } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
 import {CalculateUserCredit } from '../Utils/CalculateUserCredit';
+import { useParams, useNavigate,useSearchParams  } from "react-router-dom";
+
+
 
 const AddPurchaseReturn = () => {
   const context = useAppContext();
+     const { id } = useParams(); 
   const [purchaseRef, setPurchaseRef] = useState('');
   const [filteredPurchases, setFilteredPurchases] = useState([]);
   const [addCustomProduct, setAddCustomProduct] = useState([]);
@@ -24,7 +28,63 @@ const AddPurchaseReturn = () => {
   const addReturn = context.purchaseReturnContext?.add;
   const purchasesData = context.purchaseContext?.purchases || [];
   const products = context.productContext?.products || [];
+  const updateProduct = context.productContext.edit;
   const peoples = context.peopleContext.people;
+const purchaseReturns =context.purchaseReturnContext?.purchaseReturns
+
+
+
+
+useEffect(() => {
+  if(id){
+   const data = purchasesData.find((purchase) => purchase.id === id)
+    if (data) {
+      
+      setPurchaseRef(data.purchaseRefNo);
+     
+
+      setReturnItems(data.products.map((item, index) => ({
+        id: item.id,
+        productName: item.name,
+        quantity: 1,
+        maxQuantity: (() => {
+          // Get all returns for this sale
+          const purchaseReturn = purchaseReturns.filter(r => r.purchaseRefNo === data.purchaseRefNo);
+          
+          // Start with original quantity
+          let remainingQty = Number(item.quantity);
+          
+          // Subtract all previously returned quantities
+          purchaseReturn.forEach(returnDoc => {
+            returnDoc.items.forEach(returnItem => {
+              if (returnItem.id === item.id) {
+                remainingQty -= Number(returnItem.quantity);
+              }
+            });
+          });
+          
+          return remainingQty;
+        })(),
+      price: Number(item.purchasePrice)
+      ,
+      total: Number(item.purchasePrice) * Number(item.SellQuantity),
+      })));
+      calculateTotal();
+
+      const matchedPeople = peoples.find(people => people.id === data.personId);
+      if (matchedPeople) {
+      
+          setSelectedPeople(matchedPeople.id); 
+      } else {
+          console.log('People not found for sale:', sale.personId);
+      }
+    }
+  }
+},[id])
+
+
+
+
   useEffect(() => {
     if (selectedPeople) {
       const { pendingCredit } =CalculateUserCredit(context, selectedPeople);
@@ -49,12 +109,30 @@ const AddPurchaseReturn = () => {
   };
 
   const handlePurchaseSelect = (purchase) => {
+    console.log(purchase,'clg purchase')
     setSelectedPurchase(purchase);
     setReturnItems(purchase.products.map((item) => ({
       id: item.id,
       productName: item.name,
-      quantity: Number(item.quantity),
-      maxQuantity: Number(item.quantity),
+      quantity: 1,
+      maxQuantity: (() => {
+        // Get all returns for this sale
+        const purchaseReturn = purchaseReturns.filter(r => r.purchaseRefNo === data.purchaseRefNo);
+        
+        // Start with original quantity
+        let remainingQty = Number(item.quantity);
+        
+        // Subtract all previously returned quantities
+        purchaseReturn.forEach(returnDoc => {
+          returnDoc.items.forEach(returnItem => {
+            if (returnItem.id === item.id) {
+              remainingQty -= Number(returnItem.quantity);
+            }
+          });
+        });
+        
+        return remainingQty;
+      })(),
       price: Number(item.purchasePrice),
       total: Number(item.purchasePrice) * Number(item.quantity),
     })));
@@ -62,7 +140,7 @@ const AddPurchaseReturn = () => {
     setPurchaseRef('');
     setFilteredPurchases([]);
 
-    const matchedSupplier = peoples.find(people => people.id === purchase.peopleId);
+    const matchedSupplier = peoples.find(people => people.id === purchase.personId);
     if (matchedSupplier) {
       setSelectedPeople(matchedSupplier.id);
     }
@@ -129,7 +207,7 @@ const AddPurchaseReturn = () => {
     const returnData = {
       id: uuidv4(),
       returnRefNo,
-      purchaseRef: selectedPurchase?.purchaseRefNo,
+      purchaseRefNo: selectedPurchase?.purchaseRefNo,
       people: selectedPeople,
       items: returnItems,
       totalAmount,
@@ -141,7 +219,32 @@ const AddPurchaseReturn = () => {
         newCreditBalance: peopleCredit - creditAdjustment
       }
     };
+
+    returnItems.forEach(returnItem => {
+      // Find matching product
+      const product = products.find(p => p.id === returnItem.id);
+      if (product) {
+        // Find matching batch code
+        const batch = product.batchCode.find(b => b.batchCode === returnItem.batchCode);  
+        if (batch) {
+          // Update batch quantity by adding return quantity
+          batch.quantity = batch.quantity - returnItem.quantity;  
+          // Send updated product to test function   
+          updateProduct(product.id, product);
+        }
+      }
+    });
+
+
+
+
+
   console.log(returnData)
+
+
+
+
+
     addReturn(returnData);
 
     // Reset form
@@ -218,6 +321,7 @@ const AddPurchaseReturn = () => {
           <thead>
             <tr>
               <th>Product</th>
+              <th>Total Quantity</th>
               <th>Quantity</th>
               <th>Price</th>
               <th>Total</th>
@@ -228,6 +332,7 @@ const AddPurchaseReturn = () => {
             {returnItems.map((item) => (
               <tr key={item.id}>
                 <td>{item.productName}</td>
+                <td>{item.maxQuantity}</td>
                 <td>
                   <input
                     type="number"

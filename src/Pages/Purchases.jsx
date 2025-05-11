@@ -27,24 +27,12 @@ const toggleMenu = (index) => {
 };
 
 
-  // const handleView = (purchase) => {
-  //   // Logic for viewing details
-  // };
-
-  // const handleEdit = (purchase) => {
-  //   navigate(`/purchases/edit/${purchase.id}`);
-  // };
-
   
+  const handleSalesReturn = (id) => {
+    navigate(`/return/purchase_return/add/${id}`);
+  };
 
-//   const handleAddPayment = (purchase) => {
-//     // Logic for adding payment
-//     navigate(`/purchases/addPayments/${purchase.id}`);
-//   };
-  
-//  const  handleViewPayment = (purchase) => {
-//     navigate(`/purchases/viewPayments/${purchase.id}`);
-//   }
+ 
 
   return (
     <div className={`p-4 ${language === 'ur' ? 'rtl' : 'ltr'}`} dir={language === 'ur' ? 'rtl' : 'ltr'}>
@@ -68,7 +56,6 @@ const toggleMenu = (index) => {
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].total_bill}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_mode}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].date}</th>
-                {/* <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].payment_status}</th> */}
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].credit}</th>
                 <th className="px-6 py-4 text-white font-semibold tracking-wider text-left">{languageData[language].action}</th>
               </tr>
@@ -84,13 +71,7 @@ const toggleMenu = (index) => {
                   <td className="px-6 py-4 text-gray-800">{purchase.totalBill}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.paymentMode}</td>
                   <td className="px-6 py-4 text-gray-800">{purchase.date}</td>
-                  {/* <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-sm ${(purchase.totalBill - purchase.totalPayment) === 0 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'}`}>
-                      {(purchase.totalBill - purchase.totalPayment) === 0 ? languageData[language].full : languageData[language].due}
-                    </span>
-                  </td> */}
+                
                   <td className="px-6 py-4 text-gray-800">{purchase.totalBill - purchase.totalPayment}</td>
                   <td className="px-6 py-4 relative">
   <button onClick={() => toggleMenu(index)} className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200">
@@ -103,23 +84,13 @@ const toggleMenu = (index) => {
            maxHeight: '300px',
            overflowY: 'auto'
          }}>
-      {/* <button onClick={() => handleView(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
-        {languageData[language].view}
+    
+      <button onClick={() => handleSalesReturn(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
+        {languageData[language].sale_return}
       </button>
-      <button onClick={() => handleEdit(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
-        {languageData[language].edit}
-      </button> */}
       <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600">
         {languageData[language].delete}
       </button>
-      {/* {(purchase.totalBill - purchase.totalPayment) !== 0 && (
-        <button onClick={() => handleAddPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-green-50 text-green-600">
-          {languageData[language].add_payment}
-        </button>
-      )} */}
-      {/* <button onClick={() => handleViewPayment(purchase)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-600">
-        {languageData[language].view_payment}
-      </button> */}
     </div>
   )}
 </td>
