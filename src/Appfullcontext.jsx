@@ -28,7 +28,7 @@ const AppContext = createContext();
 
 // Context Provider
 export const AppContextProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   
  const afterFirstTimeCheck = useRef(false);
   // Contexts

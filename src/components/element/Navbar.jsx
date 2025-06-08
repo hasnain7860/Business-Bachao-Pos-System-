@@ -1,446 +1,196 @@
-import React, { useState, useEffect , useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   AiOutlineDown,
   AiOutlineRight,
   AiOutlineDashboard,
 } from "react-icons/ai";
-
-import languageData from "../../assets/languageData.json";
-
-import clsx from "clsx";
-
 import {
   FiSettings,
   FiLogOut,
   FiUsers,
-  FiPackage,
-  FiShoppingCart,
   FiClipboard,
 } from "react-icons/fi";
+import { MdInventory } from "react-icons/md";
+import Cookies from 'js-cookie';
+// Language data for translations
+import languageData from "../../assets/languageData.json";
 
 import Syncauto from "../Syncauto.jsx";
+import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
 
 
 
-import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
-import { MdInventory, MdPerson } from "react-icons/md";
 import { useAppContext } from '../../Appfullcontext.jsx';
 
 
 const Navbar = () => {
-  const { setIsAuthenticated , settingContext,language,setLanguage} = useAppContext();
-const [notificationCount, setNotificationCount] = useState(0)
-
-const businessName = settingContext?.settings[0]?.business?.businessName || "POS System"
-
-
-
-const toggleLanguage = () => {
-  setLanguage((prevLanguage) => (prevLanguage === 'en' ? 'ur' : 'en'));
-}; 
-  
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const sidebarRef = useRef(null);
-  const menuButtonRef = useRef(null);
-  const [collapsedSections, setCollapsedSections] = useState({
-  people: true,
-  inventory: true,
-  return: true,
-  sales: true,
-  purchases: true,
-});
-  
-
- 
-
-  // Toggle Sidebar
- 
-  const toggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
-
-  // Toggle Collapse for sections
-  const toggleSection = (section) => {
-    setCollapsedSections((prevState) => ({
-      ...prevState,
-      [section]: !prevState[section],
-    }));
-  };
-
-  // Handle Logout
-  const handleLogout =async () => {
-   await clearAllStores()
-   await setIsAuthenticated(false);
+    const { setIsAuthenticated, settingContext, language, setLanguage } = useAppContext();
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [collapsedSections, setCollapsedSections] = useState({});
     
-    alert("Logging out...");
-    // Add your logout logic here
-  };
+    const sidebarRef = useRef(null);
+    const menuButtonRef = useRef(null);
 
-  // Close sidebar when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target) &&
-        menuButtonRef.current &&
-        !menuButtonRef.current.contains(event.target)
-      ) {
-        setIsSidebarOpen(false);
-      }
+    const businessName = settingContext?.settings[0]?.business?.businessName || "POS System";
+    const userRole = Cookies.get('userRole') || 'seller'; // Default 'seller' agar role set na ho
+
+    // --- Navigation Links Data Structure ---
+    // Yahan humne saare links ko ek array mein daal diya hai
+    const navLinks = [
+        { path: "/", labelKey: "dashboard", icon: AiOutlineDashboard, roles: ['Admin', 'seller'] },
+        { path: "/people", labelKey: "people", icon: FiUsers, roles: ['Admin', 'seller'] },
+        {
+            labelKey: "inventory", icon: MdInventory, roles: ['Admin'],
+            children: [
+                { path: "/inventory/company", labelKey: "company", roles: ['Admin'] },
+                { path: "/inventory/products", labelKey: "products", roles: ['Admin'] },
+                { path: "/inventory/upload-Products", labelKey: "upload_products", roles: ['Admin'] },
+                { path: "/inventory/units", labelKey: "units", roles: ['Admin'] },
+            ]
+        },
+        {
+            labelKey: "return", icon: MdInventory, roles: ['Admin'],
+            children: [
+                { path: "/return/sell_return", labelKey: "sell_return", roles: ['Admin'] },
+                { path: "/return/purchase_return", labelKey: "purchase_return", roles: ['Admin'] },
+            ]
+        },
+        { path: "/sales", labelKey: "sales", icon: FiClipboard, roles: ['Admin'] },
+        { path: "/purchases", labelKey: "purchases", icon: FiClipboard, roles: ['Admin'] },
+        { path: "/CreditManagement", labelKey: "credit_management", icon: FiClipboard, roles: ['Admin', 'seller'] },
+        { path: "/Cost", labelKey: "cost_management", icon: FiClipboard, roles: ['Admin', 'seller'] },
+        { path: "/data", labelKey: "data_sync", icon: FiClipboard, roles: ['Admin'] },
+        { path: "/settings", labelKey: "settings", icon: FiSettings, roles: ['Admin'] },
+    ];
+
+    const toggleLanguage = () => {
+        setLanguage((prev) => (prev === 'en' ? 'ur' : 'en'));
     };
 
-    if (isSidebarOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+    const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+    
+    const toggleSection = (sectionKey) => {
+        setCollapsedSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
+    };
 
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isSidebarOpen]);
+    const handleLogout = async () => {
+        await clearAllStores();
+        Cookies.remove('userName');
+        Cookies.remove('userRole');
+        await setIsAuthenticated(false);
+        // alert ko hata kar console log use karein ya toast notification
+        console.log("Logging out...");
+    };
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                sidebarRef.current && !sidebarRef.current.contains(event.target) &&
+                menuButtonRef.current && !menuButtonRef.current.contains(event.target)
+            ) {
+                setIsSidebarOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
-  return (
-    <div>
-      <Syncauto></Syncauto>
-      {/* Navbar */}
-      <nav 
-  className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 h-20
-  justify-between  ${language === 'ur' ? 'flex-row-reverse' : ''}`}
->
-  {/* ☰ Menu Button */}
-  <button
-    onClick={toggleSidebar}
-    ref={menuButtonRef}
-    className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600"
-  >
-    ☰
-  </button>
+    // --- Sidebar Links Renderer ---
+    // Yeh function data structure se links generate karega
+    const renderNavLinks = (links) => {
+        return links.filter(link => link.roles.includes(userRole)).map((link, index) => {
+            const key = link.labelKey || index;
+            const Icon = link.icon;
 
-  {/* Business Name */}
-  <h1 className="text-2xl font-bold">
-    {businessName}
-  </h1>
+            // Agar link ke andar children hain (nested section)
+            if (link.children) {
+                return (
+                    <li key={key}>
+                        <button
+                            onClick={() => toggleSection(key)}
+                            className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
+                        >
+                            <span className="flex items-center">
+                                {Icon && <Icon className="mr-3" />}
+                                {languageData[language][link.labelKey]}
+                            </span>
+                            {collapsedSections[key] ? <AiOutlineRight size={20} /> : <AiOutlineDown size={20} />}
+                        </button>
+                        <ul className={`mt-2 space-y-2 ${collapsedSections[key] ? "hidden" : "block"}`}>
+                            {renderNavLinks(link.children)}
+                        </ul>
+                    </li>
+                );
+            }
 
-  {/* Language, Notifications & Sales Button */}
-  <div 
-    className={`flex items-center space-x-4 transition-all duration-300 
-    ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}
-  >
-    {/* Notification Icon */}
-    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
-      🔔
-      {notificationCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-          {notificationCount}
-        </span>
-      )}
-    </Link>
+            // Simple link
+            return (
+                <li key={key}>
+                    <Link
+                        to={link.path}
+                        className="text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+                    >
+                        {Icon && <Icon className="mr-3" />}
+                        {languageData[language][link.labelKey]}
+                    </Link>
+                </li>
+            );
+        });
+    };
+    
+    return (
+        <div>
+            <Syncauto />
+            {/* Navbar */}
+            <nav className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 h-20 justify-between ${language === 'ur' ? 'flex-row-reverse' : ''}`}>
+                <button onClick={toggleSidebar} ref={menuButtonRef} className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600">
+                    ☰
+                </button>
+                <h1 className="text-2xl font-bold">{businessName}</h1>
+                <div className={`flex items-center space-x-4 transition-all duration-300 ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
+                        🔔
+                        {notificationCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                {notificationCount}
+                            </span>
+                        )}
+                    </Link>
+                    <button onClick={toggleLanguage} className="p-2 bg-gray-700 rounded-full hover:bg-gray-600">
+                        {languageData[language].toggle_language}
+                    </button>
+                    <Link to="/sales/new" className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">
+                        {languageData[language].sales}
+                    </Link>
+                </div>
+            </nav>
 
-    {/* Language Toggle Button */}
-    <button
-      onClick={toggleLanguage}
-      className="p-2 bg-gray-700 rounded-full hover:bg-gray-600"
-    >
-      {languageData[language].toggle_language}
-    </button>
-
-    {/* Sales Button */}
-    <Link
-      to="/sales/new"
-      className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-    >
-      {languageData[language].sales}
-    </Link>
-  </div>
-</nav>
-
-
-
-      {/* Sidebar */}
-      <div
-  ref={sidebarRef}
-  className={`fixed top-20 ${
-    language === "ur" ? "right-0" : "left-0"
-  } h-full bg-gray-800 text-white shadow-md z-40 transform ${
-    isSidebarOpen ? "translate-x-0" : language === "ur" ? "translate-x-full" : "-translate-x-full"
-  } transition-transform duration-300 w-64 overflow-y-auto`}
-  style={{ direction: language === "ur" ? "rtl" : "ltr" }}
->
-       
-        <div className="flex flex-col justify-between h-full" >
-        <div className="">
-        <ul className="p-2  ">
-          {/* Dashboard */}
-          <li>
-            <Link
-              to="/"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
+            {/* Sidebar */}
+            <div
+                ref={sidebarRef}
+                className={`fixed top-20 ${language === "ur" ? "right-0" : "left-0"} h-full bg-gray-800 text-white shadow-md z-40 transform ${isSidebarOpen ? "translate-x-0" : language === "ur" ? "translate-x-full" : "-translate-x-full"} transition-transform duration-300 w-64 overflow-y-auto`}
+                style={{ direction: language === "ur" ? "rtl" : "ltr" }}
             >
-              <AiOutlineDashboard className="mr-3" />
-             {languageData[language].dashboard}
-            </Link>
-          </li>
-
-
-
-          <li>
-            <Link
-              to="/people"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-                  <FiUsers className="mr-3" />
-          {languageData[language].people}
-            </Link>
-          </li>
-
-
-
-
-          {/* People Section
-          <li>
-            <button
-              onClick={() => toggleSection("people")}
-              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
-            >
-              <FiUsers className="mr-3" />
-                {languageData[language].people}
-              
-              {collapsedSections["people"] ? (
-                <AiOutlineRight size={20} />
-              ) : (
-                <AiOutlineDown size={20} />
-              )}
-            </button>
-            <ul
-              className={`mt-2 space-y-2 ${
-                collapsedSections["people"] ? "hidden" : "block"
-              }`}
-            >
-              <li>
-                <Link
-                  to="/people/customers"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-     {languageData[language].customers}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/people/suppliers"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].suppliers}
-                </Link>
-              </li>
-            </ul>
-          </li> */}
-
-          {/* Inventory Section */}
-          <li>
-            <button
-              onClick={() => toggleSection("inventory")}
-              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
-            >
-              <MdInventory className="mr-3" />
-                {languageData[language].inventory}
-              {collapsedSections["inventory"] ? (
-                <AiOutlineRight size={20} />
-              ) : (
-                <AiOutlineDown size={20} />
-              )}
-            </button>
-            <ul
-              className={`mt-2 space-y-2 ${
-                collapsedSections["inventory"] ? "hidden" : "block"
-              }`}
-            >
-              <li>
-                <Link
-                  to="/inventory/company"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].company}
-                </Link>
-              </li>
-            
-             
-              <li>
-                <Link
-                  to="/inventory/products"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].products}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/inventory/upload-Products"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].upload_products}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/inventory/units"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].units} 
-                </Link>
-              </li>
-            </ul>
-          </li>
-
-    {/* Inventory Section */}
-    <li>
-            <button
-              onClick={() => toggleSection("return")}
-              className="w-full flex justify-between items-center text-left text-base py-2 px-4 rounded-md hover:bg-gray-700"
-            >
-              <MdInventory className="mr-3" />
-                {languageData[language].return}
-              {collapsedSections["return"] ? (
-                <AiOutlineRight size={20} />
-              ) : (
-                <AiOutlineDown size={20} />
-              )}
-            </button>
-            <ul
-              className={`mt-2 space-y-2 ${
-                collapsedSections["return"] ? "hidden" : "block"
-              }`}
-            >
-              <li>
-                <Link
-                  to="/return/sell_return"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].sell_return}
-                </Link>
-              </li>
-            
-             
-              <li>
-                <Link
-                  to="/return/purchase_return"
-                  className="block text-sm py-2 px-4 rounded-md hover:bg-gray-600 transition-all"
-                >
-                       {languageData[language].purchase_return}
-                </Link>
-              </li>
-             
-            </ul>
-          </li>
-
-
-
-          {/* Sales Section */}
-
-          <li>
-            <Link
-              to="/sales"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-                 <FiClipboard className="mr-3" />
-          {languageData[language].sales}
-            </Link>
-          </li>
-
-
-
-      
-        
-      
-
-          {/* Purchases Section */}
-
-          <li>
-            <Link
-              to="/purchases"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-                 <FiClipboard className="mr-3" />
-                 {languageData[language].purchases}
-            </Link>
-          </li>
-
-
-                    {/* Credit Management */}
-          <li>
-            <Link
-              to="/CreditManagement"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-                {languageData[language].credit_management}
-           
-            </Link>
-          </li>
-                    {/* Cost Management */}
-          <li>
-            <Link
-              to="/Cost"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-                   {languageData[language].cost_management}
-            </Link>
-          </li>
-
-                    {/* Manage Users */}
-          {/* <li>
-            <Link
-              to="/manage-users"
-              className="block text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-              <MdPerson className="mr-3" />
-              Manage Users
-            </Link>
-          </li> */}
-
-          {/* data sysnc */}
-          <li>
-            <Link
-              to="/data"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-  {languageData[language].data_sync}
-              
-            </Link>
-          </li>
-
-          {/* Settings */}
-          <li>
-            <Link
-              to="/settings"
-              className=" text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-              <FiSettings className="mr-3" />
-              {languageData[language].settings}
-            </Link>
-          </li>
-
-          {/* Logout */}
-          <li>
-            <button
-              onClick={handleLogout}
-              className="w-full text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all"
-            >
-              <FiLogOut className="mr-3" />
-              {languageData[language].logout}
-            </button>
-            </li>
-          
-        </ul>
+                <div className="flex flex-col justify-between h-full">
+                    <ul className="p-2">
+                        {renderNavLinks(navLinks)}
+                        {/* Logout Link (alag se, kyunki iska logic different hai) */}
+                        <li>
+                            <button onClick={handleLogout} className="w-full text-base py-2 px-4 flex items-center rounded-md hover:bg-gray-700 transition-all">
+                                <FiLogOut className="mr-3" />
+                                {languageData[language].logout}
+                            </button>
+                        </li>
+                    </ul>
+                    <div className="text-base pb-20 pl-5">
+                        version 2.0.0
+                    </div>
+                </div>
+            </div>
         </div>
-         <div className="text-base pb-20 pl-5">
-        version 1.5.3
-          </div>
-          </div>
-        </div>
-        
-      
-    </div>
-  );
+    );
 };
 
-export default Navbar;             
+export default Navbar;

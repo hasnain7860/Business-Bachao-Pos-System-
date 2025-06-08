@@ -3,21 +3,22 @@ import {
     BrowserRouter as Router,
     Routes,
     Route,
-    useNavigate
+    useNavigate,
+    Link
 } from "react-router-dom";
 import "./App.css";
 import Navbar from "./components/element/Navbar";
 import Layout from "./Layout";
 import Dashboard from "./Pages/dashboard";
 import Login from "./Pages/Login.jsx";
-import Profile from "./Pages/Profile.jsx";
+
 import CreditManagement from "./Pages/CreditManagement.jsx";
 import Settings from "./Pages/Settings.jsx";
-import People from "./Pages/People.jsx";    
-import Suppliers from "./Pages/suppliers.jsx";
-import Customer from "./Pages/customer.jsx";
-import Company from "./Pages/Company.jsx";
+import People from "./Pages/People.jsx";
 
+
+import Company from "./Pages/Company.jsx";
+import Cookies from 'js-cookie';
 import Unit from "./Pages/Unit.jsx";
 import AddProduct from "./Pages/AddProduct.jsx";
 import Products from "./Pages/Products.jsx";
@@ -38,7 +39,25 @@ import ProductUploadPage from "./Pages/ProductUploadPage";
 import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
 import SellReturn from "./Pages/SellReturn.jsx";
 import AddSellReturn from "./Pages/AddSellReturn.jsx";
+import { useEffect } from "react";
 // import eruda from 'eruda';
+
+
+// AdminOnlyRoute component to restrict access to admin-only routes
+const AdminOnlyRoute = ({ children }) => {
+    const Navigate = useNavigate()
+    const role = Cookies.get('userRole') || 'Admin'; // Default to 'admin' for demo
+    if (role !== 'Admin') {
+        useEffect(() => {
+            Navigate("/sales")
+        }, [role])
+
+    }
+
+
+    return children;
+};
+
 
 function App() {
     // eruda.init();
@@ -61,22 +80,13 @@ function App() {
                     }
                 />
 
-                <Route
-                    path="/profile"
-                    element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Profile />
-                            </Layout>
-                        </ProtectedRoute>
-                    }
-                />
+
                 <Route
                     path="/notifications"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <Notification/>
+                                <Notification />
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -96,59 +106,53 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <Settings />
+                                <AdminOnlyRoute>
+                                    <Settings />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/people"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <People/>
+                                <People />
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                <Route
-                    path="/people/suppliers"
-                    element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Suppliers />
-                            </Layout>
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/people/customers"
-                    element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Customer />
-                            </Layout>
-                        </ProtectedRoute>
-                    }
-                />
+
                 <Route
                     path="/inventory/Company"
                     element={
                         <ProtectedRoute>
+
                             <Layout>
-                                <Company />
+                                <AdminOnlyRoute>
+                                    <Company />
+                                </AdminOnlyRoute>
                             </Layout>
+
+
+
                         </ProtectedRoute>
                     }
                 />
-              
+
                 <Route
                     path="/inventory/units"
                     element={
                         <ProtectedRoute>
+
                             <Layout>
-                                <Unit />
+                                <AdminOnlyRoute>
+                                    <Company />
+                                </AdminOnlyRoute>
                             </Layout>
+
+
                         </ProtectedRoute>
                     }
                 />
@@ -157,17 +161,21 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <AddProduct />
+                                <AdminOnlyRoute>
+                                    <AddProduct />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/inventory/addProduct/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <AddProduct />
+                                <AdminOnlyRoute>
+                                    <AddProduct />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -177,7 +185,9 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <AddProduct />
+                                <AdminOnlyRoute>
+                                    <AddProduct />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -187,7 +197,9 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <Products />
+                                <AdminOnlyRoute>
+                                    <Products />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -197,27 +209,31 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <ProductUploadPage />
+                                <AdminOnlyRoute>
+                                    <ProductUploadPage />
+                                </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                  <Route
+                <Route
                     path="/return/sell_return"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                            <SellReturn/>
+                      
+                                <SellReturn />
+                        
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/return/sell_return/add"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                            <AddSellReturn/>
+                                <AddSellReturn />
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -227,37 +243,43 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                            <AddSellReturn/>
+                                <AddSellReturn />
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                  <Route
+                <Route
                     path="/return/purchase_return"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <PurchaseReturn/>
+                                                                 <AdminOnlyRoute>
+                                <PurchaseReturn />
+                                    </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/return/purchase_return/add"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <AddPurchaseReturn/>
+                                                                 <AdminOnlyRoute>
+                                <AddPurchaseReturn />
+                                    </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/return/purchase_return/add/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <AddPurchaseReturn/>
+                                                                 <AdminOnlyRoute>
+                                <AddPurchaseReturn />
+                                    </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -267,7 +289,9 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
+                                    <AdminOnlyRoute>
                                 <Purchases />
+                                    </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -277,7 +301,9 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
+                                    <AdminOnlyRoute>
                                 <NewPurchases />
+                                    </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -292,12 +318,12 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                  <Route
+                <Route
                     path="/sales/return/:id"
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <SellReturn/>
+                                <SellReturn />
                             </Layout>
                         </ProtectedRoute>
                     }
@@ -312,7 +338,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                     <Route
+                <Route
                     path="/sales/view/:id"
                     element={
                         <ProtectedRoute>
@@ -322,7 +348,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/:ref/addPayments/:id"
                     element={
                         <ProtectedRoute>
@@ -332,7 +358,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/:ref/viewPayments/:id"
                     element={
                         <ProtectedRoute>
@@ -342,14 +368,14 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                     <Route
-                  
+                <Route
+
                     path="/sales/view/:id/print"
                     element={
                         <ProtectedRoute>
-                          
-                                <SalesView />
-                            
+
+                            <SalesView />
+
                         </ProtectedRoute>
                     }
                 />
@@ -363,7 +389,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-          
+
                 <Route
                     path="/data"
                     element={
