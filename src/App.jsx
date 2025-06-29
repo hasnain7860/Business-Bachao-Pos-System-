@@ -148,7 +148,7 @@ function App() {
 
                             <Layout>
                                 <AdminOnlyRoute>
-                                    <Company />
+                                    <Unit/>
                                 </AdminOnlyRoute>
                             </Layout>
 
