@@ -12,7 +12,7 @@ const ProductSearch = ({
     const searchTerm = searchProduct.toLowerCase();
 
     return productName.toLowerCase().includes(searchTerm) || 
-           productNameUrdu.includes(searchTerm);
+           productNameUrdu.includes(searchTerm) ||  (product.barcode && product.barcode.includes(searchTerm));
   });
 
   return (
