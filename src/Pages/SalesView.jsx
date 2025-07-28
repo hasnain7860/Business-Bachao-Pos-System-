@@ -129,7 +129,7 @@ const SalesView = () => {
           <tr key={product.id}>
             <td className="py-1">{product.name}</td>
             <td className="py-1 text-right">{product.SellQuantity}</td>
-<td className="py-1 text-right">{product.discount ? product.discount : 0} </td>
+<td className="py-1 text-right">{product.discount ? product.discount.toFixed(2) : 0}% </td>
             <td className="py-1 text-right">
               {userAndBusinessDetail[0]?.business?.currency} {finalTotal.toFixed(2)}
             </td>
