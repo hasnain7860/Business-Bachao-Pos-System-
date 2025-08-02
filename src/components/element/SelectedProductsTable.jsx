@@ -13,7 +13,7 @@ const SelectedProductsTable = ({
         <table className="table w-full table-auto">
           <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
             <tr>
-              {['Product', 'Batch', 'Qty', 'Price', 'Stock', 'Disc%', 'Total', 'Action'].map((heading) => (
+              {['no.','Product', 'Batch', 'Qty', 'Price', 'Stock', 'Disc%', 'Total', 'Action'].map((heading) => (
                 <th key={heading} className="text-white font-semibold text-xs md:text-sm whitespace-nowrap px-2">
                   {heading}
                 </th>
@@ -21,8 +21,9 @@ const SelectedProductsTable = ({
             </tr>
           </thead>
           <tbody>
-            {selectedProducts.map(product => (
+            {selectedProducts.map((product,i) => { return (
               <tr key={`${product.id}-${product.batchCode}`} className="hover:bg-blue-50 transition-colors">
+                  <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{i+1}</td>
                 <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{product.name}</td>
                 <td className="text-purple-600 font-medium text-xs md:text-sm px-2">{product.batchCode}</td>
                 <td className="px-2">
@@ -77,7 +78,7 @@ const SelectedProductsTable = ({
                   </button>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
