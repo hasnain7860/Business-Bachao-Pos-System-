@@ -26,6 +26,7 @@ import Purchases from "./Pages/Purchases.jsx";
 import NewPurchases from "./Pages/NewPurchases.jsx";
 import DataSync from "./Pages/DataSync.jsx";
 import Sales from "./Pages/Sales.jsx";
+import Reports from './Pages/reports.jsx'
 import Cost from "./Pages/Cost.jsx";
 import AddPurchaseReturn from "./Pages/AddPurchaseReturn.jsx";
 import NewSales from "./Pages/NewSales.jsx";
@@ -385,6 +386,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Cost />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                     <Route
+                    path="/report"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Reports />
                             </Layout>
                         </ProtectedRoute>
                     }

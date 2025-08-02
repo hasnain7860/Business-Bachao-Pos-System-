@@ -59,6 +59,7 @@ const Navbar = () => {
         },
         { path: "/sales", labelKey: "sales", icon: FiClipboard, roles: ['Admin'] },
         { path: "/purchases", labelKey: "purchases", icon: FiClipboard, roles: ['Admin'] },
+        { path: "/report", labelKey: "reports", icon: FiClipboard, roles: ['Admin'] },
         { path: "/CreditManagement", labelKey: "credit_management", icon: FiClipboard, roles: ['Admin', 'seller'] },
         { path: "/Cost", labelKey: "cost_management", icon: FiClipboard, roles: ['Admin', 'seller'] },
         { path: "/data", labelKey: "data_sync", icon: FiClipboard, roles: ['Admin'] },
@@ -185,7 +186,7 @@ const Navbar = () => {
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 3.0.0
+                        version 4.0.0
                     </div>
                 </div>
             </div>
