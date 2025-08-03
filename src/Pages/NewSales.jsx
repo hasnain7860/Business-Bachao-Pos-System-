@@ -7,40 +7,36 @@ import { useAppContext } from "../Appfullcontext";
 import { v4 as uuidv4 } from "uuid";
 import AddProductModal from "../components/element/AddProductModal";
 import { CalculateUserCredit } from "../Utils/CalculateUserCredit";
+
 const NewSales = () => {
     const navigate = useNavigate();
     const context = useAppContext();
 
     const people = context.peopleContext.people;
-
     const products = context.productContext.products;
     const editProduct = context.productContext.edit;
     const isPrint = useRef(false);
-    const [salesRefNo, setSalesRefNo] = useState("");
 
+    const [salesRefNo, setSalesRefNo] = useState("");
     const [selectedPerson, setSelectedPerson] = useState("");
     const [searchPerson, setSearchPerson] = useState("");
-
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [searchProduct, setSearchProduct] = useState("");
     const [paymentMode, setPaymentMode] = useState("");
     const [amountPaid, setAmountPaid] = useState("0");
     const [credit, setCredit] = useState(0);
+    const [discount, setDiscount] = useState(0); // Discount state
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedBatch, setSelectedBatch] = useState(null);
     const [selectedModalProduct, setSelectedModalProduct] = useState(null);
     const [message, setMessage] = useState("");
-    console.log(selectedProducts);
- const [userCreditData, setUserCreditData] = useState(null);   
-  useEffect(() => {
-    if(selectedPerson){
-      setUserCreditData(CalculateUserCredit(context,selectedPerson))
-    }
-  }, [selectedPerson]);
-  
-  
-  
-    
+    const [userCreditData, setUserCreditData] = useState(null);
+
+    useEffect(() => {
+        if (selectedPerson) {
+            setUserCreditData(CalculateUserCredit(context, selectedPerson));
+        }
+    }, [selectedPerson]);
 
     useEffect(() => {
         generateSalesRefNo();
@@ -50,9 +46,10 @@ const NewSales = () => {
         setSalesRefNo(`SALE-${Math.floor(100000 + Math.random() * 900000)}`);
     };
 
+    // Call handleCalculateCredit when discount changes
     useEffect(() => {
         handleCalculateCredit();
-    }, [selectedProducts, amountPaid]);
+    }, [selectedProducts, amountPaid, discount]);
 
     const handleAddProduct = (product, batch, quantity = 1) => {
         const existingProduct = selectedProducts.find(
@@ -77,7 +74,6 @@ const NewSales = () => {
 
     const handleProductChange = (id, batchCode, field, value) => {
         if (field === "SellQuantity") {
-            // Convert value to number and ensure it's not negative
             const quantity = Math.max(
                 0,
                 Math.min(
@@ -87,21 +83,18 @@ const NewSales = () => {
                     )?.batchQuantity || 0
                 )
             );
-
-            const updatedProducts = selectedProducts.map(p => {
-                if (p.id === id && p.batchCode === batchCode) {
-                    return { ...p, [field]: quantity };
-                }
-                return p;
-            });
+            const updatedProducts = selectedProducts.map(p =>
+                p.id === id && p.batchCode === batchCode
+                    ? { ...p, [field]: quantity }
+                    : p
+            );
             setSelectedProducts(updatedProducts);
         } else {
-            const updatedProducts = selectedProducts.map(p => {
-                if (p.id === id && p.batchCode === batchCode) {
-                    return { ...p, [field]: value };
-                }
-                return p;
-            });
+            const updatedProducts = selectedProducts.map(p =>
+                p.id === id && p.batchCode === batchCode
+                    ? { ...p, [field]: value }
+                    : p
+            );
             setSelectedProducts(updatedProducts);
         }
         handleCalculateCredit();
@@ -112,7 +105,7 @@ const NewSales = () => {
             if (p.id === id && p.batchCode === batchCode) {
                 const newSellPrice = value;
                 let discount = 100 - (newSellPrice * 100) / p.sellPrice;
-                discount = Math.max(discount, 0); // Agar discount negative hai to 0 kar do
+                discount = Math.max(discount, 0);
                 return { ...p, newSellPrice: newSellPrice, discount: discount };
             }
             return p;
@@ -121,7 +114,6 @@ const NewSales = () => {
         handleCalculateCredit();
     };
 
-    // Add this new function to handle opening the modal
     const handleOpenAddModal = (product, batch) => {
         setSelectedModalProduct(product);
         setSelectedBatch(batch);
@@ -132,22 +124,29 @@ const NewSales = () => {
         return Number(product.newSellPrice) < Number(product.purchasePrice);
     };
 
+    // Calculate subtotal before discount
+    const calculateSubtotal = () => {
+        return selectedProducts.reduce((total, product) => {
+            const productTotal =
+                Number(product.newSellPrice) * Number(product.SellQuantity);
+            return Number(total) + Number(productTotal);
+        }, 0);
+    };
+
+    // Calculate final total after discount
     const calculateTotalPayment = () => {
-        return selectedProducts
-            .reduce((total, product) => {
-                const productTotal =
-                    Number(product.newSellPrice) * Number(product.SellQuantity);
-                return Number(total) + Number(productTotal);
-            }, 0)
-            .toFixed(2);
+        const subtotal = calculateSubtotal();
+        const finalTotal = subtotal - Number(discount);
+        return Math.max(0, finalTotal).toFixed(2); // Ensure total is not negative
     };
 
     const handleAmountPaidChange = e => {
         setAmountPaid(e.target.value);
     };
+
     let amountPaidcheck = amountPaid === "" ? 0 : Number(amountPaid);
+
     const handleCalculateCredit = () => {
-        
         setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck));
     };
 
@@ -156,16 +155,18 @@ const NewSales = () => {
             setMessage("Please add a person first.");
             return;
         }
-
         if (selectedProducts.length === 0) {
             setMessage("Please add at least one product to the sale.");
             return;
         }
-
-if(amountPaidcheck > calculateTotalPayment()){  
-        setMessage("Amount paid cannot be greater than total bill.");
-        return
-}
+        if (amountPaidcheck > calculateTotalPayment()) {
+            setMessage("Amount paid cannot be greater than total bill.");
+            return;
+        }
+        if (discount > calculateSubtotal()) {
+            setMessage("Discount cannot be greater than the subtotal.");
+            return;
+        }
 
         if (amountPaid === "") {
             setAmountPaid("0");
@@ -176,9 +177,10 @@ if(amountPaidcheck > calculateTotalPayment()){
             id: uniqueId,
             salesRefNo,
             personId: selectedPerson,
-
             products: selectedProducts,
             paymentMode,
+            subtotal: calculateSubtotal().toFixed(2),
+            discount: discount,
             totalBill: calculateTotalPayment(),
             amountPaid,
             credit,
@@ -186,14 +188,11 @@ if(amountPaidcheck > calculateTotalPayment()){
         };
 
         for (let product of selectedProducts) {
-            // Find the product in the original products list
             const originalProduct = products.find(p => p.id === product.id);
             if (originalProduct) {
-                // Locate the correct batch in the batchCode array
                 const updatedBatchCode = originalProduct.batchCode.map(
                     batch => {
                         if (batch.batchCode === product.batchCode) {
-                            // Subtract the sold quantity from the batch's quantity
                             return {
                                 ...batch,
                                 quantity: batch.quantity - product.SellQuantity
@@ -202,14 +201,10 @@ if(amountPaidcheck > calculateTotalPayment()){
                         return batch;
                     }
                 );
-
-                // Create updated product with the new batchCode array
                 const updatedProduct = {
                     ...originalProduct,
                     batchCode: updatedBatchCode
                 };
-
-                // Use the existing editProduct function to update the product in IndexedDB
                 await editProduct(product.id, updatedProduct);
             }
         }
@@ -225,7 +220,8 @@ if(amountPaidcheck > calculateTotalPayment()){
         setSearchPerson("");
         setSelectedProducts([]);
         setPaymentMode("");
-        setAmountPaid("");
+        setAmountPaid("0");
+        setDiscount(0);
         setCredit(0);
         generateSalesRefNo();
         setMessage("");
@@ -234,8 +230,9 @@ if(amountPaidcheck > calculateTotalPayment()){
     const handleSaveAndPrintSales = async () => {
         isPrint.current = true;
         const salesData = await handleSaveSales();
-
-        navigate(`/sales/view/${salesData.id}/print`);
+        if (salesData) {
+            navigate(`/sales/view/${salesData.id}/print`);
+        }
         isPrint.current = false;
     };
 
@@ -386,7 +383,7 @@ if(amountPaidcheck > calculateTotalPayment()){
                         handleOpenAddModal={handleOpenAddModal}
                     />
 
-                    {/* Products Table with better responsiveness */}
+                    {/* Products Table */}
                     <SelectedProductsTable
                         selectedProducts={selectedProducts}
                         handleProductChange={handleProductChange}
@@ -403,7 +400,7 @@ if(amountPaidcheck > calculateTotalPayment()){
                             Payment Details
                         </h3>
 
-                        <div className="mb-6">
+                        <div className="mb-4">
                             <label className="text-sm font-semibold text-gray-600 mb-2 block">
                                 Payment Mode:
                             </label>
@@ -420,7 +417,34 @@ if(amountPaidcheck > calculateTotalPayment()){
                             </select>
                         </div>
 
-                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-6 shadow-md">
+                        <div className="space-y-2 mb-4 text-gray-700">
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold">Subtotal:</span>
+                                <span className="font-bold">
+                                    Rs. {calculateSubtotal().toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Discount Input Field */}
+                        <div className="mb-4">
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                                Discount (Rs.):
+                            </label>
+                            <input
+                                type="number"
+                                value={discount}
+                                onChange={e =>
+                                    setDiscount(
+                                        Math.max(0, Number(e.target.value) || 0)
+                                    )
+                                }
+                                className="input input-bordered w-full bg-white shadow-sm hover:border-yellow-400 transition-colors text-lg font-semibold"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-4 shadow-md">
                             <label className="text-white text-sm font-semibold block mb-1">
                                 Total Bill:
                             </label>
@@ -429,7 +453,7 @@ if(amountPaidcheck > calculateTotalPayment()){
                             </div>
                         </div>
 
-                        <div className="mb-6">
+                        <div className="mb-4">
                             <label className="text-sm font-semibold text-gray-600 mb-2 block">
                                 Amount Paid:
                             </label>
@@ -438,78 +462,46 @@ if(amountPaidcheck > calculateTotalPayment()){
                                 value={amountPaid}
                                 onChange={handleAmountPaidChange}
                                 className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold"
+                                placeholder="0"
                             />
                         </div>
 
-
-
-
-
-
-                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-8 shadow-md">
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-6 shadow-md">
                             <label className="text-white text-sm font-semibold block mb-1">
-                                Credit Amount:
+                                Credit (Due):
                             </label>
                             <div className="text-3xl font-bold text-white">
-                                Rs. {credit}
+                                Rs. {credit.toFixed(2)}
                             </div>
                         </div>
-                        
-                        
-                        
-                        
-                        
-                       {
-              //             userCreditData && (
-              //           <>
-              //       {   userCreditData.pendingCredit > 0 ? <>
-              //     <p>total user credit : {userCreditData.pendingCredit}</p> 
-            
-              // amount paid  : <input type="number" />   
-              
-              // adjust in credit : 
-              //     <input type="number" />   
-              //       </> : <>
-              //                           <p>total user payout: {userCreditData.pendingCredit}</p> 
-              //       </> } 
-              //           </>   
-              //               )
-                    }
-                        
-                       
-                        
-                        
-                        
-                        
-                        
-                        
-                        <button
-                            type="button"
-                            onClick={handleSaveSales}
-                            className="btn btn-primary w-full mb-3 text-lg font-bold hover:scale-105 transition-transform"
-                        >
-                            Save Sales
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveAndPrintSales}
-                            className="btn btn-secondary w-full text-lg font-bold hover:scale-105 transition-transform"
-                        >
-                            Save and Print
-                        </button>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                type="button"
+                                onClick={handleSaveSales}
+                                className="btn btn-primary w-full"
+                            >
+                                Save Sale
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSaveAndPrintSales}
+                                className="btn btn-secondary w-full"
+                            >
+                                Save & Print
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Add Product Modal */}
             {showAddModal && (
                 <AddProductModal
                     product={selectedModalProduct}
                     batch={selectedBatch}
-                    onAdd={(product, batch, quantity) =>
-                        handleAddProduct(product, batch, quantity)
-                    }
                     onClose={() => setShowAddModal(false)}
+                    onAdd={handleAddProduct}
                 />
             )}
         </div>

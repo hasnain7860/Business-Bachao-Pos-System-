@@ -4,199 +4,198 @@ import { useAppContext } from "../Appfullcontext";
 import { FaPrint } from "react-icons/fa";
 
 const SalesView = () => {
-  const context = useAppContext();
-  const salesData = context?.SaleContext?.Sales || [];
-  const customers = context?.supplierCustomerContext?.customers || [];
-  const userAndBusinessDetail = context?.settingContext?.settings || [];
+    const context = useAppContext();
+    const salesData = context?.SaleContext?.Sales || [];
+    const people = context?.peopleContext?.people || []; 
+    const userAndBusinessDetail = context?.settingContext?.settings || [];
 
-  const { id } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+    const { id } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
-  const sale = salesData.find((sale) => sale.id === id) || null;
-  console.log(sale);
-  const customer = customers.find((c) => c.id === sale?.customerId) || null;
-  const isPrintMode = location.pathname.includes("/print");
-  useEffect(() => {
-    if (salesData.length > 0) {
-      setLoading(false);
+    const sale = salesData.find((sale) => sale.id === id) || null;
+    const person = people.find((p) => p.id === (sale?.personId || sale?.customerId)) || null;
+    const isPrintMode = location.pathname.includes("/print");
+
+    const currency = userAndBusinessDetail[0]?.business?.currency || 'Rs.';
+
+    useEffect(() => {
+        if (salesData.length > 0) {
+            setLoading(false);
+        }
+    }, [salesData]);
+
+    useEffect(() => {
+        if (isPrintMode && !loading && sale) {
+            const originalTitle = document.title;
+            document.title = `Sale - ${sale?.salesRefNo}`;
+
+            const handleAfterPrint = () => {
+                document.title = originalTitle;
+                navigate(-1); // Go back to the previous page after printing
+            };
+            window.addEventListener("afterprint", handleAfterPrint);
+
+            setTimeout(() => {
+                window.print();
+            }, 500); // A small delay to ensure content is fully rendered
+
+            return () => {
+                window.removeEventListener("afterprint", handleAfterPrint);
+                document.title = originalTitle;
+            };
+        }
+    }, [isPrintMode, loading, sale, navigate]);
+
+    const handlePrint = () => {
+        navigate(`/sales/view/${id}/print`);
+    };
+
+    if (loading) {
+        return <div className="text-center text-lg p-10">Loading Receipt...</div>;
     }
-  }, [salesData]);
 
-  useEffect(() => {
-    if (isPrintMode && !loading && sale) {
-      const handleAfterPrint = () => {
-        navigate(-1);
-      };
-      window.addEventListener("afterprint", handleAfterPrint);
-      
-      setTimeout(() => {
-        document.title = `Sale - ${sale?.salesRefNo}`;
-        
-      
-        const printOptions = {
-          silent: true,
-          printBackground: true,
-          deviceWidth: '80mm',
-        };
-        
-        window.print(printOptions);
-        
-      }, 500);
-
-      return () => {
-        window.removeEventListener("afterprint", handleAfterPrint);
-      };
+    if (!sale) {
+        return <div className="text-center text-red-500 text-lg p-10">Sale not found</div>;
     }
-  }, [isPrintMode, loading, sale, navigate]);
-  const handlePrint = () => {
-    navigate(`/sales/view/${id}/print`);
-  };
 
-  if (loading) {
-    return <div className="text-center text-blue-500">Loading...</div>;
-  }
+    // Safely get subtotal and discount, defaulting to 0 if not present
+    const discount = parseFloat(sale.discount || 0);
+    const subtotal = parseFloat(sale.subtotal || (parseFloat(sale.totalBill) + discount));
+    const totalBill = parseFloat(sale.totalBill);
 
-  if (!sale) {
-    return <div className="text-center text-red-500">Sale not found</div>;
-  }
-
-  // 🔵 Calculate Returns
-  const totalReturnQuantity = sale.returns?.reduce(
-    (sum, ret) =>
-      sum + ret.returnedProducts.reduce((s, p) => s + p.returnQuantity, 0),
-    0
-  );
-
-  const totalReturnAmount = sale.returns?.reduce(
-    (sum, ret) => sum + ret.returnPrice,
-    0
-  );
-
-  const remainingTotalBill = sale.totalBill - totalReturnAmount;
-  const totalSoldQuantity = sale.products.reduce(
-    (sum, product) => sum + parseInt(product.SellQuantity, 10),
-    0
-  );
-  const remainingQuantity = totalSoldQuantity - totalReturnQuantity;
-
-  return (
-  
-    
-<div className="w-[302px] mx-auto p-2 bg-white text-sm"> 
-   {userAndBusinessDetail[0]?.business ? (
+    return (
         <>
-       
-<h2 className="text-center font-bold text-base mb-1">
-  {userAndBusinessDetail[0].business.businessName}
-</h2>
-<p className="text-center text-xs mb-1">{userAndBusinessDetail[0].business.email}</p>
-<p className="text-center text-xs mb-1">{userAndBusinessDetail[0].business.phoneNo}</p>
-<hr className="my-2 border-dashed" />
+            {/* Print-specific styles for 80mm thermal printers */}
+            <style>
+                {`
+                    @media print {
+                        body, html {
+                            margin: 0;
+                            padding: 0;
+                            width: 80mm;
+                        }
+                        .print-container {
+                            width: 100%;
+                            margin: 0;
+                            padding: 0;
+                            box-shadow: none;
+                        }
+                        .no-print {
+                            display: none;
+                        }
+                    }
+                `}
+            </style>
+        
+            <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
+                <div className="no-print flex justify-end mb-4">
+                    <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2">
+                        <FaPrint /> Print Receipt
+                    </button>
+                </div>
+
+                {/* --- Receipt Start --- */}
+                {/* w-72 is 288px, a safe width for 80mm printers */}
+                <div className="print-container w-72 mx-auto p-3 bg-white text-black shadow-lg font-sans">
+                    {userAndBusinessDetail[0]?.business ? (
+                        <div className="text-center mb-2">
+                            <h2 className="text-xl font-bold">
+                                {userAndBusinessDetail[0].business.businessName}
+                            </h2>
+                            <p className="text-xs">{userAndBusinessDetail[0].business.email}</p>
+                            <p className="text-xs">{userAndBusinessDetail[0].business.phoneNo}</p>
+                        </div>
+                    ) : (
+                        <p className="text-center text-red-500">Business details not found</p>
+                    )}
+
+                    <hr className="my-2 border-dashed border-gray-400" />
+
+                    <div className="text-xs">
+                        <div className="flex justify-between"><span>Ref No:</span> <span>{sale.salesRefNo}</span></div>
+                        {person && (
+                            <div className="flex justify-between"><span>Customer:</span> <span>{person.name}</span></div>
+                        )}
+                        <div className="flex justify-between"><span>Date:</span> <span>{new Date(sale.dateTime).toLocaleString()}</span></div>
+                    </div>
+
+                    <hr className="my-2 border-dashed border-gray-400" />
+
+                    {/* Products Table */}
+                    <table className="w-full text-xs mt-2">
+                        <thead>
+                            <tr className="border-b border-dashed border-gray-400">
+                                <th className="py-1 text-left font-semibold">Item</th>
+                                <th className="py-1 text-center font-semibold">Qty</th>
+                                <th className="py-1 text-right font-semibold">Rate</th>
+                                <th className="py-1 text-right font-semibold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sale.products.length > 0 ? (
+                                sale.products.map((product, index) => (
+                                    <tr key={`${product.id}-${index}`}>
+                                        <td className="py-1">{product.name}</td>
+                                        <td className="py-1 text-center">{product.SellQuantity}</td>
+                                        <td className="py-1 text-right">{parseFloat(product.newSellPrice || product.sellPrice).toFixed(2)}</td>
+                                        <td className="py-1 text-right">
+                                            {(parseFloat(product.newSellPrice || product.sellPrice) * parseInt(product.SellQuantity, 10)).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" className="text-center py-2">No products</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    <hr className="my-2 border-t-2 border-dashed border-gray-400" />
+
+                    {/* Final Bill Summary */}
+                    <div className="text-xs space-y-1">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Subtotal:</span>
+                            <span>{currency} {subtotal.toFixed(2)}</span>
+                        </div>
+                        {discount > 0 && (
+                            <div className="flex justify-between">
+                                <span className="font-semibold">Discount:</span>
+                                <span className="text-red-500">- {currency} {discount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between text-sm font-bold mt-1">
+                            <span>Grand Total:</span>
+                            <span>{currency} {totalBill.toFixed(2)}</span>
+                        </div>
+                         <div className="flex justify-between">
+                            <span className="font-semibold">Amount Paid:</span>
+                            <span>{currency} {parseFloat(sale.amountPaid || 0).toFixed(2)}</span>
+                        </div>
+                         <div className="flex justify-between font-bold">
+                            <span className="font-semibold">Credit/Due:</span>
+                            <span>{currency} {parseFloat(sale.credit || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <hr className="my-3 border-dashed border-gray-400" />
+
+                    {/* Developer Footer */}
+                    <div className="text-center text-[10px] text-gray-600">
+                        <p className="font-bold">Powered by: Business Bachao</p>
+                        <p>Developed by: Muhammad Hasnain Tariq</p>
+                        <p>Contact: 03314460028 (WhatsApp)</p>
+                    </div>
+                </div>
+                {/* --- Receipt End --- */}
+            </div>
         </>
-      ) : (
-        <p className="text-center text-red-500">Business details not found</p>
-      )}
-
-      <h3 className="text-xl font-semibold mb-2">Bill Details</h3>
-      <p><strong>Sales Reference No:</strong> {sale.salesRefNo}</p>
-      {sale.customerId && (
-        <p><strong>Customer Name:</strong> {customer?.name || "N/A"}</p>
-      )}
-      <p><strong>Date:</strong> {new Date(sale.dateTime).toLocaleString()}</p>
-      <p><strong>Total Bill:</strong> {userAndBusinessDetail[0]?.business?.currency} {sale.totalBill}</p>
-
-      {/* 🔵 Products Table */}
-      <h4 className="text-lg font-semibold mt-4">Products:</h4>
-      <div className="overflow-x-auto">
-      
-<table className="w-full text-xs border-collapse mt-2">
-  <thead>
-    <tr>
-      <th className="py-1 text-left">Item</th>
-      <th className="py-1 text-right">Qty</th>
-<th className="py-1 text-right">discount</th>
-      <th className="py-1 text-right">Price</th>
-    </tr>
-  </thead>
-  <tbody>
-    {sale.products.length > 0 ? (
-      sale.products.map((product) => {
-        const finalTotal = (product.sellPrice * parseInt(product.SellQuantity, 10)) * (1 - product.discount/100);
-        return (
-          <tr key={product.id}>
-            <td className="py-1">{product.name}</td>
-            <td className="py-1 text-right">{product.SellQuantity}</td>
-<td className="py-1 text-right">{product.discount ? product.discount.toFixed(2) : 0}% </td>
-            <td className="py-1 text-right">
-              {userAndBusinessDetail[0]?.business?.currency} {finalTotal.toFixed(2)}
-            </td>
-
-          </tr>
-        );
-      })
-    ) : (
-      <tr>
-        <td colSpan="3" className="text-center py-1">No products</td>
-      </tr>
-    )}
-  </tbody>
-</table>
-      </div>
-
-      {/* 🔴 Sales Returns Section (Only If Returns Exist) */}
-      {sale.returns?.length > 0 && (
-        <>
-          <h4 className="text-lg font-semibold mt-6 text-red-500">Returned Products:</h4>
-          <table className="min-w-full border-collapse border border-gray-200 mt-2">
-            <thead>
-              <tr className="bg-red-100">
-                <th className="border border-gray-200 p-2">Product Name</th>
-                <th className="border border-gray-200 p-2">Return Quantity</th>
-                <th className="border border-gray-200 p-2">Return Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sale.returns.flatMap((ret) =>
-                ret.returnedProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-200 p-2">{product.name}</td>
-                    <td className="border border-gray-200 p-2">{product.returnQuantity}</td>
-                    <td className="border border-gray-200 p-2">
-                      {userAndBusinessDetail[0]?.business?.currency} {product.returnPrice}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </>
-      )}
-{/* 🔵 Final Bill Summary */}
-<div className="flex justify-between mt-4 font-bold">
-  {sale.returns?.length > 0 ? (
-    <>
-      <span className="text-lg text-red-500">Grand Total:</span>
-      <span>{userAndBusinessDetail[0]?.business?.currency} {remainingTotalBill}</span>
-    </>
-  ) : (
-    <>
-      <span className="text-lg">Grand Total:</span>
-      <span>{userAndBusinessDetail[0]?.business?.currency} {sale.totalBill}</span>
-    </>
-  )}
-</div>
-
-
-      {!isPrintMode && (
-        <button onClick={handlePrint} className="btn btn-primary flex items-center mt-4">
-          <FaPrint className="mr-2" /> Print
-        </button>
-      )}
-    </div>
-  );
+    );
 };
 
 export default SalesView;
+
