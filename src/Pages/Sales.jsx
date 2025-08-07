@@ -35,6 +35,9 @@ console.log(sales)
       case 'view':
         navigate(`/sales/view/${id}`);
         break;
+              case 'edit':
+        navigate(`/sales/edit/${id}`);
+        break;
       case 'print':
         navigate(`/sales/view/${id}/print`);
         break;
@@ -203,6 +206,16 @@ console.log(sales)
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             {languageData[language].view}
+          </button>
+            <button
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
+            onClick={() => handleMenuAction('edit', sale.id)}
+          >
+            <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            {languageData[language].edit}
           </button>
           
           <button
