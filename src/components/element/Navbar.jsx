@@ -186,7 +186,7 @@ const Navbar = () => {
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 6.0.0
+                        version 7.0.0
                     </div>
                 </div>
             </div>

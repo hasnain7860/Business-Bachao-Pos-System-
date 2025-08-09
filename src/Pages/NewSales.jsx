@@ -51,7 +51,7 @@ const NewSales = () => {
         handleCalculateCredit();
     }, [selectedProducts, amountPaid, discount]);
 
-    const handleAddProduct = (product, batch, quantity = 1) => {
+    const handleAddProduct = (product, batch, quantity, chosenPrice, priceType) => {
         const existingProduct = selectedProducts.find(
             p => p.id === product.id && p.batchCode === batch.batchCode
         );
@@ -63,8 +63,13 @@ const NewSales = () => {
                     batchCode: batch.batchCode,
                     SellQuantity: quantity,
                     discount: 0,
-                    sellPrice: batch.sellPrice,
-                    newSellPrice: batch.sellPrice,
+                    // Store original prices for reference
+                    sellPrice: batch.sellPrice, 
+                    wholeSalePrice: batch.wholeSalePrice,
+                    // This is the price being used for this sale, it can be edited later
+                    newSellPrice: chosenPrice, 
+                    // Store which price type was initially selected
+                    priceUsedType: priceType,
                     purchasePrice: batch.purchasePrice,
                     batchQuantity: batch.quantity
                 }
@@ -73,46 +78,45 @@ const NewSales = () => {
     };
 
     const handleProductChange = (id, batchCode, field, value) => {
-        if (field === "SellQuantity") {
-            const quantity = Math.max(
-                0,
-                Math.min(
-                    Number(value),
-                    selectedProducts.find(
-                        p => p.id === id && p.batchCode === batchCode
-                    )?.batchQuantity || 0
-                )
-            );
-            const updatedProducts = selectedProducts.map(p =>
-                p.id === id && p.batchCode === batchCode
-                    ? { ...p, [field]: quantity }
-                    : p
-            );
-            setSelectedProducts(updatedProducts);
-        } else {
-            const updatedProducts = selectedProducts.map(p =>
-                p.id === id && p.batchCode === batchCode
-                    ? { ...p, [field]: value }
-                    : p
-            );
-            setSelectedProducts(updatedProducts);
-        }
-        handleCalculateCredit();
+        // UPDATED: Using functional update to avoid stale state issues
+        setSelectedProducts(currentProducts => {
+            return currentProducts.map(p => {
+                if (p.id === id && p.batchCode === batchCode) {
+                    if (field === "SellQuantity") {
+                        const maxQty = p.batchQuantity || 0;
+                        const newQty = Math.max(0, Math.min(Number(value), maxQty));
+                        return { ...p, [field]: newQty };
+                    }
+                    return { ...p, [field]: value };
+                }
+                return p;
+            });
+        });
     };
+    
 
     const handleSellingPriceChange = (id, batchCode, value) => {
-        const updatedProducts = selectedProducts.map(p => {
+    setSelectedProducts(currentProducts => {
+        return currentProducts.map(p => {
             if (p.id === id && p.batchCode === batchCode) {
                 const newSellPrice = value;
-                let discount = 100 - (newSellPrice * 100) / p.sellPrice;
-                discount = Math.max(discount, 0);
-                return { ...p, newSellPrice: newSellPrice, discount: discount };
+
+                // FIX: Yahan hum check kar rahe hain ke konsi base price istemal karni hai.
+                // Agar sale 'wholesale' se shuru hui thi, to base price wholeSalePrice hogi.
+                const basePrice = p.priceUsedType === 'wholesale' 
+                                  ? p.wholeSalePrice 
+                                  : p.sellPrice;
+
+                // Ab discount sahi base price ke khilaf calculate hoga.
+                let discountPercent = 100 - (Number(newSellPrice) * 100) / Number(basePrice);
+                discountPercent = Math.max(0, discountPercent);
+
+                return { ...p, newSellPrice: newSellPrice, discount: discountPercent.toFixed(2) };
             }
             return p;
         });
-        setSelectedProducts(updatedProducts);
-        handleCalculateCredit();
-    };
+    });
+};
 
     const handleOpenAddModal = (product, batch) => {
         setSelectedModalProduct(product);

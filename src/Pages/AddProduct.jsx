@@ -23,18 +23,19 @@ const AddProduct = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
   const [productName, setProductName] = useState("");
   const [productNameInUrdu, setProductNameInUrdu] = useState("");
-  const [barcode, setBarcode] = useState(""); // New state for product barcode
+  const [barcode, setBarcode] = useState("");
   const [edit, setEdit] = useState(false);
 
   // State for batch details
-  const [batchCode, setBatchCode] = useState(""); // For new batch code
-  const [selectedBatch, setSelectedBatch] = useState(null); // For selected batch in update
+  const [batchCode, setBatchCode] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const [purchasePrice, setPurchasePrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
+  const [wholeSalePrice, setWholeSalePrice] = useState(""); // NEW: Wholesale price state
   const [retailPrice, setRetailPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
-  const [batches, setBatches] = useState([]); // Array to store batch details
+  const [batches, setBatches] = useState([]);
 
   // Effect to load product data when editing or copying
   useEffect(() => {
@@ -42,21 +43,18 @@ const AddProduct = () => {
       const product = context.productContext.products.find((p) => p.id == id);
 
       if (product) {
-        console.log("Loaded Product:", product);
         setProductName(product.name || "");
         setProductNameInUrdu(product.nameInUrdu || "");
         setSelectedCompany(product.companyId || "");
         setSelectedUnit(product.unitId || "");
-        setBarcode(product.barcode || ""); // Load existing barcode
+        setBarcode(product.barcode || "");
 
         if (isCopy) {
-          // If copying, prepare for a new product but keep details
           const nextBatchNumber = batches.length + 1;
           const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
           setBatchCode(newBatchCode);
-          setEdit(false); // Not in edit mode
+          setEdit(false);
         } else {
-          // If editing, load existing batches
           if (product.batchCode) {
             setBatches(product.batchCode);
           } else {
@@ -64,11 +62,10 @@ const AddProduct = () => {
              const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
              setBatchCode(newBatchCode);
           }
-          setEdit(true); // In edit mode
+          setEdit(true);
         }
       }
     } else {
-      // For a new product, generate an initial batch code
       const nextBatchNumber = batches.length + 1;
       const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
       setBatchCode(newBatchCode);
@@ -83,16 +80,18 @@ const AddProduct = () => {
         setExpirationDate(batch.expirationDate);
         setPurchasePrice(batch.purchasePrice);
         setSellPrice(batch.sellPrice);
+        setWholeSalePrice(batch.wholeSalePrice || ""); // NEW: Load wholesale price
         setRetailPrice(batch.retailPrice);
         setQuantity(batch.quantity);
       }
     }
   }, [selectedBatch, batches]);
 
-  // Function to handle adding a new batch to the list (for new products)
+  // Function to handle adding a new batch to the list
   const handleAddNewBatch = () => {
-    if (!purchasePrice || !sellPrice || !retailPrice || !quantity) {
-      alert("Please fill all the required fields for the current batch first");
+    // UPDATED: Retail price removed from validation
+    if (!purchasePrice || !sellPrice || !wholeSalePrice || !quantity) {
+      alert("Please fill all the required fields (Purchase, Sell, Wholesale, Quantity) for the current batch first");
       return;
     }
 
@@ -101,13 +100,12 @@ const AddProduct = () => {
       expirationDate: expirationDate || "",
       purchasePrice: purchasePrice,
       sellPrice: sellPrice,
+      wholeSalePrice: wholeSalePrice, // NEW: Add wholesale price to batch data
       retailPrice: retailPrice,
       quantity: quantity
     };
 
     setBatches([...batches, batchData]);
-
-    // Generate a new batch code for the next potential batch
     const nextBatchNumber = batches.length + 2;
     const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
     setBatchCode(newBatchCode);
@@ -116,29 +114,25 @@ const AddProduct = () => {
     setExpirationDate("");
     setPurchasePrice("");
     setSellPrice("");
+    setWholeSalePrice(""); // NEW: Clear wholesale price field
     setRetailPrice("");
     setQuantity("");
   };
 
-  // Function to generate a new barcode
   const handleGenerateBarcode = () => {
-    // Generates a 13-digit number similar to EAN-13 format
     const newBarcode = Math.floor(1000000000000 + Math.random() * 9000000000000).toString();
     setBarcode(newBarcode);
   };
 
-  // Function to save the product (either add new or update existing)
   const handleSaveProduct = () => {
     if (!productName || !productNameInUrdu || !selectedCompany || !selectedUnit ) {
       alert("Please fill all required fields, including the barcode.");
       return;
     }
-
     if (Number(sellPrice) < Number(purchasePrice)) {
       alert("Selling price cannot be less than purchase price");
       return;
     }
-
     if (!purchasePrice) {
       alert("Purchase price must be provided for the batch");
       return;
@@ -149,18 +143,17 @@ const AddProduct = () => {
       expirationDate: expirationDate || "",
       purchasePrice: purchasePrice || "",
       sellPrice: sellPrice || "",
+      wholeSalePrice: wholeSalePrice || "", // NEW: Add wholesale price to final batch data
       retailPrice: retailPrice || "",
       quantity: quantity || "",
     };
 
     let updatedBatches;
     if (edit) {
-      // Update existing batch in edit mode
       updatedBatches = batches.map((batch) =>
         batch.batchCode === selectedBatch ? currentBatchData : batch
       );
     } else {
-      // Add the final batch to the list for a new product
       updatedBatches = [...batches, currentBatchData];
     }
 
@@ -170,8 +163,8 @@ const AddProduct = () => {
       nameInUrdu: productNameInUrdu,
       companyId: selectedCompany,
       unitId: selectedUnit,
-      barcode: barcode, // Save the barcode with the product
-      batchCode: updatedBatches, // Save all batches
+      barcode: barcode,
+      batchCode: updatedBatches,
     };
 
     if (edit) {
@@ -181,7 +174,7 @@ const AddProduct = () => {
       addProduct(productData);
       alert("Product added successfully!");
     }
-    navigate(-1); // Go back to the previous page
+    navigate(-1);
   };
 
   return (
@@ -191,237 +184,100 @@ const AddProduct = () => {
           {edit ? "✏️ Update Product" : "➕ Add New Product"}
         </h2>
 
+        {/* ... Product Details Section (No changes here) ... */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Name (English) */}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-700">Product Name (English)*</span>
-            </label>
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              placeholder="Enter product name"
-              className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500"
-              required
-            />
-          </div>
-
-          {/* Product Name (Urdu) */}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-700">Product Name (Urdu)*</span>
-            </label>
-            <input
-              type="text"
-              value={productNameInUrdu}
-              onChange={(e) => setProductNameInUrdu(e.target.value)}
-              placeholder="اردو میں نام درج کریں"
-              className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500"
-              required
-            />
-          </div>
-
-          {/* Company */}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-700">Company*</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
-              >
-                <option value="">Select a Company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm hover:bg-indigo-600"
-                onClick={() => navigate("/inventory/Company")}
-              >
-                New
-              </button>
+            {/* Product Name (English) */}
+            <div className="form-control">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Product Name (English)*</span></label>
+                <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Enter product name" className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500" required />
             </div>
-          </div>
-
-          {/* Unit */}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-700">Unit*</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedUnit}
-                onChange={(e) => setSelectedUnit(e.target.value)}
-                className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
-              >
-                <option value="">Select a Unit</option>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm hover:bg-indigo-600"
-                onClick={() => navigate("/inventory/units")}
-              >
-                New
-              </button>
+            {/* Product Name (Urdu) */}
+            <div className="form-control">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Product Name (Urdu)*</span></label>
+                <input type="text" value={productNameInUrdu} onChange={(e) => setProductNameInUrdu(e.target.value)} placeholder="اردو میں نام درج کریں" className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500" required />
             </div>
-          </div>
-
-          {/* Barcode Section */}
-          <div className="form-control col-span-full">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-700">Product Barcode</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                placeholder="Scan or enter barcode"
-                className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
-                
-              />
-              <button
-                type="button"
-                onClick={handleGenerateBarcode}
-                className="btn btn-secondary gap-2"
-                title="Generate a new barcode"
-              >
-                <FaBarcode /> Generate
-              </button>
+            {/* Company */}
+            <div className="form-control">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Company*</span></label>
+                <div className="flex items-center gap-2">
+                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500">
+                        <option value="">Select a Company</option>
+                        {companies.map((company) => (<option key={company.id} value={company.id}>{company.name}</option>))}
+                    </select>
+                    <button type="button" className="btn btn-primary btn-sm hover:bg-indigo-600" onClick={() => navigate("/inventory/Company")}>New</button>
+                </div>
             </div>
-          </div>
+            {/* Unit */}
+            <div className="form-control">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Unit*</span></label>
+                <div className="flex items-center gap-2">
+                    <select value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)} className="select select-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500">
+                        <option value="">Select a Unit</option>
+                        {units.map((unit) => (<option key={unit.id} value={unit.id}>{unit.name}</option>))}
+                    </select>
+                    <button type="button" className="btn btn-primary btn-sm hover:bg-indigo-600" onClick={() => navigate("/inventory/units")}>New</button>
+                </div>
+            </div>
+            {/* Barcode Section */}
+            <div className="form-control col-span-full">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Product Barcode</span></label>
+                <div className="flex items-center gap-2">
+                    <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Scan or enter barcode" className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"/>
+                    <button type="button" onClick={handleGenerateBarcode} className="btn btn-secondary gap-2" title="Generate a new barcode"><FaBarcode /> Generate</button>
+                </div>
+            </div>
         </div>
+
 
         {/* Batch Section */}
         <div className="col-span-full bg-indigo-50 p-6 rounded-lg my-6 border border-indigo-100">
           <h3 className="font-semibold text-xl text-gray-800 mb-4">Batch Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Batch Code */}
+            {/* Batch Code and Expiration Date (No changes here) */}
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">
-                  {edit ? "Select Batch Code" : "New Batch Code"}
-                </span>
-              </label>
-              {edit ? (
-                <select
-                  value={selectedBatch || ""}
-                  onChange={(e) => setSelectedBatch(e.target.value)}
-                  className="select select-bordered w-full bg-white focus:border-indigo-500"
-                >
-                  <option value="">Select a Batch to Edit</option>
-                  {batches.map((batch) => (
-                    <option key={batch.batchCode} value={batch.batchCode}>
-                      {batch.batchCode}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={batchCode}
-                  readOnly
-                  className="input input-bordered w-full bg-gray-200 cursor-not-allowed"
-                />
-              )}
+              <label className="label"><span className="label-text font-semibold text-gray-700">{edit ? "Select Batch Code" : "New Batch Code"}</span></label>
+              {edit ? ( <select value={selectedBatch || ""} onChange={(e) => setSelectedBatch(e.target.value)} className="select select-bordered w-full bg-white focus:border-indigo-500"><option value="">Select a Batch to Edit</option>{batches.map((batch) => (<option key={batch.batchCode} value={batch.batchCode}>{batch.batchCode}</option>))}</select>) : (<input type="text" value={batchCode} readOnly className="input input-bordered w-full bg-gray-200 cursor-not-allowed"/>)}
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text font-semibold text-gray-700">Expiration Date</span></label>
+              <input type="date" value={expirationDate || ""} onChange={(e) => setExpirationDate(e.target.value)} className="input input-bordered w-full bg-white focus:border-indigo-500"/>
             </div>
 
-            {/* Expiration Date */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">Expiration Date</span>
-              </label>
-              <input
-                type="date"
-                value={expirationDate || ""}
-                onChange={(e) => setExpirationDate(e.target.value)}
-                className="input input-bordered w-full bg-white focus:border-indigo-500"
-              />
-            </div>
              {/* Purchase Price */}
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">Purchase Price*</span>
-              </label>
-              <input
-                required
-                type="number"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                placeholder="Enter purchase price"
-                className="input input-bordered w-full bg-white focus:border-indigo-500"
-              />
+              <label className="label"><span className="label-text font-semibold text-gray-700">Purchase Price*</span></label>
+              <input required type="number" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} placeholder="Enter purchase price" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
             </div>
 
             {/* Sell Price */}
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">Sell Price*</span>
-              </label>
-              <input
-                required
-                type="number"
-                value={sellPrice}
-                onChange={(e) => setSellPrice(e.target.value)}
-                placeholder="Enter sell price"
-                className="input input-bordered w-full bg-white focus:border-indigo-500"
-              />
+              <label className="label"><span className="label-text font-semibold text-gray-700">Sell Price*</span></label>
+              <input required type="number" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder="Enter sell price" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
             </div>
 
-            {/* Retail Price */}
+            {/* NEW: Wholesale Price */}
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">Retail Price*</span>
-              </label>
-              <input
-                required
-                type="number"
-                value={retailPrice}
-                onChange={(e) => setRetailPrice(e.target.value)}
-                placeholder="Enter retail price"
-                className="input input-bordered w-full bg-white focus:border-indigo-500"
-              />
+              <label className="label"><span className="label-text font-semibold text-gray-700">Wholesale Price*</span></label>
+              <input required type="number" value={wholeSalePrice} onChange={(e) => setWholeSalePrice(e.target.value)} placeholder="Enter wholesale price" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
+            </div>
+
+            {/* UPDATED: Retail Price (now optional) */}
+            <div className="form-control">
+              <label className="label"><span className="label-text font-semibold text-gray-700">Retail Price (Optional)</span></label>
+              <input type="number" value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} placeholder="Enter retail price" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
             </div>
 
             {/* Quantity */}
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-700">Quantity*</span>
-              </label>
-              <input
-                required
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Enter quantity"
-                className="input input-bordered w-full bg-white focus:border-indigo-500"
-              />
+              <label className="label"><span className="label-text font-semibold text-gray-700">Quantity*</span></label>
+              <input required type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Enter quantity" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
             </div>
           </div>
 
           {/* Add Batch Button (only for new products) */}
           {!edit && (
             <div className="mt-4">
-              <button
-                type="button"
-                onClick={handleAddNewBatch}
-                className="btn btn-primary btn-block gap-2"
-                disabled={!purchasePrice || !sellPrice || !retailPrice || !quantity}
-              >
-                <FaPlus /> Add This Batch to List
-              </button>
+              <button type="button" onClick={handleAddNewBatch} className="btn btn-primary btn-block gap-2" disabled={!purchasePrice || !sellPrice || !wholeSalePrice || !quantity}><FaPlus /> Add This Batch to List</button>
             </div>
           )}
         </div>
@@ -438,6 +294,7 @@ const AddProduct = () => {
                     <th className="p-3">Expiry Date</th>
                     <th className="p-3">Purchase Price</th>
                     <th className="p-3">Sell Price</th>
+                    <th className="p-3">Wholesale Price</th> {/* NEW Column */}
                     <th className="p-3">Retail Price</th>
                     <th className="p-3">Quantity</th>
                   </tr>
@@ -449,6 +306,7 @@ const AddProduct = () => {
                       <td className="p-3">{batch.expirationDate ? new Date(batch.expirationDate).toLocaleDateString() : 'N/A'}</td>
                       <td className="p-3">{batch.purchasePrice}</td>
                       <td className="p-3">{batch.sellPrice}</td>
+                      <td className="p-3">{batch.wholeSalePrice}</td> {/* NEW Cell */}
                       <td className="p-3">{batch.retailPrice}</td>
                       <td className="p-3">{batch.quantity}</td>
                     </tr>
@@ -461,20 +319,8 @@ const AddProduct = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-4 mt-8">
-          <button
-            type="button"
-            onClick={handleSaveProduct}
-            className="btn btn-primary flex-1 hover:bg-indigo-600 transition-colors duration-200 text-lg py-3"
-          >
-            {edit ? "💾 Update Product" : "➕ Save Product"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn btn-outline hover:bg-gray-100 flex-1 transition-colors duration-200 text-lg py-3"
-          >
-            ← Back
-          </button>
+            <button type="button" onClick={handleSaveProduct} className="btn btn-primary flex-1 hover:bg-indigo-600 transition-colors duration-200 text-lg py-3">{edit ? "💾 Update Product" : "➕ Save Product"}</button>
+            <button type="button" onClick={() => navigate(-1)} className="btn btn-outline hover:bg-gray-100 flex-1 transition-colors duration-200 text-lg py-3">← Back</button>
         </div>
       </div>
     </div>
