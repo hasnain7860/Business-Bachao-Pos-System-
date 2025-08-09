@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
-import { FaPlus, FaTimes } from "react-icons/fa";
-import { v4 as uuidv4 } from "uuid";
+import { FaPlus, FaTimes, FaEdit, FaTrash } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import PaymentDetails from "../components/element/PaymentDetails.jsx";
 import languageData from "../assets/languageData.json";
 import { useNavigate } from 'react-router-dom';
-
+import { v4 as uuidv4 } from "uuid";
 const CreditManagement = () => {
   const context = useAppContext();
   const { language } = context;
@@ -17,10 +16,15 @@ const CreditManagement = () => {
   const t = languageData[language];
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
-  console.log(submittedRecords);
+  const editRecords = context.creditManagementContext.edit;
+  const deleteRecords = context.creditManagementContext.delete;
+  
   const purchasesData = context.purchaseContext.purchases;
   const [searchTerm, setSearchTerm] = useState("");
   const sellReturns = context.SellReturnContext.sellReturns
+
+const [editingRecordId, setEditingRecordId] = useState(null);
+
   const [selectedPeople, setSelectedPeople] = useState(null)
   const [showPopup, setShowPopup] = useState(false);
   const [formType, setFormType] = useState("");
@@ -44,32 +48,66 @@ const CreditManagement = () => {
     setSearchTerm("");
   };
 
-  const handleSubmit = () => {
-    if (!formData.amount) return;
+// YEH TEEN NAYE FUNCTIONS ADD KAREIN
 
-    const newRecord = {
-      id: uuidv4(),
-      personId: selectedPeople.id,
-      type: formType,
-      amount: parseFloat(formData.amount),
-      date: formData.date,
-      note: formData.note,
-    };
-
-  
- 
-  addRecords(newRecord);
-
-  
+const handleClosePopup = () => {
     setShowPopup(false);
+    setEditingRecordId(null); // Edit mode reset karein
     setFormData({
-      id: uuidv4(),
       date: new Date().toISOString().substring(0, 10),
       amount: "",
       note: "",
     });
-  };
+};
 
+// Edit ke liye function
+const handleEdit = (record) => {
+  console.log(record.id)
+    setEditingRecordId(record.id);
+    setFormType(record.type);
+    setFormData({ ...record }); // Form ko record ke data se bhar dein
+    setShowPopup(true);
+};
+
+// Delete ke liye function
+const handleDelete = (recordId) => {
+    if (window.confirm("Are you sure you want to delete this record?")) {
+      deleteRecords(recordId); // Aapka delete function use kiya
+    }
+};
+
+  // PURANE handleSubmit KO IS NAYE WALE SE REPLACE KAR DEIN
+
+const handleSubmit = () => {
+    if (!formData.amount) return;
+
+    if (editingRecordId) {
+      // --- UPDATE LOGIC ---
+      
+      const updatedRecord = {
+        id: editingRecordId,
+        personId: selectedPeople.id,
+        type: formType,
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        note: formData.note,
+      };
+      editRecords(updatedRecord.id ,updatedRecord); // Aapka edit function use kiya
+    } else {
+      // --- ADD LOGIC ---
+      const newRecord = {
+        id: uuidv4(),
+        personId: selectedPeople.id,
+        type: formType,
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        note: formData.note,
+      };
+      addRecords(newRecord); // Aapka add function use kiya
+    }
+    
+    handleClosePopup(); // Popup band karein aur state reset karein
+};
 
 
 
@@ -419,14 +457,17 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
               <div className="mt-4 max-h-64 overflow-y-auto">
                 <h3 className="text-lg font-semibold">{t.existingRecords}</h3>
                 <table className="min-w-full bg-white border border-gray-300 mt-2">
-                  <thead>
-                    <tr className="bg-gray-200">
-                      <th className="border px-4 py-2">{t.type}</th>
-                      <th className="border px-4 py-2">{t.amount}</th>
-                      <th className="border px-4 py-2">{t.date}</th>
-                      <th className="border px-4 py-2">{t.notes}</th>
-                    </tr>
-                  </thead>
+<thead className="bg-gray-200">
+    <tr>
+        <th className="border px-4 py-2">{t.type}</th>
+        <th className="border px-4 py-2">{t.amount}</th>
+        <th className="border px-4 py-2">{t.date}</th>
+        <th className="border px-4 py-2">{t.notes}</th>
+        {/* YEH NAYI HEADER LINE ADD KAREIN */}
+        <th className="border px-4 py-2">Actions</th>
+    </tr>
+</thead>
+
                   <tbody>
                     {submittedRecords
                       .filter(
@@ -440,6 +481,16 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
                             {new Date(record.date).toLocaleDateString()}
                           </td>
                           <td className="border px-4 py-2">{record.note}</td>
+
+<td className="border px-4 py-2 flex items-center justify-center space-x-2">
+    <button onClick={() => handleEdit(record)} className="text-blue-500 hover:text-blue-700 p-1">
+        <FaEdit />
+    </button>
+    <button onClick={() => handleDelete(record.id)} className="text-red-500 hover:text-red-700 p-1">
+        <FaTrash />
+    </button>
+</td>
+
                         </tr>
                       ))}
                   </tbody>
@@ -545,7 +596,9 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
       {showPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-4 rounded shadow-lg w-80">
-            <h3 className="text-lg font-bold">{t.add} {formType}</h3>
+// Is line ko update karein
+<h3 className="text-lg font-bold capitalize">{editingRecordId ? 'Edit' : 'Add'} {formType}</h3>
+
             <input
               type="date"
               className="w-full p-2 border rounded mt-2"
@@ -573,18 +626,20 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
               }
             />
             <div className="mt-4 flex space-x-2">
-              <button
-                className="bg-green-500 text-white px-4 py-2 rounded"
-                onClick={handleSubmit}
-              >
-                {t.add}
-              </button>
-              <button
-                className="bg-red-500 text-white px-4 py-2 rounded"
-                onClick={() => setShowPopup(false)}
-              >
-                {t.cancel}
-              </button>
+<button
+    className="bg-green-500 text-white px-4 py-2 rounded"
+    onClick={handleSubmit}
+>
+    {editingRecordId ? 'Update' : 'Add'}
+</button>
+
+<button
+    className="bg-red-500 text-white px-4 py-2 rounded"
+    onClick={handleClosePopup} // Yahan handleClosePopup use karein
+>
+    {t.cancel}
+</button>
+
             </div>
           </div>
         </div>
