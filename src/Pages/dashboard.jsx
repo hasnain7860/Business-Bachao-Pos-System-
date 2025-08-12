@@ -167,7 +167,7 @@ const POSDashboard = () => {
               <span>Total Purchase Value</span>
             </h2>
             <p className="text-2xl font-bold mt-2">{currency} {totalPurchaseValue.toFixed(2)}</p>
-            <Link to="/purchase" className="btn bg-white text-red-500 mt-4">View Purchases</Link>
+            <Link to="/purchases" className="btn bg-white text-red-500 mt-4">View Purchases</Link>
           </div>
         </div>
       </div>

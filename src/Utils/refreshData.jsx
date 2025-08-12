@@ -68,7 +68,7 @@ const refreshData = async (context, storeName) => {
         context.companyContext.refreshData(),
         context.productContext.refreshData(),
         context.purchaseContext.refreshData(),
-        context.salesContext.refreshData(),
+        context.SaleContext.refreshData(),
         context.unitContext.refreshData(),
         context.supplierCustomerContext.refreshData(),
         context.settingContext.refreshData(),

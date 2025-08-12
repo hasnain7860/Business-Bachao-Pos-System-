@@ -5,6 +5,7 @@ import {
   AiOutlineRight,
   AiOutlineDashboard,
 } from "react-icons/ai";
+import SyncStatusIcon from '../SyncStatusIcon.jsx'
 import {
   FiSettings,
   FiLogOut,
@@ -159,6 +160,7 @@ const Navbar = () => {
                             </span>
                         )}
                     </Link>
+                    <SyncStatusIcon/>
                     <button onClick={toggleLanguage} className="p-2 bg-gray-700 rounded-full hover:bg-gray-600">
                         {languageData[language].toggle_language}
                     </button>
@@ -186,7 +188,7 @@ const Navbar = () => {
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 8.0.0
+                        version 8.1.0
                     </div>
                 </div>
             </div>
