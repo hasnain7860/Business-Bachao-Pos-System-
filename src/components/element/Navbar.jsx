@@ -6,6 +6,7 @@ import {
   AiOutlineDashboard,
 } from "react-icons/ai";
 import SyncStatusIcon from '../SyncStatusIcon.jsx'
+import ForceSyncButton from '../ForceSyncButton.jsx'
 import {
   FiSettings,
   FiLogOut,
@@ -19,7 +20,7 @@ import languageData from "../../assets/languageData.json";
 
 import Syncauto from "../Syncauto.jsx";
 import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
-
+import { getDB } from '../../Utils/IndexedDb'; 
 
 
 import { useAppContext } from '../../Appfullcontext.jsx';
@@ -77,14 +78,49 @@ const Navbar = () => {
         setCollapsedSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
     };
 
-    const handleLogout = async () => {
-        await clearAllStores();
-        Cookies.remove('userName');
-        Cookies.remove('userRole');
-        await setIsAuthenticated(false);
-        // alert ko hata kar console log use karein ya toast notification
-        console.log("Logging out...");
+
+
+
+
+
+   const handleLogout = async () => {
+        try {
+            const db = await getDB();
+            const pendingCount = await db.count('pendingQuery');
+
+            // Agar items sync hone baaki hain
+            if (pendingCount > 0) {
+                const userConfirmation = window.confirm(
+                    `Aapke ${pendingCount} items abhi tak sync nahi hue hain.\n\n` +
+                    `Agar aapne abhi logout kar diya, to yeh saara data hamesha ke liye delete ho jayega.\n\n` +
+                    `Kya aap waqai logout karna chahte hain?`
+                );
+
+                // Agar user "Cancel" par click karta hai, to function yahin rok dein
+                if (!userConfirmation) {
+                    return; 
+                }
+            }
+            
+            // Agar koi pending item nahi hai, ya user ne confirm kar diya hai
+            console.log("Clearing all data and logging out...");
+            await clearAllStores();
+            Cookies.remove('userName');
+            Cookies.remove('userRole');
+            await setIsAuthenticated(false);
+
+        } catch (error) {
+            console.error("Logout ke waqt error aaya:", error);
+            alert("Logout fail ho gaya. Please dobara try karein.");
+        }
     };
+
+
+
+
+
+
+    
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -152,15 +188,16 @@ const Navbar = () => {
                 </button>
                 <h1 className="text-2xl font-bold">{businessName}</h1>
                 <div className={`flex items-center space-x-4 transition-all duration-300 ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
+                {/*    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
                         🔔
                         {notificationCount > 0 && (
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                                 {notificationCount}
                             </span>
-                        )}
-                    </Link>
+                        )
+                    </Link>}*/}
                     <SyncStatusIcon/>
+                    <ForceSyncButton/>
                     <button onClick={toggleLanguage} className="p-2 bg-gray-700 rounded-full hover:bg-gray-600">
                         {languageData[language].toggle_language}
                     </button>
@@ -188,7 +225,7 @@ const Navbar = () => {
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 8.1.0
+                        version 8.2.0
                     </div>
                 </div>
             </div>
