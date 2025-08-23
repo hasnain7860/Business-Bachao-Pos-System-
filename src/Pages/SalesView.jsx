@@ -87,7 +87,7 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- FINAL PRINT STYLES FOR BOLD AND BIG TEXT --- */}
+            {/* --- UPDATED PRINT STYLES --- */}
             <style>{`
                 @media print {
                     body, html { 
@@ -98,27 +98,28 @@ const SalesView = () => {
                     .print-container { 
                         width: 100%; 
                         margin: 0; 
-                        padding: 3px;
+                        padding: 1px; /* Reduced padding to maximize space */
                         box-shadow: none; 
                         color: #000;
                     }
                     .no-print { 
                         display: none; 
                     }
-                    /* --- Force ALL text to be bigger and bolder --- */
+                    /* --- ALL TEXT EVEN BIGGER & BOLDER --- */
                     .print-container, .print-container * {
-                        font-size: 14px !important; /* Adjust if needed */
+                        font-size: 18px !important; /* Increased base font size */
                         font-weight: 700 !important; /* BOLD */
-                        line-height: 1.4 !important;
+                        line-height: 1.5 !important;
                     }
                     .print-container h2 {
-                        font-size: 22px !important; /* Business Name */
+                        font-size: 26px !important; /* Business Name */
                     }
                     .print-container .grand-total, .print-container .net-balance {
-                        font-size: 18px !important; /* Main Totals */
+                        font-size: 22px !important; /* Main Totals */
                     }
+                    /* --- FOOTER FULL BIG --- */
                     .print-container .footer-text, .print-container .footer-text * {
-                        font-size: 10px !important; /* Footer can be smaller but still bold */
+                        font-size: 20px !important; /* Made footer extra large and bold */
                     }
                     hr {
                         border-top: 2px dashed #000 !important;

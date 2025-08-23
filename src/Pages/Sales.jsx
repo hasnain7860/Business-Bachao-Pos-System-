@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react'; // useMemo ko import karein
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
+
 const Sales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
@@ -11,9 +12,10 @@ const Sales = () => {
   const userAndBusinessDetail = context.settingContext.settings;
   const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$';
   const {language} = context;
-console.log(sales)
-  // Search State
+
+  // State for Search and Date
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState(''); // Date picker ke liye state
 
   // Three-dot menu state
   const [openMenu, setOpenMenu] = useState({});
@@ -35,19 +37,13 @@ console.log(sales)
       case 'view':
         navigate(`/sales/view/${id}`);
         break;
-              case 'edit':
+      case 'edit':
         navigate(`/sales/edit/${id}`);
         break;
       case 'print':
         navigate(`/sales/view/${id}/print`);
         break;
-      // case 'addPayment':
-      //   navigate(`/sales/addPayments/${id}`);
-      //   break;
-      // case 'viewPayment':
-      //   navigate(`/sales/viewPayments/${id}`);
-      //   break;
-      case 'saleReturn':  // Sale Return Option
+      case 'saleReturn':
         navigate(`/return/sell_return/add/${id}`);
         break;
       case 'delete':
@@ -69,11 +65,36 @@ console.log(sales)
     });
   };
 
-  // ** Filtered Sales List Based on Search Query **
-  const filteredSales = sales.filter((sale) => {
-    const customerName = handlePeopleNameViaId(sale).toLowerCase();
-    return customerName.includes(searchQuery.toLowerCase()) || sale.totalBill.toString().includes(searchQuery) || sale.salesRefNo.toString().includes(searchQuery);
-  });
+  // ** Date aur Search ke hisab se Sales ko filter aur sort karein **
+  const filteredSales = useMemo(() => {
+    let processedSales = [...sales];
+
+    // Step 1: Hamesha date ke hisab se sort karein (nayi uper)
+    processedSales.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+
+    // Step 2: Agar date select ki hai to filter karein
+    if (selectedDate) {
+      processedSales = processedSales.filter(sale => {
+        const saleDate = new Date(sale.dateTime).toISOString().split('T')[0]; // Format: 'YYYY-MM-DD'
+        return saleDate === selectedDate;
+      });
+    }
+
+    // Step 3: Agar search query hai to filter karein
+    if (searchQuery) {
+      processedSales = processedSales.filter(sale => {
+        const customerName = handlePeopleNameViaId(sale).toLowerCase();
+        return (
+          customerName.includes(searchQuery.toLowerCase()) ||
+          sale.totalBill.toString().includes(searchQuery) ||
+          sale.salesRefNo.toString().includes(searchQuery)
+        );
+      });
+    }
+
+    return processedSales;
+  }, [sales, selectedDate, searchQuery, peoples]); // Dependencies
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -95,10 +116,11 @@ console.log(sales)
           </button>
         </div>
 
-        {/* Search Section */}
+        {/* --- UPDATED: Search and Date Picker Section --- */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="max-w-md mx-auto">
-            <div className="relative">
+          <div className="max-w-xl mx-auto flex flex-col sm:flex-row gap-4">
+            {/* Search Input */}
+            <div className="relative flex-grow">
               <input
                 type="text"
                 placeholder={languageData[language].search_placeholder}
@@ -106,9 +128,16 @@ console.log(sales)
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <span className="absolute left-3 top-2.5 text-gray-400">
-                🔍
-              </span>
+              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+            {/* Date Picker Input */}
+            <div className="relative">
+              <input
+                type="date"
+                className="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -132,7 +161,6 @@ console.log(sales)
                       languageData[language].paid_bill,
                       languageData[language].credit,
                       languageData[language].payment_mode,
-                      // languageData[language].status,
                       languageData[language].actions
                     ].map((header, index) => (
                       <th
@@ -167,18 +195,12 @@ console.log(sales)
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.salesRefNo}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{handlePeopleNameViaId(sale)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.dateTime}</td>
+                        {/* Date formatting */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sale.dateTime).toLocaleDateString()}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{currency} {sale.totalBill - returnTotal}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{currency} {updatedAmountPaid}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{currency} {updatedCredit}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.paymentMode}</td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            updatedCredit === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {updatedCredit === 0 ? languageData[language].paid : languageData[language].pending}
-                          </span>
-                        </td> */}
                        
 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
   <div className="relative inline-block text-left">
@@ -228,30 +250,6 @@ console.log(sales)
             {languageData[language].print}
           </button>
         </div>
-{/* 
-        {updatedCredit > 0 && (
-          <div className="py-1">
-            <button
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
-              onClick={() => handleMenuAction('addPayment', sale.id)}
-            >
-              <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              {languageData[language].add_payment}
-            </button>
-            
-            <button
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
-              onClick={() => handleMenuAction('viewPayment', sale.id)}
-            >
-              <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              {languageData[language].view_payment}
-            </button>
-          </div>
-        )} */}
 
         <div className="py-1">
           <button
