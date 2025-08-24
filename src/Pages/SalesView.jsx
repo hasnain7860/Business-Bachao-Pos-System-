@@ -87,7 +87,7 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- UPDATED PRINT STYLES --- */}
+            {/* --- PRINT STYLE UPDATE KIYA GAYA HAI --- */}
             <style>{`
                 @media print {
                     body, html { 
@@ -98,28 +98,30 @@ const SalesView = () => {
                     .print-container { 
                         width: 100%; 
                         margin: 0; 
-                        padding: 1px; /* Reduced padding to maximize space */
+                        padding: 3px;
                         box-shadow: none; 
                         color: #000;
                     }
                     .no-print { 
                         display: none; 
                     }
-                    /* --- ALL TEXT EVEN BIGGER & BOLDER --- */
+                    /* --- Saare text ko bara aur bold karne ke liye --- */
                     .print-container, .print-container * {
-                        font-size: 18px !important; /* Increased base font size */
+                        font-size: 14px !important; /* Size yahan se adjust kar sakte hain */
                         font-weight: 700 !important; /* BOLD */
-                        line-height: 1.5 !important;
+                        line-height: 1.4 !important;
                     }
                     .print-container h2 {
-                        font-size: 26px !important; /* Business Name */
+                        font-size: 22px !important; /* Business Name */
                     }
                     .print-container .grand-total, .print-container .net-balance {
-                        font-size: 22px !important; /* Main Totals */
+                        font-size: 18px !important; /* Main Totals */
                     }
-                    /* --- FOOTER FULL BIG --- */
+                    /* --- YAHAN TABDEELI KI GAYI HAI --- */
+                    /* --- Footer text (Software name & contact) ko bara aur bold kar diya hai --- */
                     .print-container .footer-text, .print-container .footer-text * {
-                        font-size: 20px !important; /* Made footer extra large and bold */
+                        font-size: 14px !important; /* Iska size baaqi text ke barabar kar diya hai */
+                        font-weight: 700 !important; /* Yaqeenan bold rakha hai */
                     }
                     hr {
                         border-top: 2px dashed #000 !important;
@@ -225,3 +227,4 @@ const SalesView = () => {
 };
 
 export default SalesView;
+
