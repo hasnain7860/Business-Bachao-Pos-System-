@@ -178,9 +178,59 @@ const Reports = () => {
         const ReportHeader = () => (<div className="mb-4 print-header"><h2 className="text-2xl font-bold text-center">{businessName}</h2><h3 className="text-xl font-semibold text-center capitalize">{activeReport.replace('_', ' ')} Report</h3>{activeReport !== 'balances' && <p className="text-center text-sm text-gray-600">From: {new Date(startDate).toLocaleDateString()} To: {new Date(endDate).toLocaleDateString()}</p>}</div>);
 
         switch (reportData.type) {
-            // ... 'sales', 'pnl', 'product' cases remain the same ...
+            // ----- YAHAN TABDEELI KI GAI HAI -----
             case 'sales':
-                return (<div><ReportHeader /><div className="overflow-x-auto"><table className="min-w-full bg-white"><thead className="bg-gray-800 text-white"><tr><th className="py-2 px-3 text-left">Date</th><th className="py-2 px-3 text-left">Ref No</th><th className="py-2 px-3 text-right">Discount</th><th className="py-2 px-3 text-right">Total Bill</th><th className="py-2 px-3 text-right">Profit</th></tr></thead><tbody className="text-gray-700">{reportData.data.length > 0 ? reportData.data.map(sale => (<tr key={sale.id} className="border-b"><td className="py-2 px-3">{new Date(sale.dateTime).toLocaleDateString()}</td><td className="py-2 px-3">{sale.salesRefNo}</td><td className="py-2 px-3 text-right text-amber-600">{currency} {sale.discount.toFixed(2)}</td><td className="py-2 px-3 text-right font-semibold">{currency} {parseFloat(sale.totalBill).toFixed(2)}</td><td className={`py-2 px-3 text-right font-bold ${sale.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{currency} {sale.profit.toFixed(2)}</td></tr>)) : <tr><td colSpan="5" className="text-center py-4">No sales found.</td></tr>}</tbody><tfoot className="bg-gray-200 font-bold"><tr><td colSpan="2" className="py-2 px-3 text-right">Totals:</td><td className="py-2 px-3 text-right text-amber-700">{currency} {reportData.summary.totalDiscount.toFixed(2)}</td><td className="py-2 px-3 text-right">{currency} {reportData.summary.totalBill.toFixed(2)}</td><td className={`py-2 px-3 text-right ${reportData.summary.totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{currency} {reportData.summary.totalProfit.toFixed(2)}</td></tr></tfoot></table></div></div>);
+                return (
+                    <div>
+                        <ReportHeader />
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full bg-white">
+                                <thead className="bg-gray-800 text-white">
+                                    <tr>
+                                        <th className="py-2 px-3 text-left">Date</th>
+                                        {/* Header Update kiya hai */}
+                                        <th className="py-2 px-3 text-left">Ref No / Customer</th>
+                                        <th className="py-2 px-3 text-right">Discount</th>
+                                        <th className="py-2 px-3 text-right">Total Bill</th>
+                                        <th className="py-2 px-3 text-right">Profit</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-gray-700">
+                                    {reportData.data.length > 0 ? reportData.data.map(sale => {
+                                        // Customer ka naam dhoondh rahe hain
+                                        const person = allPeoples.find(p => p.id === sale.personId);
+                                        const personName = person ? person.name : 'Walking Customer';
+
+                                        return (
+                                            <tr key={sale.id} className="border-b">
+                                                <td className="py-2 px-3">{new Date(sale.dateTime).toLocaleDateString()}</td>
+                                                <td className="py-2 px-3">
+                                                    {/* Ref No ke saath naam dikha rahe hain */}
+                                                    {sale.salesRefNo}
+                                                    <span className="block text-xs text-gray-500">{personName}</span>
+                                                </td>
+                                                <td className="py-2 px-3 text-right text-amber-600">{currency} {sale.discount.toFixed(2)}</td>
+                                                <td className="py-2 px-3 text-right font-semibold">{currency} {parseFloat(sale.totalBill).toFixed(2)}</td>
+                                                <td className={`py-2 px-3 text-right font-bold ${sale.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{currency} {sale.profit.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    }) : (
+                                        <tr><td colSpan="5" className="text-center py-4">No sales found.</td></tr>
+                                    )}
+                                </tbody>
+                                <tfoot className="bg-gray-200 font-bold">
+                                    <tr>
+                                        <td colSpan="2" className="py-2 px-3 text-right">Totals:</td>
+                                        <td className="py-2 px-3 text-right text-amber-700">{currency} {reportData.summary.totalDiscount.toFixed(2)}</td>
+                                        <td className="py-2 px-3 text-right">{currency} {reportData.summary.totalBill.toFixed(2)}</td>
+                                        <td className={`py-2 px-3 text-right ${reportData.summary.totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{currency} {reportData.summary.totalProfit.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                );
+            // ----- TABDEELI KHATAM -----
             case 'pnl':
                 const pnl = reportData.data;
                 return (<div className="bg-white p-6 rounded-lg max-w-2xl mx-auto"><ReportHeader /><div className="space-y-3 text-sm md:text-base"><div className="flex justify-between border-b pb-2"><span>Total Sale</span><span className="font-bold">{currency} {pnl.totalRevenue.toFixed(2)}</span></div><div className="flex justify-between border-b pb-2"><span>Less: Discounts</span><span className="text-amber-600">({currency} {pnl.totalDiscounts.toFixed(2)})</span></div><div className="flex justify-between border-b pb-2"><span>Less: Cost of Goods Sold</span><span className="text-red-600">({currency} {pnl.totalCOGS.toFixed(2)})</span></div><div className="flex justify-between border-b-2 border-gray-800 pb-2 text-base md:text-lg"><span className="font-bold">Gross Profit</span><span className={`font-bold ${pnl.grossProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{currency} {pnl.grossProfit.toFixed(2)}</span></div><div className="flex justify-between pt-2 border-b pb-2"><span>Less: Other Expenses</span><span className="text-red-600">({currency} {pnl.otherExpenses.toFixed(2)})</span></div><div className="flex justify-between pt-3 mt-2 border-t-4 border-double border-black text-lg md:text-xl"><span className="font-extrabold">Net Profit / Loss</span><span className={`font-extrabold ${pnl.netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>{currency} {pnl.netProfit.toFixed(2)}</span></div></div></div>);
