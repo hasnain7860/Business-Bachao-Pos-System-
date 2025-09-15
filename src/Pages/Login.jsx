@@ -42,7 +42,7 @@ const Login = () => {
     try {
       const querySnapshot = await getDocs(collection(adminDb, "client"));
       const users = querySnapshot.docs.map(doc => doc.data());
-
+ console.log("users" + JSON.stringify(users))
       for (let user of users) {
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (user.email === email && passwordMatch) {
