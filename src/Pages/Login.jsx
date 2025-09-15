@@ -25,49 +25,60 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  // File: Login.js (Updated handleSubmit function)
+
+const handleSubmit = async (e) => {
     e.preventDefault();
     const { email, password } = formData;
 
     if (!email || !password) {
-      setError("Both fields are required.");
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError("Please enter a valid email.");
-      return;
+        setError("Both fields are required.");
+        return;
     }
 
     try {
-      const querySnapshot = await getDocs(collection(adminDb, "client"));
-      const users = querySnapshot.docs.map(doc => doc.data());
- console.log("users" + JSON.stringify(users))
-      for (let user of users) {
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (user.email === email && passwordMatch) {
-          Cookies.set('userName', user.name, { expires: 3 });
-          Cookies.set('userRole', user.role, { expires: 3 });
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/login`;
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
 
-          // Update form state
-          setForm({
-            
-            business: {  firebaseStorePass: user.AdminFirebaseObject }
-          });
-          
-          setIsAuthenticated(true);
-          return;
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed.');
         }
-      }
 
-      setError("Invalid email or password.");
-      setTimeout(() => setError(""), 3000); // Auto-hide error after 3 sec
+        // Login successful!
+        Cookies.set('userName', data.name, { expires: 3 });
+        Cookies.set('userRole', data.role, { expires: 3 });
+
+        // IMPORTANT: Subscription status ko context mein save karein
+        // Hum yeh agle step mein karenge. Abhi ke liye client DB initialize karein.
+        ClientDatabaseInitializer(JSON.parse(data.adminFirebaseObject));
+
+        // Context aur local storage mein user data save karein taaki session bana rahe
+        const sessionData = {
+            isAuthenticated: true,
+            subscriptionStatus: data.subscriptionStatus,
+            subscriptionEndDate: data.subscriptionEndDate,
+            clientDbConfig: data.adminFirebaseObject,
+            email:data.email,
+            uid:data.uid
+            
+        };
+        localStorage.setItem('userSession', JSON.stringify(sessionData));
+
+        setIsAuthenticated(true);
+        // Context mein subscription status bhi set karna hoga.
 
     } catch (err) {
-      console.error("Error fetching documents:", err);
-      setError("Error during authentication.");
+        setError(err.message);
+        setTimeout(() => setError(""), 3000);
     }
-  };
+};
+
 
   // Use useEffect to call saveSetting after form state updates
   useEffect(() => {

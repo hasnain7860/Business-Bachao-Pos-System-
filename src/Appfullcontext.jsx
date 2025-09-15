@@ -29,8 +29,9 @@ const AppContext = createContext();
 // Context Provider
 export const AppContextProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
  const afterFirstTimeCheck = useRef(false);
+ const [subscriptionStatus, setSubscriptionStatus] = useState('inactive');
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
   // Contexts
   const companyContext = useCompanyContext();
  const purchaseReturnContext = usePurchaseReturnContext();
@@ -48,17 +49,17 @@ export const AppContextProvider = ({ children }) => {
   const { settings } = settingContext;
   const [language, setLanguage] = useState('en');
   const [isOpen, setIsOpen] = useState(true);
+   // Session ko check karne ke liye useEffect ko update karein
   useEffect(() => {
-    // Check if settings is an array and has at least one element
-    if (settings && settings.length > 0 && settings[0].business && settings[0].business.firebaseStorePass) {
-      if(!afterFirstTimeCheck.current){
+    const sessionData = localStorage.getItem('userSession');
+    if (sessionData) {
+      const parsedData = JSON.parse(sessionData);
       setIsAuthenticated(true);
-      
-       ClientDatabaseInitializer(JSON.parse(settings[0].business.firebaseStorePass))
-       afterFirstTimeCheck.current = true ;
+      setSubscriptionStatus(parsedData.subscriptionStatus);
+      setSubscriptionEndDate(parsedData.subscriptionEndDate);
+      ClientDatabaseInitializer(JSON.parse(parsedData.clientDbConfig));
     }
-    }
-  }, [settings]); // Dependency array includes settings to run effect when settings change
+  }, []); // Yeh sirf ek baar chalega jab app load hogi
 
  
   return (
@@ -82,7 +83,11 @@ export const AppContextProvider = ({ children }) => {
         SaleContext,
         SellReturnContext,
         settingContext,
-        creditManagementContext,      
+        creditManagementContext,    
+        subscriptionStatus, // Provide to app
+        setSubscriptionStatus, // To update from login
+        subscriptionEndDate,
+        setSubscriptionEndDate,
       }}
     >
       {children}
