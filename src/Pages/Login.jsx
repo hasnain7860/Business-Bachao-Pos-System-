@@ -37,7 +37,11 @@ const handleSubmit = async (e) => {
     }
 
     try {
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/login`;
+     
+      const apiUrl = import.meta.env.PROD 
+  ? "/api/login" 
+  : `${import.meta.env.VITE_API_BASE_URL}/api/login`;
+console.log("condition" + import.meta.env.PROD )
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
