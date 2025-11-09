@@ -89,10 +89,10 @@ const ProductUploadPage = () => {
                     const newProduct = {
                         id: product.id,
                         name: product.name,
-                        nameInUrdu: product.nameInUrdu || null,
-                        companyId: product.companyId || null,
-                        unitId: product.unitId || null,
-                        productImage: product.productImage || null,
+                        nameInUrdu: product.nameInUrdu || "",
+                        companyId: product.companyId || "",
+                        unitId: product.unitId || "",
+                        productImage: product.productImage || "",
                         batchCode: [batchData]
                     };
                     newProducts.push(newProduct);
