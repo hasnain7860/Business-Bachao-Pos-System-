@@ -19,6 +19,9 @@ const People = () => {
   const [peoplePerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // New state to track API support
+  const [isContactPickerSupported, setIsContactPickerSupported] = useState(false);
+
   useEffect(() => {
     const updateColumns = () => {
       const width = window.innerWidth;
@@ -29,6 +32,12 @@ const People = () => {
 
     updateColumns();
     window.addEventListener("resize", updateColumns);
+
+    // Check for Contact Picker API support
+    if ('contacts' in navigator && 'select' in navigator.contacts) {
+      setIsContactPickerSupported(true);
+    }
+
     return () => window.removeEventListener("resize", updateColumns);
   }, []);
 
@@ -102,9 +111,12 @@ const People = () => {
     setIsModalVisible(false);
   };
 
+  // VCF File Upload Handler
   const handleVcfFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // NOTE: window.confirm is bad practice as it's blocking.
+      // Consider replacing with a custom modal if possible.
       const confirmed = window.confirm(`Do you want to upload the file: ${file.name}?`);
       if (confirmed) {
         const reader = new FileReader();
@@ -163,6 +175,54 @@ const People = () => {
 
     return people;
   };
+
+  // --- NEW --- Handler for importing from phone contacts
+  const handleImportFromPhone = async () => {
+    if (!isContactPickerSupported) {
+      console.error("Contact Picker API is not supported on this browser or context.");
+      // You should show a custom modal error here instead of alert()
+      // For now, we just log and return.
+      return;
+    }
+
+    const props = ['name', 'tel'];
+    const opts = { multiple: true };
+
+    try {
+      const contacts = await navigator.contacts.select(props, opts);
+
+      if (contacts.length === 0) {
+        console.log("No contacts selected.");
+        return;
+      }
+
+      let importedCount = 0;
+      contacts.forEach(contact => {
+        const name = contact.name && contact.name.length > 0 ? contact.name[0] : "Unknown";
+        const phone = contact.tel && contact.tel.length > 0 ? contact.tel[0] : "";
+
+        // Only import if a phone number is present
+        if (phone) {
+          addPerson({
+            id: uuidv4(),
+            name: name,
+            phone: phone,
+            email: "",    // Default empty
+            address: "",  // Default empty
+            image: null,  // Default empty
+          });
+          importedCount++;
+        }
+      });
+      console.log(`Successfully imported ${importedCount} contacts.`);
+      
+    } catch (ex) {
+      console.error("Error importing contacts:", ex);
+      // This catch block will trigger if the user closes the picker
+      // or if there's a permission issue.
+    }
+  };
+
 
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
@@ -276,8 +336,10 @@ const People = () => {
           className="border py-2 px-3 rounded"
         />
       </div>
-      {/* VCF File Upload Section */}
-      <div className={`mb-4 flex items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
+      
+      {/* VCF File Upload Section & NEW Phone Import Button */}
+      <div className={`mb-4 flex flex-wrap items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
+        {/* VCF Upload */}
         <label className="inline-flex items-center">
           <input
             type="file"
@@ -289,17 +351,33 @@ const People = () => {
             {languageData[language].upload_person}
           </span>
         </label>
-        <span className="ml-2 text-gray-500">{languageData[language].upload_vcf}</span>
+        <span className="text-gray-500">{languageData[language].upload_vcf}</span>
 
         {/* Demo File Download Button */}
         <a
-          href="/customer.vcf" // یہاں اپنی ڈیمو فائل کا اصل لنک دیں
+          href="/customer.vcf" // Make sure this file exists in your public folder
           download="customer.vcf"
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           {languageData[language].download_demo}
         </a>
+
+        {/* --- NEW --- Import from Phone Button */}
+        <button
+          onClick={handleImportFromPhone}
+          disabled={!isContactPickerSupported}
+          className={`bg-purple-500 text-white px-4 py-2 rounded ${
+            isContactPickerSupported
+              ? 'hover:bg-purple-600'
+              : 'opacity-50 cursor-not-allowed'
+          }`}
+          title={isContactPickerSupported ? "Import from phone contacts" : "This feature is only available on supported mobile browsers (HTTPS)"}
+        >
+          {/* Add 'import_phone' to your languageData.json file */}
+          {languageData[language].import_phone || "Import from Phone"}
+        </button>
       </div>
+
 
       {/* People List Display */}
       <div
@@ -452,23 +530,4 @@ const People = () => {
 };
 
 export default People;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
