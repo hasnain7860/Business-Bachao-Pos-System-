@@ -125,7 +125,7 @@ const AddProduct = () => {
   };
 
   const handleSaveProduct = () => {
-    if (!productName || !productNameInUrdu || !selectedCompany || !selectedUnit ) {
+    if (!productName || !selectedUnit ) {
       alert("Please fill all required fields, including the barcode.");
       return;
     }
@@ -159,9 +159,9 @@ const AddProduct = () => {
 
     const productData = {
       id: isCopy ? uuidv4() : edit ? id : uuidv4(),
-      name: productName,
-      nameInUrdu: productNameInUrdu,
-      companyId: selectedCompany,
+      name: productName || "",
+      nameInUrdu: productNameInUrdu || "",
+      companyId: selectedCompany || "",
       unitId: selectedUnit,
       barcode: barcode,
       batchCode: updatedBatches,
@@ -193,8 +193,8 @@ const AddProduct = () => {
             </div>
             {/* Product Name (Urdu) */}
             <div className="form-control">
-                <label className="label"><span className="label-text font-semibold text-gray-700">Product Name (Urdu)*</span></label>
-                <input type="text" value={productNameInUrdu} onChange={(e) => setProductNameInUrdu(e.target.value)} placeholder="اردو میں نام درج کریں" className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500" required />
+                <label className="label"><span className="label-text font-semibold text-gray-700">Product Name (Urdu)</span></label>
+                <input type="text" value={productNameInUrdu} onChange={(e) => setProductNameInUrdu(e.target.value)} placeholder="اردو میں نام درج کریں" className="input input-bordered w-full bg-gray-50 focus:bg-white transition-colors duration-200 focus:border-indigo-500"  />
             </div>
             {/* Company */}
             <div className="form-control">
