@@ -28,9 +28,12 @@ const Products = () => {
         return batchCode.reduce((total, batch) => total + Number(batch.quantity || 0), 0);
     };
     // **Filtering Products Based on Search & Company**
-    const filteredProducts = products.filter(product => 
+const filteredProducts = products.filter(product => 
         (selectedCompany ? product.companyId === selectedCompany : true) &&
-        (searchTerm ? product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.nameInUrdu.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+        (searchTerm ? 
+            (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+            (product.nameInUrdu || '').toLowerCase().includes(searchTerm.toLowerCase()) 
+        : true)
     );
     
 
