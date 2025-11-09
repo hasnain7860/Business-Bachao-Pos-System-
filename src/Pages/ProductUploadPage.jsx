@@ -56,15 +56,18 @@ const ProductUploadPage = () => {
                 // --- END VALIDATION ---
     
                 // --- FIREBASE SAFE BATCH OBJECT ---
+
+                                // --- FIREBASE SAFE BATCH OBJECT ---
                 const batchData = {
                     batchCode: product.batchCode, 
                     expirationDate: product.expirationDate ?? "N/A",     
                     purchasePrice: product.purchasePrice ?? 0,        
                     sellPrice: product.sellPrice ?? 0,            
                     retailPrice: product.retailPrice ?? 0,          
-                    wholesaleRate: product.wholesaleRate ?? 0,      
+                    wholeSalePrice: product.wholesaleRate ?? 0, // <-- KEY BADAL DI GAYI HAI
                     quantity: product.quantity ?? 0               
                 };
+
     
                 let existingProductIndex = newProducts.findIndex(p => p.id === product.id);
     
