@@ -14,6 +14,7 @@ import useNotificationContext from './Logic/Notifications.jsx';
 import { ClientDatabaseInitializer } from './Utils/ClientFirebaseDb.jsx';
 import useSellReturnContext from './Logic/SellReturn.jsx';
 import usePeopleContext from './Logic/People.jsx';
+import useAreasContext from './Logic/useAreasContext.jsx';
 import usePurchaseReturnContext from './Logic/PurchaseReturn.jsx';
 
 // Utility function for updating items in an array
@@ -37,6 +38,7 @@ export const AppContextProvider = ({ children }) => {
  const purchaseReturnContext = usePurchaseReturnContext();
   const unitContext = useUnitsContext();
   const productContext = useProductContext();
+  const areasContext = useAreasContext();
   const peopleContext = usePeopleContext();
   const supplierCustomerContext = useSupplierAndCustomerContext();
   const settingContext = useSettingsContext();
@@ -70,6 +72,7 @@ export const AppContextProvider = ({ children }) => {
         isOpen,
         setIsOpen,
         isAuthenticated,
+        areasContext,
         setIsAuthenticated,
         notificationContext,
         companyContext,

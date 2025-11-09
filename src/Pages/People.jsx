@@ -5,12 +5,12 @@ import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
 
 const People = () => {
+  // 1. Get areasContext to populate the dropdown
   const context = useAppContext();
-  const people = context.peopleContext.people;
-  const addPerson = context.peopleContext.add;
-  const editPerson = context.peopleContext.edit;
-  const deletePerson = context.peopleContext.delete;
-  const { language } = context;
+  const { peopleContext, areasContext, language } = context;
+  const { people } = peopleContext;
+  const { add: addPerson, edit: editPerson, delete: deletePerson } = peopleContext;
+  const { areas } = areasContext;
 
   const navigate = useNavigate();
 
@@ -18,8 +18,6 @@ const People = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [peoplePerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // New state to track API support
   const [isContactPickerSupported, setIsContactPickerSupported] = useState(false);
 
   useEffect(() => {
@@ -33,7 +31,6 @@ const People = () => {
     updateColumns();
     window.addEventListener("resize", updateColumns);
 
-    // Check for Contact Picker API support
     if ('contacts' in navigator && 'select' in navigator.contacts) {
       setIsContactPickerSupported(true);
     }
@@ -41,6 +38,7 @@ const People = () => {
     return () => window.removeEventListener("resize", updateColumns);
   }, []);
 
+  // 2. Add areaId to the default form state
   const [formData, setFormData] = useState({
     id: null,
     name: "",
@@ -48,6 +46,7 @@ const People = () => {
     phone: "",
     address: "",
     image: null,
+    areaId: "", // Added areaId
   });
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -65,12 +64,9 @@ const People = () => {
     const reader = new FileReader();
   
     reader.onloadend = () => {
-      // reader.result contains the base64 image string
       setFormData({ ...formData, image: reader.result });
-      console.log(FormData)
     };
   
-    // Convert to base64 string
     reader.readAsDataURL(file);
   };
   
@@ -85,16 +81,22 @@ const People = () => {
   };
 
   const initiateEdit = (person) => {
-    setFormData(person);
+    setFormData({
+        ...person,
+        areaId: person.areaId || "", // Ensure areaId is "" if null/undefined
+    });
     setIsEditingMode(true);
     setIsModalVisible(true);
   };
 
   const removePerson = (id) => {
+    // You can add a check here if this person is tied to transactions
+    // For now, direct delete as requested for areas
     deletePerson(id);
   };
 
   const openModal = () => {
+    // 3. Reset areaId when opening modal for a new person
     setFormData({
       id: null,
       name: "",
@@ -102,6 +104,7 @@ const People = () => {
       phone: "",
       address: "",
       image: null,
+      areaId: "", // Reset areaId
     });
     setIsEditingMode(false);
     setIsModalVisible(true);
@@ -115,27 +118,21 @@ const People = () => {
   const handleVcfFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // NOTE: window.confirm is bad practice as it's blocking.
-      // Consider replacing with a custom modal if possible.
-      const confirmed = window.confirm(`Do you want to upload the file: ${file.name}?`);
-      if (confirmed) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const vcfContent = event.target.result;
-          const peopleList = extractPeopleFromVcf(vcfContent);
-          peopleList.forEach(person => addPerson(person));
-        };
-        reader.readAsText(file);
-      } else {
-        e.target.value = null; // Reset the file input if cancelled
-      }
+      // NOTE: Using a custom modal for confirmation is better than window.confirm
+      // but sticking to simple logic for now.
+      console.log(`File selected: ${file.name}. Add custom confirmation if needed.`);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const vcfContent = event.target.result;
+        const peopleList = extractPeopleFromVcf(vcfContent);
+        peopleList.forEach(person => addPerson(person));
+      };
+      reader.readAsText(file);
     }
   };
 
   const decodeQuotedPrintable = (input) => {
-    // Soft line breaks remove karna
     input = input.replace(/=\r?\n/g, "");
-
     return input.replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {
       return String.fromCharCode(parseInt(hex, 16));
     });
@@ -157,31 +154,28 @@ const People = () => {
         let email = emailMatch ? emailMatch[1].trim() : "";
         let address = addressMatch ? decodeQuotedPrintable(addressMatch[1].trim()) : "";
 
-        // Convert decoded name and address to proper UTF-8
         try {
           const utf8Decoder = new TextDecoder("utf-8");
           const encodedName = new Uint8Array([...name].map(c => c.charCodeAt(0)));
           const encodedAddress = new Uint8Array([...address].map(c => c.charCodeAt(0)));
-
           name = utf8Decoder.decode(encodedName);
           address = utf8Decoder.decode(encodedAddress);
         } catch (e) {
           console.error("Text decoding error:", e);
         }
 
-        people.push({ id: uuidv4(), name, phone, email, address });
+        // Add with default areaId
+        people.push({ id: uuidv4(), name, phone, email, address, areaId: "" });
       }
     });
 
     return people;
   };
 
-  // --- NEW --- Handler for importing from phone contacts
+  // Handler for importing from phone contacts
   const handleImportFromPhone = async () => {
     if (!isContactPickerSupported) {
-      console.error("Contact Picker API is not supported on this browser or context.");
-      // You should show a custom modal error here instead of alert()
-      // For now, we just log and return.
+      console.error("Contact Picker API is not supported.");
       return;
     }
 
@@ -190,26 +184,22 @@ const People = () => {
 
     try {
       const contacts = await navigator.contacts.select(props, opts);
-
-      if (contacts.length === 0) {
-        console.log("No contacts selected.");
-        return;
-      }
+      if (contacts.length === 0) return;
 
       let importedCount = 0;
       contacts.forEach(contact => {
         const name = contact.name && contact.name.length > 0 ? contact.name[0] : "Unknown";
         const phone = contact.tel && contact.tel.length > 0 ? contact.tel[0] : "";
 
-        // Only import if a phone number is present
         if (phone) {
           addPerson({
             id: uuidv4(),
             name: name,
             phone: phone,
-            email: "",    // Default empty
-            address: "",  // Default empty
-            image: null,  // Default empty
+            email: "",
+            address: "",
+            image: null,
+            areaId: "", // Add with default areaId
           });
           importedCount++;
         }
@@ -218,21 +208,20 @@ const People = () => {
       
     } catch (ex) {
       console.error("Error importing contacts:", ex);
-      // This catch block will trigger if the user closes the picker
-      // or if there's a permission issue.
     }
   };
 
 
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page on search
   };
 
   const filteredPeople = people.filter((person) =>
     person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    person.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (person.email && person.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
     person.phone.includes(searchQuery) ||
-    person.address.toLowerCase().includes(searchQuery.toLowerCase())
+    (person.address && person.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Pagination Logic
@@ -243,60 +232,14 @@ const People = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const totalPages = Math.ceil(filteredPeople.length / peoplePerPage);
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-
-  const renderPageNumbers = () => {
-    const maxPageNumbersToShow = 1;
-    const halfMaxPageNumbersToShow = Math.floor(maxPageNumbersToShow / 2);
-    let startPage = Math.max(1, currentPage - halfMaxPageNumbersToShow);
-    let endPage = Math.min(totalPages, currentPage + halfMaxPageNumbersToShow);
-
-    if (currentPage <= halfMaxPageNumbersToShow) {
-      endPage = Math.min(totalPages, maxPageNumbersToShow);
-    } else if (currentPage + halfMaxPageNumbersToShow >= totalPages) {
-      startPage = Math.max(1, totalPages - maxPageNumbersToShow + 1);
-    }
-    
-    const pageNumbersToShow = pageNumbers.slice(startPage - 1, endPage);
-
-    return (
-      <>
-        {startPage > 1 && (
-          <>
-            <li className="page-item">
-              <button onClick={() => paginate(1)} className="page-link btn btn-secondary">
-                1
-              </button>
-            </li>
-            {startPage > 2 && <li className="page-item">...</li>}
-          </>
-        )}
-        {pageNumbersToShow.map((number) => (
-          <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-            <button
-              onClick={() => paginate(number)}
-              className={`page-link btn ${currentPage === number ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              {number}
-            </button>
-          </li>
-        ))}
-        {endPage < totalPages && (
-          <>
-            {endPage < totalPages - 1 && <li className="page-item">...</li>}
-            <li className="page-item">
-              <button onClick={() => paginate(totalPages)} className="page-link btn btn-secondary">
-                {totalPages}
-              </button>
-            </li>
-          </>
-        )}
-      </>
-    );
+  
+  // 4. Helper function to get area name from ID
+  const getAreaName = (areaId) => {
+    if (!areaId) return "N/A";
+    const area = areas.find(a => a.id === areaId);
+    return area ? area.name : "Unknown Area";
   };
+
 
   return (
     <div className="p-4">
@@ -333,13 +276,12 @@ const People = () => {
           placeholder={languageData[language].search_placeholder}
           value={searchQuery}
           onChange={handleSearchInputChange}
-          className="border py-2 px-3 rounded"
+          className="border py-2 px-3 rounded w-full md:w-1/3"
         />
       </div>
       
-      {/* VCF File Upload Section & NEW Phone Import Button */}
+      {/* Import/Upload Buttons */}
       <div className={`mb-4 flex flex-wrap items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
-        {/* VCF Upload */}
         <label className="inline-flex items-center">
           <input
             type="file"
@@ -351,18 +293,16 @@ const People = () => {
             {languageData[language].upload_person}
           </span>
         </label>
-        <span className="text-gray-500">{languageData[language].upload_vcf}</span>
+        <span className="text-gray-500 text-sm">{languageData[language].upload_vcf}</span>
 
-        {/* Demo File Download Button */}
         <a
-          href="/customer.vcf" // Make sure this file exists in your public folder
+          href="/customer.vcf"
           download="customer.vcf"
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           {languageData[language].download_demo}
         </a>
 
-        {/* --- NEW --- Import from Phone Button */}
         <button
           onClick={handleImportFromPhone}
           disabled={!isContactPickerSupported}
@@ -373,7 +313,6 @@ const People = () => {
           }`}
           title={isContactPickerSupported ? "Import from phone contacts" : "This feature is only available on supported mobile browsers (HTTPS)"}
         >
-          {/* Add 'import_phone' to your languageData.json file */}
           {languageData[language].import_phone || "Import from Phone"}
         </button>
       </div>
@@ -383,7 +322,7 @@ const People = () => {
       <div
         className={`grid gap-4 w-full ${language === "ur" ? "text-right" : "text-left"}`}
         style={{
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, // Dynamically adjust columns
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         }}
         dir={language === "ur" ? "rtl" : "ltr"}
       >
@@ -402,7 +341,10 @@ const People = () => {
             <h3 className="text-lg font-bold">{person.name}</h3>
             <p>{languageData[language].phone}: {person.phone}</p>
             <p>{languageData[language].address}: {person.address}</p>
-            <div className={`flex space-x-2 mt-4 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+            {/* 5. Display the Area Name */}
+            <p>{languageData[language].area}: {getAreaName(person.areaId)}</p>
+            
+            <div className={`flex space-x-2 mt-4 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
               <button
                 onClick={() => initiateEdit(person)}
                 className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
@@ -423,24 +365,29 @@ const People = () => {
       {/* Pagination Controls */}
       <div className="flex justify-center mt-4">
         <nav>
-          <ul className="pagination flex space-x-2">
+          <ul className={`pagination flex space-x-2 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
             <li className="page-item">
               <button
                 onClick={() => paginate(currentPage - 1)}
-                className="page-link btn btn-secondary"
+                className="page-link btn btn-secondary px-3 py-1 rounded"
                 disabled={currentPage === 1}
               >
-                Previous
+                {languageData[language].previous || "Previous"}
               </button>
             </li>
-            {renderPageNumbers()}
+            {/* Simple page number display */}
+            <li className="page-item">
+                <span className="page-link px-3 py-1">
+                    {currentPage} / {totalPages}
+                </span>
+            </li>
             <li className="page-item">
               <button
                 onClick={() => paginate(currentPage + 1)}
-                className="page-link btn btn-secondary"
+                className="page-link btn btn-secondary px-3 py-1 rounded"
                 disabled={currentPage === totalPages}
               >
-                Next
+                {languageData[language].next || "Next"}
               </button>
             </li>
           </ul>
@@ -497,16 +444,36 @@ const People = () => {
                     className="w-full p-2 border rounded"
                   />
                 </div>
+                
+                {/* 6. Add Area Select Dropdown */}
+                <div>
+                  <label className="block font-bold">{languageData[language].area}</label>
+                  <select
+                    name="areaId"
+                    value={formData.areaId}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">{languageData[language].select_area || "Select Area"}</option>
+                    {areas.map(area => (
+                      <option key={area.id} value={area.id}>
+                        {area.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block font-bold">{languageData[language].image}</label>
                   <input
                     type="file"
+                    accept="image/*"
                     onChange={handleImageSelection}
                     className="w-full"
                   />
                 </div>
               </div>
-              <div className="flex justify-end space-x-4 mt-4">
+              <div className={`flex justify-end space-x-4 mt-4 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
                 <button
                   type="button"
                   onClick={closeModal}

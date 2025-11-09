@@ -43,6 +43,7 @@ const Navbar = () => {
     const navLinks = [
         { path: "/", labelKey: "dashboard", icon: AiOutlineDashboard, roles: ['Admin', 'seller'] },
         { path: "/people", labelKey: "people", icon: FiUsers, roles: ['Admin', 'seller'] },
+        { path: "/areas", labelKey: "areas", icon: FiUsers, roles: ['Admin', 'seller'] },
         {
             labelKey: "inventory", icon: MdInventory, roles: ['Admin'],
             children: [

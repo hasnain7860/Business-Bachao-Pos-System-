@@ -33,7 +33,7 @@ import AddPurchaseReturn from "./Pages/AddPurchaseReturn.jsx";
 import NewSales from "./Pages/NewSales.jsx";
 import SalesView from "./Pages/SalesView.jsx";
 import ProtectedRoute from "./components/element/ProtectedRoute";
-
+import Areas from './Pages/Areas.jsx'
 import AddPayments from "./Pages/AddPayments";
 import ViewPayments from "./Pages/ViewPayments";
 import Notification from "./Pages/Notification";
@@ -121,6 +121,16 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <People />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/areas"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Areas />
                             </Layout>
                         </ProtectedRoute>
                     }
