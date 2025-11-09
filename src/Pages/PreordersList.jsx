@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
-// 1. Modal component import karein
-import DeleteConfirmationModal from '../components/element/DeleteConfirmationModal.jsx';
+// 1. DeleteConfirmationModal import has been removed.
 
 // Helper function to get status color
 const getStatusBadgeColor = (status) => {
@@ -17,9 +16,11 @@ const getStatusBadgeColor = (status) => {
 
 const PreordersList = () => {
     const navigate = useNavigate();
-    const { preordersContext, customersContext, areasContext, language } = useAppContext();
+    // 2. Changed customersContext to peopleContext
+    const { preordersContext, peopleContext, areasContext, language } = useAppContext();
     const { preorders, edit: editPreorder, delete: deletePreorder } = preordersContext;
-    const customers = customersContext.customers || [];
+    // 3. Changed customers to people
+    const people = peopleContext.people || [];
     const areas = areasContext.areas || [];
 
     // Filters State
@@ -27,34 +28,33 @@ const PreordersList = () => {
     const [filterStatus, setFilterStatus] = useState("");
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [modalState, setModalState] = useState({ isOpen: false, deleteId: null });
+    // 4. Removed modalState
     const [errorMessage, setErrorMessage] = useState('');
 
-    const getCustomerName = (id) => customers.find(c => c.id === id)?.name || 'N/A';
+    // 5. Renamed getCustomerName to getPersonName and updated logic
+    const getPersonName = (id) => people.find(p => p.id === id)?.name || 'N/A';
     const getAreaName = (id) => areas.find(a => a.id === id)?.name || 'N/A';
 
     const filteredPreorders = useMemo(() => {
-        // ... (Filter logic theek hai) ...
         return preorders
             .filter(p => filterStatus ? p.status === filterStatus : true)
             .filter(p => filterArea ? p.areaId === filterArea : true)
             .filter(p => {
                 if (!searchQuery) return true;
-                const customerName = getCustomerName(p.customerId).toLowerCase();
+                // 6. Updated to use getPersonName and personId
+                const personName = getPersonName(p.personId).toLowerCase();
                 const refNo = p.preorderRefNo.toLowerCase();
-                return customerName.includes(searchQuery.toLowerCase()) || refNo.includes(searchQuery.toLowerCase());
+                return personName.includes(searchQuery.toLowerCase()) || refNo.includes(searchQuery.toLowerCase());
             })
             .sort((a, b) => new Date(b.preorderDate) - new Date(a.preorderDate));
-    }, [preorders, filterArea, filterStatus, searchQuery, customers]);
+    // 7. Updated dependencies to use 'people'
+    }, [preorders, filterArea, filterStatus, searchQuery, people]);
 
     // Action Handlers
     const handleConvertToSale = (preorder) => {
         navigate('/sales/new', { state: { preorderData: preorder } });
     };
 
-    // <-- ======================================================= -->
-    // <-- FIX #1: Naya 'Edit' function add kiya hai -->
-    // <-- ======================================================= -->
     const handleEditPreorder = (preorder) => {
         // Hum user ko naye route par bhej rahe hain
         // Aap ko 'App.jsx' mein yeh route add karna hoga:
@@ -69,20 +69,18 @@ const PreordersList = () => {
         }
     };
     
-    const handleDeleteRequest = (preorder) => {
+    // 8. Replaced 'handleDeleteRequest' and 'handleConfirmDelete' with one function
+    const handleDeletePreorder = (preorder) => {
         setErrorMessage(''); 
-        if (preorder.status === 'Delivered') {
-            setErrorMessage(`Cannot delete "${preorder.preorderRefNo}". It is already linked to a completed sale.`);
-            return;
-        }
-        setModalState({ isOpen: true, deleteId: preorder.id });
-    };
-
-    const handleConfirmDelete = () => {
-        if (modalState.deleteId) {
-            deletePreorder(modalState.deleteId);
-        }
-        setModalState({ isOpen: false, deleteId: null });
+        
+        // 9. REMOVED the check for 'Delivered' status. Delete is now direct.
+        // if (preorder.status === 'Delivered') {
+        //     setErrorMessage(`Cannot delete "${preorder.preorderRefNo}". It is already linked to a completed sale.`);
+        //     return;
+        // }
+        
+        // 10. Delete directly without a modal
+        deletePreorder(preorder.id);
     };
 
     return (
@@ -137,7 +135,8 @@ const PreordersList = () => {
                                     {preorder.status}
                                 </span>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-800">{getCustomerName(preorder.customerId)}</h3>
+                            {/* 10. Updated to use getPersonName and personId */}
+                            <h3 className="text-xl font-semibold text-gray-800">{getPersonName(preorder.personId)}</h3>
                             <p className="text-gray-500">{getAreaName(preorder.areaId)}</p>
                             <p className="text-sm text-gray-400 mt-1">{new Date(preorder.preorderDate).toLocaleString()}</p>
                             <div className="divider my-3"></div>
@@ -159,9 +158,6 @@ const PreordersList = () => {
                                 <label tabIndex={0} className="btn btn-ghost">⋮</label>
                                 <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
                                     <li><button onClick={() => navigate(`/preorders/view/${preorder.id}`)}>View Details</button></li>
-                                    {/* <-- ======================================================= --> */}
-                                    {/* <-- FIX #2: Naya 'Edit' button add kiya hai --> */}
-                                    {/* <-- ======================================================= --> */}
                                     <li>
                                         <button 
                                             onClick={() => handleEditPreorder(preorder)} 
@@ -171,7 +167,8 @@ const PreordersList = () => {
                                         </button>
                                     </li>
                                     <li><button onClick={() => handleCancelPreorder(preorder)} disabled={preorder.status !== 'Pending'}>Cancel Preorder</button></li>
-                                    <li><button onClick={() => handleDeleteRequest(preorder)} className="text-red-500">Delete</button></li>
+                                    {/* 11. Updated onClick to call handleDeletePreorder */}
+                                    <li><button onClick={() => handleDeletePreorder(preorder)} className="text-red-500">Delete</button></li>
                                 </ul>
                             </div>
                         </div>
@@ -184,13 +181,7 @@ const PreordersList = () => {
                 </div>
             )}
 
-            <DeleteConfirmationModal
-                isOpen={modalState.isOpen}
-                onClose={() => setModalState({ isOpen: false, deleteId: null })}
-                onConfirm={handleConfirmDelete}
-                title="Delete Preorder"
-                message={`Are you sure you want to delete this preorder? This action cannot be undone.`}
-            />
+            {/* 12. Deleted the DeleteConfirmationModal component from here */}
         </div>
     );
 };

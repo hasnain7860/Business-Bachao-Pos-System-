@@ -37,6 +37,9 @@ import Areas from './Pages/Areas.jsx'
 import AddPayments from "./Pages/AddPayments";
 import ViewPayments from "./Pages/ViewPayments";
 import Notification from "./Pages/Notification";
+import Preorders from './Pages/PreordersList.jsx'
+import NewPreorders from './Pages/NewPreorder.jsx'
+
 import ProductUploadPage from "./Pages/ProductUploadPage";
 import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
 import SellReturn from "./Pages/SellReturn.jsx";
@@ -99,6 +102,26 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <CreditManagement />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/Preorders"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <Preorders/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/preorders/new"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <NewPreorders/>
                             </Layout>
                         </ProtectedRoute>
                     }
