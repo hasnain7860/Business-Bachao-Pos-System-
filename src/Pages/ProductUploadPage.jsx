@@ -35,8 +35,6 @@ const ProductUploadPage = () => {
     
             for (const product of jsonData) {
                 // --- VALIDATION ---
-                // I have re-enabled validation for name and batchCode.
-                // Uploading a product without a name or batch code will break your data.
                 if (!product.id || !isValidUUID(product.id)) {
                     errors.push(`Invalid or missing UUID: ${product.id || "N/A"}`);
                     continue;
@@ -45,11 +43,6 @@ const ProductUploadPage = () => {
                     errors.push(`Missing product name in english for ID: ${product.id}`);
                     continue;
                 }
-                // nameInUrdu validation remains commented out, as requested.
-                // if (!product.nameInUrdu) {
-                //     errors.push(`Missing product name in urdu for ID: ${product.id}`);
-                //     continue;
-                // }
                 if (!product.batchCode) {
                     errors.push(`Missing batch code for product: ${product.name} (ID: ${product.id})`);
                     continue;
@@ -58,10 +51,11 @@ const ProductUploadPage = () => {
     
                 const batchData = {
                     batchCode: product.batchCode,
-                    expirationDate: product.expirationDate || "N/A", // This was already optional
+                    expirationDate: product.expirationDate || "N/A",
                     purchasePrice: product.purchasePrice || 0,
                     sellPrice: product.sellPrice || 0,
-                    retailPrice: product.retailPrice || 0, // This was already optional
+                    retailPrice: product.retailPrice || 0,
+                    wholesaleRate: product.wholesaleRate || 0, // <-- YAHAN ADD KIYA HAI
                     quantity: product.quantity || 0
                 };
     
@@ -69,10 +63,6 @@ const ProductUploadPage = () => {
     
                 if (existingProductIndex !== -1) {
                     // --- LOGIC FIX: PRODUCT UPDATE ---
-                    // Your old code only added a new batch, it didn't update
-                    // the product's details (like name, companyId, etc.).
-                    // This new logic merges the old data with the new data from Excel.
-                    
                     let existingProduct = newProducts[existingProductIndex];
     
                     if (existingProduct.batchCode.some(b => b.batchCode === batchData.batchCode)) {
@@ -81,14 +71,12 @@ const ProductUploadPage = () => {
                     }
                     
                     const updatedProduct = {
-                        ...existingProduct, // Start with existing data
-                        // Overwrite with new data from Excel if it exists
+                        ...existingProduct, 
                         name: product.name || existingProduct.name,
-                        nameInUrdu: product.nameInUrdu || existingProduct.nameInUrdu, // Handles optional update
+                        nameInUrdu: product.nameInUrdu || existingProduct.nameInUrdu, 
                         companyId: product.companyId || existingProduct.companyId,
                         unitId: product.unitId || existingProduct.unitId,
                         productImage: product.productImage || existingProduct.productImage,
-                        // Add the new batch to the existing batch list
                         batchCode: [...existingProduct.batchCode, batchData]
                     };
 
@@ -98,11 +86,10 @@ const ProductUploadPage = () => {
 
                 } else {
                     // --- LOGIC FIX: NEW PRODUCT ---
-                    // This now handles an optional nameInUrdu by defaulting to null.
                     const newProduct = {
                         id: product.id,
                         name: product.name,
-                        nameInUrdu: product.nameInUrdu || null, // <-- FIX: Defaults to null
+                        nameInUrdu: product.nameInUrdu || null,
                         companyId: product.companyId || null,
                         unitId: product.unitId || null,
                         productImage: product.productImage || null,
@@ -205,4 +192,5 @@ const ProductUploadPage = () => {
 };
 
 export default ProductUploadPage;
+
 
