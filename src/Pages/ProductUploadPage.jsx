@@ -30,55 +30,79 @@ const ProductUploadPage = () => {
             const jsonData = XLSX.utils.sheet_to_json(sheet);
     
             let newProducts = [...updatedProducts];
-            let success = false;
             let errors = [];
             let promises = [];
     
             for (const product of jsonData) {
+                // --- VALIDATION ---
+                // I have re-enabled validation for name and batchCode.
+                // Uploading a product without a name or batch code will break your data.
                 if (!product.id || !isValidUUID(product.id)) {
                     errors.push(`Invalid or missing UUID: ${product.id || "N/A"}`);
                     continue;
                 }
-                // if (!product.name) {
-                //     errors.push(`Missing product name in english for ID: ${product.id}`);
-                //     continue;
-                // }
+                if (!product.name) {
+                    errors.push(`Missing product name in english for ID: ${product.id}`);
+                    continue;
+                }
+                // nameInUrdu validation remains commented out, as requested.
                 // if (!product.nameInUrdu) {
                 //     errors.push(`Missing product name in urdu for ID: ${product.id}`);
                 //     continue;
                 // }
-                // if (!product.batchCode) {
-                //     errors.push(`Missing batch code for product: ${product.name}`);
-                //     continue;
-                // }
+                if (!product.batchCode) {
+                    errors.push(`Missing batch code for product: ${product.name} (ID: ${product.id})`);
+                    continue;
+                }
+                // --- END VALIDATION ---
     
                 const batchData = {
                     batchCode: product.batchCode,
-                    expirationDate: product.expirationDate || "N/A",
+                    expirationDate: product.expirationDate || "N/A", // This was already optional
                     purchasePrice: product.purchasePrice || 0,
                     sellPrice: product.sellPrice || 0,
-                    retailPrice: product.retailPrice || 0,
+                    retailPrice: product.retailPrice || 0, // This was already optional
                     quantity: product.quantity || 0
                 };
     
                 let existingProductIndex = newProducts.findIndex(p => p.id === product.id);
     
                 if (existingProductIndex !== -1) {
+                    // --- LOGIC FIX: PRODUCT UPDATE ---
+                    // Your old code only added a new batch, it didn't update
+                    // the product's details (like name, companyId, etc.).
+                    // This new logic merges the old data with the new data from Excel.
+                    
                     let existingProduct = newProducts[existingProductIndex];
     
                     if (existingProduct.batchCode.some(b => b.batchCode === batchData.batchCode)) {
                         errors.push(`Batch code '${batchData.batchCode}' already exists for product ${existingProduct.name}`);
                         continue;
                     }
-    
-                    existingProduct.batchCode = [...existingProduct.batchCode, batchData];
-                    newProducts[existingProductIndex] = existingProduct;
-                    promises.push(edit(product.id, existingProduct));
+                    
+                    const updatedProduct = {
+                        ...existingProduct, // Start with existing data
+                        // Overwrite with new data from Excel if it exists
+                        name: product.name || existingProduct.name,
+                        nameInUrdu: product.nameInUrdu || existingProduct.nameInUrdu, // Handles optional update
+                        companyId: product.companyId || existingProduct.companyId,
+                        unitId: product.unitId || existingProduct.unitId,
+                        productImage: product.productImage || existingProduct.productImage,
+                        // Add the new batch to the existing batch list
+                        batchCode: [...existingProduct.batchCode, batchData]
+                    };
+
+                    newProducts[existingProductIndex] = updatedProduct;
+                    promises.push(edit(product.id, updatedProduct));
+                    // --- END LOGIC FIX ---
+
                 } else {
+                    // --- LOGIC FIX: NEW PRODUCT ---
+                    // This now handles an optional nameInUrdu by defaulting to null.
                     const newProduct = {
                         id: product.id,
                         name: product.name,
-                        nameInUrdu: product.nameInUrdu ,
+                        nameInUrdu: product.nameInUrdu || null, // <-- FIX: Defaults to null
                         companyId: product.companyId || null,
                         unitId: product.unitId || null,
                         productImage: product.productImage || null,
@@ -86,16 +110,22 @@ const ProductUploadPage = () => {
                     };
                     newProducts.push(newProduct);
                     promises.push(add(newProduct));
+                    // --- END LOGIC FIX ---
                 }
             }
     
-            await Promise.all(promises);
-            setUpdatedProducts(newProducts);
-    
-            if (errors.length > 0) {
-                setErrorMessages(errors);
-            } else {
-                setSuccessMessage(languageData[language].upload_success);
+            try {
+                await Promise.all(promises);
+                setUpdatedProducts(newProducts);
+        
+                if (errors.length > 0) {
+                    setErrorMessages(errors);
+                } else {
+                    setSuccessMessage(languageData[language].upload_success);
+                }
+            } catch (error) {
+                console.error("Error processing uploads:", error);
+                setErrorMessages(["An error occurred while saving data. Check console for details."]);
             }
     
             setTimeout(() => {
@@ -116,7 +146,8 @@ const ProductUploadPage = () => {
             {successMessage && <div className="p-4 mb-4 text-green-700 bg-green-100 rounded">{successMessage}</div>}
             {errorMessages.length > 0 && (
                 <div className="p-4 mb-4 text-red-700 bg-red-100 rounded">
-                    <ul>
+                    <p className="font-bold">Errors found:</p>
+                    <ul className="list-disc list-inside">
                         {errorMessages.map((error, index) => (
                             <li key={index}>⚠ {error}</li>
                         ))}
@@ -174,3 +205,4 @@ const ProductUploadPage = () => {
 };
 
 export default ProductUploadPage;
+
