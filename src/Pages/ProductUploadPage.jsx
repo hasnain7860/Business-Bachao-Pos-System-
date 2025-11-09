@@ -26,8 +26,8 @@ const ProductUploadPage = () => {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: "array" });
             const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(sheet);
+            // defval: null yeh sunishchit karta hai ki khaali cells 'null' ke taur par padhe jaayein, 'undefined' nahi.
+            const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: null });
     
             let newProducts = [...updatedProducts];
             let errors = [];
@@ -36,7 +36,7 @@ const ProductUploadPage = () => {
             for (const product of jsonData) {
                 // --- VALIDATION ---
                 if (!product.id || !isValidUUID(product.id)) {
-                    errors.push(`Invalid or missing UUID: ${product.id || "N/A"}`);
+                    errors.push(`Invalid or missing UUID: ${product.id ?? "N/A"}`);
                     continue;
                 }
                 if (!product.name) {
@@ -49,20 +49,22 @@ const ProductUploadPage = () => {
                 }
                 // --- END VALIDATION ---
     
+                // --- FIREBASE SAFE BATCH OBJECT ---
+                // Yahan har optional field ko '??' ke saath default value di gayi hai.
                 const batchData = {
-                    batchCode: product.batchCode,
-                    expirationDate: product.expirationDate || "N/A",
-                    purchasePrice: product.purchasePrice || 0,
-                    sellPrice: product.sellPrice || 0,
-                    retailPrice: product.retailPrice || 0,
-                    wholesaleRate: product.wholesaleRate || 0, // <-- YAHAN ADD KIYA HAI
-                    quantity: product.quantity || 0
+                    batchCode: product.batchCode, // Yeh validated hai, null nahi hoga
+                    expirationDate: product.expirationDate ?? "N/A",     // SAFE: 'N/A' default
+                    purchasePrice: product.purchasePrice ?? 0,        // SAFE: 0 default
+                    sellPrice: product.sellPrice ?? 0,            // SAFE: 0 default
+                    retailPrice: product.retailPrice ?? 0,          // SAFE: 0 default
+                    wholesaleRate: product.wholesaleRate ?? 0,      // SAFE: 0 default
+                    quantity: product.quantity ?? 0               // SAFE: 0 default
                 };
     
                 let existingProductIndex = newProducts.findIndex(p => p.id === product.id);
     
                 if (existingProductIndex !== -1) {
-                    // --- LOGIC FIX: PRODUCT UPDATE ---
+                    // --- UPDATE EXISTING PRODUCT ---
                     let existingProduct = newProducts[existingProductIndex];
     
                     if (existingProduct.batchCode.some(b => b.batchCode === batchData.batchCode)) {
@@ -70,34 +72,34 @@ const ProductUploadPage = () => {
                         continue;
                     }
                     
+                    // Yahan har optional field '??' ke zariye purani value par fallback karta hai.
                     const updatedProduct = {
                         ...existingProduct, 
-                        name: product.name || existingProduct.name,
-                        nameInUrdu: product.nameInUrdu || existingProduct.nameInUrdu, 
-                        companyId: product.companyId || existingProduct.companyId,
-                        unitId: product.unitId || existingProduct.unitId,
-                        productImage: product.productImage || existingProduct.productImage,
-                        batchCode: [...existingProduct.batchCode, batchData]
+                        name: product.name ?? existingProduct.name, // SAFE: Laazmi hai (validated)
+                        nameInUrdu: product.nameInUrdu ?? existingProduct.nameInUrdu, // SAFE: fallback to old value
+                        companyId: product.companyId ?? existingProduct.companyId,   // SAFE: fallback to old value
+                        unitId: product.unitId ?? existingProduct.unitId,       // SAFE: fallback to old value
+                        productImage: product.productImage ?? existingProduct.productImage, // SAFE: fallback to old value
+                        batchCode: [...existingProduct.batchCode, batchData] // SAFE: 'batchData' upar safe banaya hai
                     };
 
                     newProducts[existingProductIndex] = updatedProduct;
                     promises.push(edit(product.id, updatedProduct));
-                    // --- END LOGIC FIX ---
 
                 } else {
-                    // --- LOGIC FIX: NEW PRODUCT ---
+                    // --- ADD NEW PRODUCT ---
+                    // Yahan har optional field '??' ke zariye 'null' par fallback karta hai.
                     const newProduct = {
-                        id: product.id,
-                        name: product.name,
-                        nameInUrdu: product.nameInUrdu || "",
-                        companyId: product.companyId || "",
-                        unitId: product.unitId || "",
-                        productImage: product.productImage || "",
-                        batchCode: [batchData]
+                        id: product.id,     // Laazmi hai (validated)
+                        name: product.name, // Laazmi hai (validated)
+                        nameInUrdu: product.nameInUrdu ?? null,   // SAFE: null default
+                        companyId: product.companyId ?? null,   // SAFE: null default
+                        unitId: product.unitId ?? null,     // SAFE: null default
+                        productImage: product.productImage ?? null, // SAFE: null default
+                        batchCode: [batchData] // SAFE: 'batchData' upar safe banaya hai
                     };
                     newProducts.push(newProduct);
                     promises.push(add(newProduct));
-                    // --- END LOGIC FIX ---
                 }
             }
     
