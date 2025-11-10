@@ -15,6 +15,7 @@ const NewSales = () => {
     const context = useAppContext();
 
     const people = context.peopleContext.people;
+    
     const products = context.productContext.products;
     const editProduct = context.productContext.edit;
     // 2. Get preorder context to update its status
@@ -402,6 +403,40 @@ const NewSales = () => {
                                                     // Also disable here for safety
                                                     disabled={!!sourcePreorderId} 
                                                 />
+                                                {searchPerson && (
+                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                        {people
+                                                            .filter(person =>
+                                                                person.name
+                                                                    .toLowerCase()
+                                                                    .includes(
+                                                                        searchPerson.toLowerCase()
+                                                                    )
+                                                            )
+                                                            .map(person => (
+                                                                <div
+                                                                    key={
+                                                                        person.id
+                                                                    }
+                                                                    className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                                                                    onClick={() => {
+                                                                        setSelectedPerson(
+                                                                            person.id
+                                                                        );
+                                                                        setSearchPerson(
+                                                                            ""
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <span>
+                                                                        {
+                                                                            person.name
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
                                                 {/* ... search results ... */}
                                             </div>
                                         )}
