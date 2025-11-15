@@ -55,7 +55,7 @@ const SellReturn = () => {
     <td>{row.returnRefNo || 'N/A'}</td>
     <td>{row.returnDate ? formatDate(row.returnDate) : 'N/A'}</td>
     <td>{row.salesRef || 'N/A'}</td>
-    <td>{row.items?.length ?? 0}</td>
+    <td>{row.returnedProducts?.length ?? 0}</td>
     <td>{currency}{row.totalAmount ?? 0}</td>
     <td>{currency}{row.paymentDetails?.cashReturn ?? 0}</td>
     <td>{currency}{row.paymentDetails?.creditAdjustment ?? 0}</td>

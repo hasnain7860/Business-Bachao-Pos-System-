@@ -4,12 +4,13 @@
     "dashboard": "Dashboard",
     "people": "People",
     "customers": "Customers",
-    "Preorders":"Preorders",
     "suppliers": "Suppliers",
     "inventory": "Inventory",
     "company": "Company",
-    "areas":"areas",
+    "perorder":"perorder",
     "brands": "Brands",
+    "Areas":"Areas",
+    
     "products": "Products",
     "remainingCreditAmount": "Remaining Credit Amount",
     "areYouSureDelete":"Are you sure you want to delete this item ?",
@@ -179,7 +180,34 @@
     "returnedProducts": "Returned Products",
     "totalReturns": "Total Returns",
     "returnRefNo": "Return Reference",
-    "creditAdjustment": "Credit Adjustment"
+    "creditAdjustment": "Credit Adjustment",
+     
+    
+
+    
+    
+    
+    
+    "welcome": "Welcome",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    
+    "change": "Change",
+    
+    
+    "new_preorder": "New Preorder",
+    "save_preorder": "Save Preorder",
+    "preorder_ref_no": "Preorder Ref #",
+    "preorder_summary": "Preorder Summary",
+    "area": "Area",
+    "areas": "Areas",
+    "select_area": "Select Area",
+    "all_areas": "All Areas",
+    "add_area": "Add Area Name",
+    "area_management": "Area Management",
+    "estimated_total": "Estimated Total"
+    
+    
   },
   "ur": {
     "menu": "مینو",
@@ -356,6 +384,74 @@
   "returnedProducts": "خریداری واپس شدہ مصنوعات",
   "totalReturns": "کل واپسیاں",
     "returnRefNo": "واپسی ریفرنس",
-    "creditAdjustment": "کریڈٹ ایڈجسٹمنٹ"
+    
+  
+  
+    
+  
+    
+    "welcome": "خوش آمدید",
+    "subtotal": "ذیلی کل",
+    "discount": "رعایت",
+  
+    "change": "تبدیل کریں",
+    
+    
+    "new_preorder": "نیا پری آرڈر",
+    "save_preorder": "پری آرڈر محفوظ کریں",
+    "preorder_ref_no": "پری آرڈر حوالہ نمبر",
+    "preorder_summary": "پری آرڈر کا خلاصہ",
+    "area": "علاقہ",
+    "areas": "علاقے",
+    "select_area": "علاقہ منتخب کریں",
+    "all_areas": "تمام علاقے",
+    "add_area": "علاقے کا نام شامل کریں",
+    "area_management": "علاقہ جات کا انتظام",
+    "estimated_total": "تخمینہ شدہ کل",
+  "creditAdjustment": "کر,یڈٹ ایڈجسٹمنٹ",
+  "print_receipt": "رسید پرنٹ کریں",
+"item": "آئٹم",
+"qty": "مقدار",
+"rate": "ریٹ",
+
+"total_items": "کل آئٹمز",
+"sale_returns_invoice": "سیل ریٹرن (اس انوائس کے)",
+"total_returned": "کل واپس",
+
+
+"original_bill": "اصلی بل",
+"grand_total": "گرینڈ ٹوٹل",
+"amount_paid_original": "رقم ادا کی (اصل)",
+"net_bill": "کل بل (نیٹ)",
+"cash_returned": "نقد واپس",
+"credit_adjusted": "کریڈٹ ایڈجسٹڈ",
+"overall_balance_summary": "مجموعی بیلنس کا خلاصہ",
+"previous_balance": "پچھلا بیلنس",
+"your_advance": "آپ کی پیشگی",
+"this_bills_credit": "اس بل کا کریڈٹ",
+"net_balance_due": "کل واجب الادا بیلنس",
+"total_advance": "کل پیشگی",
+"balance_cleared": "بیلنس کلیئر"
+
+
+
+
+
+
+
+
+,
+"invoice_no": "انوائس نمبر",
+"customer": "کسٹمر"
+
+
+
+
+
   }
 }
+
+
+
+
+

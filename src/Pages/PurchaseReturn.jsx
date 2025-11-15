@@ -7,11 +7,9 @@ import languageData from "../assets/languageData.json";
 const PurchaseReturn = () => {
   const context = useAppContext();
   const purchaseReturnsData = context.purchaseReturnContext?.purchaseReturns || [];
-  console.log(purchaseReturnsData)
-  console.log(purchaseReturnsData)
   const deletePurchaseReturn = context.purchaseReturnContext?.delete;
   const { language } = context;
-  
+  console.log(purchaseReturnsData)
   // Get currency from settings
   const userAndBusinessDetail = context.settingContext.settings;
   const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs.';
@@ -59,7 +57,7 @@ const PurchaseReturn = () => {
                 <td>{row.returnRefNo}</td>
                 <td>{formatDate(row.returnDate)}</td>
                 <td>{row.purchaseRef}</td>
-                <td>{row.items.length}</td>
+                <td>{row.returnedProducts?.length}</td>
                 <td>{currency}{row.totalAmount}</td>
                 <td>{currency}{row.paymentDetails.cashReturn}</td>
                 <td>{currency}{row.paymentDetails.creditAdjustment}</td>
