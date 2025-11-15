@@ -3,7 +3,7 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
-
+import jwt from 'jsonwebtoken';
 
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
@@ -19,7 +19,7 @@ const db = getFirestore();
 
 // CORS middleware ko initialize karein
 const corsMiddleware = cors({
-  origin: 'http://localhost:5173', // <-- Sirf is URL ko allow karein
+  origin: [ 'http://localhost:5173' , 'https://business-bachao-pos-system.vercel.app' ] , // <-- Sirf is URL ko allow karein
   methods: ['POST', 'GET', 'OPTIONS'], // Allowable methods
 });
 
@@ -59,14 +59,25 @@ await runMiddleware(req, res, corsMiddleware);
     if (passwordMatch) {
       // Password sahi hai! User ka data frontend ko bhejein
       // IMPORTANT: Password kabhi wapas na bhejein
+  const token = jwt.sign(
+        { userId: userId, email: user.email }, // Token mein user ki ID store karein
+        process.env.JWT_SECRET, // Aapka Vercel secret
+        { expiresIn: '100d' } // Lambi expiry
+      );
+      
+      
+      
+  
       res.status(200).json({
         uid: userDoc.id,
+                token: token,
         name: user.name,
         role: user.role,
         email:user.email,
         adminFirebaseObject: user.AdminFirebaseObject,
-        subscriptionStatus: user.subscriptionStatus || 'inactive', // Subscription status bhejein
-        subscriptionEndDate: user.subscriptionEndDate || null,
+        subscriptionStatus: user.subscriptionStatus || 'inactive', // Default value dein agar nahi hai
+        subscriptionEndDate: user.subscriptionEndDate || null, // Default value
+        
       });
     } else {
       // Password galat hai
