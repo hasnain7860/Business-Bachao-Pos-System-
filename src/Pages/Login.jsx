@@ -61,7 +61,7 @@ const Login = () => {
       if (!response.ok) {
         throw new Error(data.error || 'Login failed.');
       }
-
+console.log("data.............." + JSON.stringify(data))
       // Login successful!
       // Cookies (Aapki marzi hai, lekin localStorage session PWA ke liye behtar hai)
       Cookies.set('userName', data.name, { expires: 365 });

@@ -60,9 +60,9 @@ await runMiddleware(req, res, corsMiddleware);
       // Password sahi hai! User ka data frontend ko bhejein
       // IMPORTANT: Password kabhi wapas na bhejein
   const token = jwt.sign(
-        { userId: userId, email: user.email }, // Token mein user ki ID store karein
+        { userId: userDoc.id, email: user.email }, // Token mein user ki ID store karein
         process.env.JWT_SECRET, // Aapka Vercel secret
-        { expiresIn: '100d' } // Lambi expiry
+        { expiresIn: '1000d' } // Lambi expiry
       );
       
       
