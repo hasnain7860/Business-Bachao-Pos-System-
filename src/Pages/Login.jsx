@@ -73,7 +73,7 @@ console.log("data.............." + JSON.stringify(data))
       // PWA ke liye localStorage mein poora session save karein
       const sessionData = {
         isAuthenticated: true,
-        token: data.token, // <-- Naya token save karein
+        token: data.token, 
         uid: data.uid,
         email: data.email,
         subscriptionStatus: data.subscriptionStatus,

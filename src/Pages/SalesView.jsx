@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../Appfullcontext";
-import { FaPrint } from "react-icons/fa";
+import { FaPrint, FaSave } from "react-icons/fa";
 
 const SalesView = () => {
     const context = useAppContext();
@@ -25,16 +25,26 @@ const SalesView = () => {
 
     const currency = userAndBusinessDetail[0]?.business?.currency || 'Rs.';
 
+    // --- NAQ KO EDIT KARNE KE LIYE NAYI STATE ---
+    const [naqCount, setNaqCount] = useState(''); // Ab yeh string state hai
+    const [saveMessage, setSaveMessage] = useState('');
+    // --- END ---
+
     useEffect(() => {
-        if (salesData.length > 0) {
+        if (salesData.length > 0 && sale) {
+            setLoading(false);
+            // Jab sale load ho toh naq ki value state mein set kar dein
+            setNaqCount(sale.naq || ''); 
+        } else if (salesData.length > 0 && !sale) {
             setLoading(false);
         }
-    }, [salesData]);
+    }, [salesData, sale]);
 
     const { previousBalance, netBalance } = useMemo(() => {
         if (!person || !sale) {
             return { previousBalance: 0, netBalance: parseFloat(sale?.credit || 0) };
         }
+        // ... (baaqi balance logic waisi hi rahegi) ...
         const totalSalesCredit = salesData.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
         const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const totalReceivable = totalSalesCredit + manualCredit;
@@ -76,6 +86,33 @@ const SalesView = () => {
         navigate(`/sales/view/${id}/print`);
     };
 
+    // --- NAQ SAVE KARNE KA UPDATED FUNCTION ---
+    const handleSaveNaq = async () => {
+        if (!sale) return;
+
+        setSaveMessage('Saving...');
+        try {
+            // Poora sale object copy karein aur 'naq' ko update karein (bina parseFloat ke)
+            const updatedSaleData = {
+                ...sale,
+                naq: naqCount || '' // Ab yeh text (string) save karega
+            };
+            
+            // Context ka edit function call karein
+            await context.SaleContext.edit(sale.id, updatedSaleData);
+            
+            setSaveMessage('Naq Saved Successfully!');
+        } catch (error) {
+            console.error("Failed to save Naq:", error);
+            setSaveMessage('Error saving Naq.');
+        } finally {
+            // 3 second baad message hata dein
+            setTimeout(() => setSaveMessage(''), 3000);
+        }
+    };
+    // --- END ---
+
+
     if (loading) return <div className="text-center text-lg p-10">Loading Receipt...</div>;
     if (!sale) return <div className="text-center text-red-500 text-lg p-10">Sale not found</div>;
 
@@ -87,7 +124,7 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- PRINT STYLE UPDATE KIYA GAYA HAI --- */}
+            {/* --- PRINT STYLE (waisa hi hai) --- */}
             <style>{`
                 @media print {
                     body, html { 
@@ -105,33 +142,62 @@ const SalesView = () => {
                     .no-print { 
                         display: none; 
                     }
-                    /* --- Saare text ko bara aur bold karne ke liye --- */
                     .print-container, .print-container * {
-                        font-size: 14px !important; /* Size yahan se adjust kar sakte hain */
-                        font-weight: 700 !important; /* BOLD */
+                        font-size: 14px !important; 
+                        font-weight: 700 !important; 
                         line-height: 1.4 !important;
                     }
                     .print-container h2 {
-                        font-size: 22px !important; /* Business Name */
+                        font-size: 22px !important;
                     }
                     .print-container .grand-total, .print-container .net-balance {
-                        font-size: 18px !important; /* Main Totals */
+                        font-size: 18px !important;
                     }
-                    /* --- YAHAN TABDEELI KI GAYI HAI --- */
-                    /* --- Footer text (Software name & contact) ko bara aur bold kar diya hai --- */
                     .print-container .footer-text, .print-container .footer-text * {
-                        font-size: 14px !important; /* Iska size baaqi text ke barabar kar diya hai */
-                        font-weight: 700 !important; /* Yaqeenan bold rakha hai */
+                        font-size: 14px !important; 
+                        font-weight: 700 !important;
                     }
                     hr {
                         border-top: 2px dashed #000 !important;
                     }
+                    #navbar{
+                      display:none !imoortant;
+                    }
+                    body * { visibility: hidden !important; }
+    .print-container, .print-container * { visibility: visible !important; }
                 }
             `}</style>
 
             <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
-                <div className="no-print flex justify-end mb-4">
-                    <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2"><FaPrint /> Print Receipt</button>
+                
+                {/* --- YAHAN NAQ EDIT FORM UPDATE KIYA GAYA HAI --- */}
+                <div className="no-print mb-4 p-4 bg-white rounded-lg shadow-md max-w-md mx-auto">
+                    <h3 className="text-lg font-bold mb-3 text-center">Update Naq (Bundles)</h3>
+                    <div className="flex gap-2 items-center">
+                        <label htmlFor="naqInput" className="font-semibold whitespace-nowrap">Total Naq:</label>
+                        <input
+                            type="text" // --- TYPE CHANGE KI GAYI HAI ---
+                            id="naqInput"
+                            value={naqCount}
+                            onChange={(e) => setNaqCount(e.target.value)}
+                            className="input input-bordered w-full"
+                            placeholder="e.g. 5 ctn, 2 sapar" // --- PLACEHOLDER CHANGE KIYA GAYA HAI ---
+                        />
+                        <button onClick={handleSaveNaq} className="btn btn-success flex items-center gap-2">
+                            <FaSave /> Save
+                        </button>
+                    </div>
+                    {saveMessage && (
+                        <p className={`text-center mt-2 ${saveMessage.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+                            {saveMessage}
+                        </p>
+                    )}
+                </div>
+                {/* --- END NAQ EDIT FORM --- */}
+
+
+                <div className="no-print flex justify-end mb-4 max-w-md mx-auto">
+                    <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full"><FaPrint /> Print Receipt</button>
                 </div>
 
                 <div className="print-container w-72 mx-auto p-3 bg-white text-black shadow-lg font-sans">
@@ -147,6 +213,14 @@ const SalesView = () => {
                     <hr className="my-2 border-dashed border-gray-400" />
                     <div className="text-xs">
                         <div className="flex justify-between"><span>Ref No:</span> <span>{sale.salesRefNo}</span></div>
+                        
+                        {/* --- YAHAN NAQ DISPLAY LOGIC UPDATE KI GAYI HAI --- */}
+                        {/* Ab yeh check karega ke string khali (empty) na ho */}
+                        {sale.naq && sale.naq !== '' && (
+                             <div className="flex justify-between"><span>Total Naq:</span> <span>{sale.naq}</span></div>
+                        )}
+                        {/* --- NAQ KA CODE YAHAN KHATAM HUA --- */}
+
                         {person && (<div className="flex justify-between"><span>Customer:</span> <span>{person.name}</span></div>)}
                         <div className="flex justify-between"><span>Date:</span> <span>{new Date(sale.dateTime).toLocaleString()}</span></div>
                     </div>
@@ -227,4 +301,5 @@ const SalesView = () => {
 };
 
 export default SalesView;
+
 

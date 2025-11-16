@@ -109,6 +109,8 @@ const Navbar = () => {
             await clearAllStores();
             Cookies.remove('userName');
             Cookies.remove('userRole');
+            
+localStorage.removeItem('userSession')
             await setIsAuthenticated(false);
 
         } catch (error) {
@@ -184,7 +186,7 @@ const Navbar = () => {
         <div>
             <Syncauto />
             {/* Navbar */}
-            <nav className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 h-20 justify-between ${language === 'ur' ? 'flex-row-reverse' : ''}`}>
+            <nav id="navbar" className={`fixed top-0 left-0 w-full bg-gray-800 text-white shadow-md z-50 p-4 flex items-center transition-all duration-300 h-20 justify-between ${language === 'ur' ? 'flex-row-reverse' : ''}`}>
                 <button onClick={toggleSidebar} ref={menuButtonRef} className="text-xl font-bold px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600">
                     ☰
                 </button>
