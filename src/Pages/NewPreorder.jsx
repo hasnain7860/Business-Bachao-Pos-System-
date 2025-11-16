@@ -18,12 +18,14 @@ const NewPreorder = () => {
         productContext, 
         preordersContext, 
         peopleContext, 
+        areasContext, // --- 1. Added areasContext ---
         language 
     } = context;
     
     const { preorders, add: addPreorder, edit: editPreorder } = preordersContext;
     const { products } = productContext;
     const { people } = peopleContext;
+    const { areas } = areasContext; // --- 1. Get areas array ---
 
     // --- States ---
     const [preorderRefNo, setPreorderRefNo] = useState("");
@@ -40,6 +42,20 @@ const NewPreorder = () => {
     const [selectedModalProduct, setSelectedModalProduct] = useState(null);
     const [message, setMessage] = useState("");
     const [isEditing, setIsEditing] = useState(false);
+
+    // --- 2. Use useMemo to find the person and area objects ---
+    const selectedPersonObject = useMemo(() => {
+        return people.find(p => p.id === selectedPerson);
+    }, [selectedPerson, people]);
+
+    const selectedAreaObject = useMemo(() => {
+        // Guard against missing areas or person
+        if (!selectedPersonObject || !areas || !selectedPersonObject.areaId) {
+            return null;
+        }
+        return areas.find(a => a.id === selectedPersonObject.areaId);
+    }, [selectedPersonObject, areas]);
+
 
     // --- Effects ---
 
@@ -235,10 +251,14 @@ const NewPreorder = () => {
             return;
         }
 
+        // --- 4. Get personObject to add areaId ---
+        const personObject = people.find(p => p.id === selectedPerson);
+
         const preorderData = {
             id: isEditing ? preorderId : uuidv4(),
             preorderRefNo,
             personId: selectedPerson,
+            areaId: personObject?.areaId || null, // --- 4. ADDED THIS LINE ---
             products: selectedProducts,
             notes: notes,
             subtotal: calculateSubtotal.toFixed(2),
@@ -297,6 +317,7 @@ const NewPreorder = () => {
                                         Person:
                                     </label>
                                     <div className="flex flex-col gap-2">
+                                        {/* --- 3. MODIFIED this section to show area name --- */}
                                         {selectedPerson && (
                                             <select
                                                 className="select select-bordered w-full"
@@ -305,10 +326,13 @@ const NewPreorder = () => {
                                                 disabled={isEditing} // Can't change person when editing
                                             >
                                                 <option value={selectedPerson}>
-                                                    {people.find(p => p.id === selectedPerson)?.name || "Selected Person"}
+                                                    {selectedPersonObject?.name || "Selected Person"}
+                                                    {selectedAreaObject && ` (${selectedAreaObject.name})`}
                                                 </option>
                                             </select>
                                         )}
+                                        {/* --- End of modification --- */}
+                                        
                                         {!selectedPerson && !isEditing && (
                                             <div className="relative w-full">
                                                 <input
@@ -335,6 +359,7 @@ const NewPreorder = () => {
                                                                         setSearchPerson("");
                                                                     }}
                                                                 >
+                                                                    {/* You could also show area here if you want */}
                                                                     <span>{person.name}</span>
                                                                 </div>
                                                             ))}
@@ -479,5 +504,4 @@ const NewPreorder = () => {
 };
 
 export default NewPreorder;
-
 

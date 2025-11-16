@@ -9,13 +9,14 @@ const PreorderAreaReport = () => {
 
     // --- Data from context ---
     const allPreorders = context.preordersContext.preorders || [];
-    const allPeoples = context.peopleContext.people || [];
+    // --- FIX: allPeoples ki yahan zaroorat nahi hai ---
+    // const allPeoples = context.peopleContext.people || []; 
     const { areas } = context.areasContext;
     
     const userAndBusinessDetail = context.settingContext.settings;
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
 
-    // --- Filters State ---
+    // --- Filters State (No Change) ---
     const [selectedArea, setSelectedArea] = useState('all');
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -23,7 +24,7 @@ const PreorderAreaReport = () => {
     const [reportData, setReportData] = useState(null);
     const [showFilters, setShowFilters] = useState(true);
 
-    // Area ki list Dropdown ke liye
+    // Area ki list Dropdown ke liye (No Change)
     const uniqueAreas = useMemo(() => {
         return areas.sort((a, b) => a.name.localeCompare(b.name));
     }, [areas]);
@@ -35,36 +36,37 @@ const PreorderAreaReport = () => {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        // 1. Date se filter karein
+        // --- FIX #1: Date filter ab 'order.preorderDate' use kar raha hai ---
         const preordersInRange = allPreorders.filter(order => {
-            const orderDate = new Date(order.date);
+            const orderDate = new Date(order.preorderDate); // Ghalat 'order.date' ki jagah
             return orderDate >= start && orderDate <= end;
         });
 
-        // 2. Area ke hisab se filter karein
+        // --- FIX #2: Area filter ab direct 'order.areaId' use kar raha hai ---
         let filteredPreorders = preordersInRange;
         if (selectedArea !== 'all') {
-            // Un logon ki ID nikalein jo is area mein hain
-            const peopleInArea = allPeoples
-                .filter(p => p.areaId === selectedArea)
-                .map(p => p.id);
-            
-            // Sirf un preorders ko rakhein jo un logon ke hain
-            filteredPreorders = preordersInRange.filter(order => peopleInArea.includes(order.personId));
+            // Poora 'people' logic hata diya gaya hai. Yeh tez aur durust hai.
+            filteredPreorders = preordersInRange.filter(order => order.areaId === selectedArea);
         }
 
         // 3. Products ko aggregate karein
         const productSummary = new Map();
         filteredPreorders.forEach(order => {
+            // Agar products array nahi hai to skip karein
+            if (!Array.isArray(order.products)) return; 
+
             order.products.forEach(product => {
                 const existing = productSummary.get(product.id) || { id: product.id, name: product.name, totalQuantity: 0 };
-                existing.totalQuantity += (parseInt(product.quantity, 10) || 0);
+                
+                // --- FIX #3: Quantity ab 'product.SellQuantity' se li ja rahi hai ---
+                existing.totalQuantity += (parseInt(product.SellQuantity, 10) || 0); // Ghalat 'product.quantity' ki jagah
+                
                 productSummary.set(product.id, existing);
             });
         });
 
         const finalData = Array.from(productSummary.values())
-            .sort((a, b) => b.totalQuantity - a.totalQuantity); // Ziada quantity wale upar
+            .sort((a, b) => b.totalQuantity - a.totalQuantity);
         
         setReportData(finalData);
         setShowFilters(false);
@@ -76,8 +78,8 @@ const PreorderAreaReport = () => {
 
     return (
         <div>
-            {/* --- Filters (No Print) --- */}
-            <div className={`no-print ${showFilters ? '' : 'hidden'}`}>
+            {/* --- Filters (UI Improved) --- */}
+            <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].preorder_area_report || 'Area-wise Preorder Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     
@@ -104,7 +106,7 @@ const PreorderAreaReport = () => {
 
                     <button 
                         onClick={handleGenerateReport} 
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10"
                     >
                         {languageData[language].generate || 'Generate'}
                     </button>
@@ -115,7 +117,7 @@ const PreorderAreaReport = () => {
             {reportData && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
-                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600">
+                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600 hover:underline">
                             <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
                         </button>
                         <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
@@ -130,32 +132,40 @@ const PreorderAreaReport = () => {
                         <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>{languageData[language].product_name || 'Product Name'}</th>
-                                    <th className="text-right">{languageData[language].total_ordered_qty || 'Total Ordered Qty'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportData.map((item, index) => (
-                                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                                        <td className="text-center">{index + 1}</td>
-                                        <td className="font-medium">{item.name}</td>
-                                        <td className="text-right font-bold">{item.totalQuantity}</td>
+                    {reportData.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="py-2 px-3 text-center">S.No.</th>
+                                        <th className="py-2 px-3 text-left">{languageData[language].product_name || 'Product Name'}</th>
+                                        <th className="py-2 px-3 text-right">{languageData[language].total_ordered_qty || 'Total Ordered Qty'}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {reportData.map((item, index) => (
+                                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                                            <td className="py-2 px-3 text-center">{index + 1}</td>
+                                            <td className="py-2 px-3 font-medium">{item.name}</td>
+                                            <td className="py-2 px-3 text-right font-bold">{item.totalQuantity}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center p-10 no-print">
+                             <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
+                        </div>
+                    )}
                 </div>
             )}
+            
+             {/* 'No Data' message agar report generate ho chuki hai aur data 0 hai */}
              {reportData && reportData.length === 0 && !showFilters && (
-                 <div className="text-center p-10">
+                 <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
                     <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
-                    <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto">
+                    <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto hover:underline">
                         <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
                     </button>
                  </div>
@@ -165,4 +175,5 @@ const PreorderAreaReport = () => {
 };
 
 export default PreorderAreaReport;
+
 
