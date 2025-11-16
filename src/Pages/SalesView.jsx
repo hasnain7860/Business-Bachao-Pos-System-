@@ -16,7 +16,7 @@ const SalesView = () => {
 
     const salesData = SaleContext?.Sales || [];
     // Aapke feedback ke mutabiq 'editSale' function use kar rahe hain
-    const editSale = SaleContext?.editSale; 
+    const editSale = SaleContext?.edit; 
     const customers = customersContext?.customers || [];
     const userAndBusinessDetail = settingContext?.settings || [];
     const submittedRecords = creditManagementContext?.submittedRecords || [];
