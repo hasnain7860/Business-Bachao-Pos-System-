@@ -137,11 +137,20 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- 80MM PRINT FIX --- */}
+            {/* --- 80MM PRINT FIX (72mm CONTENT AREA) --- */}
             <style>{`
                 @media print {
-                    @page { size: 80mm auto; margin: 0 !important; }
-                    body, html { margin: 0 !important; padding: 0 !important; background-color: #fff !important; }
+                    @page { 
+                        size: 80mm auto; 
+                        /* YEH HAI ASLI FIX: Left/Right margin add ki hai paper per */
+                        margin: 0 4mm !important; 
+                    }
+                    body, html { 
+                        margin: 0 !important; 
+                        padding: 0 !important; 
+                        background-color: #fff !important; 
+                        width: 100% !important; 
+                    }
                     body * { visibility: hidden !important; }
                     .no-print, #navbar { display: none !important; }
                     .print-container, .print-container * { visibility: visible !important; }
@@ -149,9 +158,9 @@ const SalesView = () => {
                         position: absolute !important; 
                         left: 0 !important; 
                         top: 0 !important; 
-                        width: 100% !important; 
+                        width: 100% !important; /* Yeh 100% ab 72mm ka hoga */
                         margin: 0 !important; 
-                        padding: 2px !important; 
+                        padding: 0 !important; /* Padding 0 kardi takay width control ho */
                         box-shadow: none !important; 
                     }
                     .print-container, .print-container * {
@@ -169,7 +178,7 @@ const SalesView = () => {
                     .text-xs { font-size: 11px !important; }
                     .py-1 { padding-top: 1px !important; padding-bottom: 1px !important; }
                     
-                    /* --- START OF PRINT FIX --- */
+                    /* --- START OF PRINT FIX (Widths + Alignment) --- */
                     .print-container table { 
                         table-layout: fixed; 
                         width: 100%; 
@@ -179,41 +188,41 @@ const SalesView = () => {
                         vertical-align: top; /* Ensures all cells align to the top */
                     }
 
-                    /* Products Table (4 columns) */
+                    /* Products Table (4 columns) - Widths adjusted */
                     .products-table th:nth-child(1), .products-table td:nth-child(1) { 
-                        width: 50%; 
-                        word-break: break-word; /* Allows long item names to wrap */
+                        width: 50%; /* Item ko sabse zyada jagah */
+                        word-break: break-word; 
                     } /* Item */
                     .products-table th:nth-child(2), .products-table td:nth-child(2) { 
-                        width: 15%; 
+                        width: 15%; /* Qty */
                         text-align: center !important; 
-                        white-space: nowrap; /* Prevents Qty from wrapping */
+                        white-space: nowrap; 
                     } /* Qty */
                     .products-table th:nth-child(3), .products-table td:nth-child(3) { 
-                        width: 20%; 
+                        width: 17%; /* Rate (Thora kam kiya) */
                         text-align: right !important; 
-                        white-space: nowrap; /* Prevents Rate from wrapping */
+                        white-space: nowrap; 
                     } /* Rate */
                     .products-table th:nth-child(4), .products-table td:nth-child(4) { 
-                        width: 15%; 
+                        width: 18%; /* Total (Thora kam kiya) */
                         text-align: right !important; 
-                        white-space: nowrap; /* Prevents Total from wrapping */
+                        white-space: nowrap; 
                     } /* Total */
 
                     /* Returns Table (3 columns) */
                     .returns-table th:nth-child(1), .returns-table td:nth-child(1) { 
                         width: 50%; 
-                        word-break: break-word; /* Allows long item names to wrap */
+                        word-break: break-word; 
                     } /* Item */
                     .returns-table th:nth-child(2), .returns-table td:nth-child(2) { 
                         width: 20%; 
                         text-align: center !important; 
-                        white-space: nowrap; /* Prevents Qty from wrapping */
+                        white-space: nowrap; 
                     } /* Qty */
-                    .returns-table th:nth-child(3), .returns-table td:nth-child(3) { 
+                    .returns-table th:nth-child(3), .returns-table td: anthracite(3) { 
                         width: 30%; 
                         text-align: right !important; 
-                        white-space: nowrap; /* Prevents Amount from wrapping */
+                        white-space: nowrap; 
                     } /* Amount */
                     /* --- END OF PRINT FIX --- */
                 }
@@ -276,6 +285,7 @@ const SalesView = () => {
                             <h2 className="text-xl font-bold">{userAndBusinessDetail[0].business.businessName}</h2>
                             <p className="text-xs">{userAndBusinessDetail[0].business.email}</p>
                             <p className="text-xs">{userAndBusinessDetail[0].business.phoneNo}</p>
+                            <p className="text-xs">{userAndBusinessDetail[0].business.address}</p>
                         </div>
                     ) : (
                         <p className="text-center text-red-500">Business details not found</p>
@@ -413,7 +423,7 @@ const SalesView = () => {
                             )}
                             {netBalance === 0 && (
                                 <div className="flex justify-between text-base font-bold net-balance"><span>{languageData[language]?.balance_cleared || 'Balance Cleared:'}</span><span>{currency} 0.00</span></div>
-                           )}
+                            )}
                         </div>
                     )}
 
