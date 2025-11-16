@@ -10,7 +10,10 @@ const CustomerCompanyReport = () => {
     // --- Data from context ---
     const allSales = context.SaleContext.Sales || [];
     const allPeoples = context.peopleContext.people || [];
-    const allProducts = context.productContext.products || []; // Products chahiye company ke liye
+    const allProducts = context.productContext.products || [];
+    
+    // --- FIX: companyContext ko import karein ---
+    const allCompanies = context.companyContext.companies || []; 
 
     const userAndBusinessDetail = context.settingContext.settings;
     const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
@@ -18,23 +21,39 @@ const CustomerCompanyReport = () => {
 
     // --- Filters State ---
     const [selectedCustomer, setSelectedCustomer] = useState('all');
-    const [selectedCompany, setSelectedCompany] = useState('all');
+    const [selectedCompany, setSelectedCompany] = useState('all'); // Yeh ab ID hogi
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
     
     const [reportData, setReportData] = useState(null);
     const [showFilters, setShowFilters] = useState(true);
 
-    // Customers ki list
+    // --- FIX: Customers ki list ko sahi filter karein ---
     const customers = useMemo(() => {
-        return allPeoples;
+        // Sirf 'customer' ya 'Both' type ke log return karein
+        return allPeoples.sort((a,b) => a.name.localeCompare(b.name));
     }, [allPeoples]);
 
-    // Companies ki unique list (Products se)
+    // --- FIX: Companies ki unique list (ab ID aur Naam use karegi) ---
     const uniqueCompanies = useMemo(() => {
-        const companies = new Set(allProducts.map(p => p.company).filter(Boolean));
-        return ['all', ...Array.from(companies)];
-    }, [allProducts]);
+        // allProducts se unique 'companyId' nikalen
+        const companyIds = new Set(allProducts.map(p => p.companyId).filter(Boolean));
+        
+        // Un IDs ko 'allCompanies' se match kar ke {id, name} ka array banayein
+        return Array.from(companyIds).map(id => {
+            const company = allCompanies.find(c => c.id === id);
+            return company ? { id: company.id, name: company.name } : null;
+        })
+        .filter(Boolean) // Null values (agar company na mile) ko remove karein
+        .sort((a,b) => a.name.localeCompare(b.name)); // Naam se sort karein
+
+    }, [allProducts, allCompanies]);
+
+    // --- FIX: Company ka naam ID se hasil karein ---
+    const getCompanyName = (companyId) => {
+        const company = allCompanies.find(c => c.id === companyId);
+        return company ? company.name : (languageData[language].not_assigned || 'N/A');
+    };
 
     // Report generate karne ka function
     const handleGenerateReport = () => {
@@ -58,23 +77,30 @@ const CustomerCompanyReport = () => {
             const customer = allPeoples.find(p => p.id === sale.personId);
             const customerName = customer ? customer.name : (languageData[language].walking_customer || 'Walking Customer');
             
-            sale.products.forEach(product => {
-                const productCompany = allProducts.find(p => p.id === product.id)?.company || 'N/A';
+            // Sale ke har product ke liye
+            sale.products.forEach(productInSale => {
                 
-                if (selectedCompany === 'all' || productCompany === selectedCompany) {
+                // --- FIX: Asal product ko 'allProducts' se dhoondein taake 'companyId' mil sake ---
+                const mainProduct = allProducts.find(p => p.id === productInSale.id);
+                const productCompanyId = mainProduct ? mainProduct.companyId : 'N/A';
+                
+                // Ab 'selectedCompany' (jo ke ek ID hai) ko 'productCompanyId' se match karein
+                if (selectedCompany === 'all' || productCompanyId === selectedCompany) {
                     
-                    const quantity = parseInt(product.SellQuantity, 10) || 0;
-                    const salePrice = parseFloat(product.newSellPrice || product.sellPrice) || 0;
-                    const purchasePrice = parseFloat(product.purchasePrice) || 0;
+                    const quantity = parseInt(productInSale.SellQuantity, 10) || 0;
+                    const salePrice = parseFloat(productInSale.newSellPrice || productInSale.sellPrice) || 0;
+                    // 'purchasePrice' sale ke product se lein
+                    const purchasePrice = parseFloat(productInSale.purchasePrice) || 0; 
 
                     const totalSale = salePrice * quantity;
                     const totalCost = purchasePrice * quantity;
                     const totalProfit = totalSale - totalCost;
 
                     finalProductList.push({
-                        id: product.id,
-                        name: product.name,
-                        company: productCompany,
+                        id: productInSale.id,
+                        name: productInSale.name,
+                        companyId: productCompanyId, // ID store karein
+                        companyName: getCompanyName(productCompanyId), // Naam store karein
                         customerName: customerName,
                         saleDate: new Date(sale.dateTime).toLocaleDateString(),
                         quantity,
@@ -98,12 +124,14 @@ const CustomerCompanyReport = () => {
     
     const handlePrint = () => window.print();
 
+    // Filter UI ke liye naam
     const customerName = selectedCustomer === 'all' ? (languageData[language].all_customers || 'All Customers') : customers.find(c => c.id === selectedCustomer)?.name;
+    const companyName = selectedCompany === 'all' ? (languageData[language].all_companies || 'All Companies') : allCompanies.find(c => c.id === selectedCompany)?.name;
 
     return (
         <div>
             {/* --- Filters (No Print) --- */}
-            <div className={`no-print ${showFilters ? '' : 'hidden'}`}>
+            <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].customer_company_report || 'Customer/Company Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                     
@@ -119,6 +147,7 @@ const CustomerCompanyReport = () => {
                         </select>
                     </div>
 
+                    {/* --- FIX: Dropdown ab 'company.id' ko value ke tor par use karega --- */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">{languageData[language].company_brand || 'Company (Brand)'}</label>
                         <select
@@ -126,7 +155,9 @@ const CustomerCompanyReport = () => {
                             onChange={e => setSelectedCompany(e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                         >
-                            {uniqueCompanies.map(c => <option key={c} value={c}>{c === 'all' ? (languageData[language].all_companies || 'All Companies') : c}</option>)}
+                            <option value="all">{languageData[language].all_companies || 'All Companies'}</option>
+                            {/* 'uniqueCompanies' ab {id, name} objects hain */}
+                            {uniqueCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
 
@@ -141,7 +172,7 @@ const CustomerCompanyReport = () => {
 
                     <button 
                         onClick={handleGenerateReport} 
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10"
                     >
                         {languageData[language].generate || 'Generate'}
                     </button>
@@ -152,7 +183,7 @@ const CustomerCompanyReport = () => {
             {reportData && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
-                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600">
+                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600 hover:underline">
                             <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
                         </button>
                         <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
@@ -164,59 +195,66 @@ const CustomerCompanyReport = () => {
                         <h2>{businessName}</h2>
                         <h3>{languageData[language].customer_company_report || 'Customer/Company Report'}</h3>
                         <p>{languageData[language].customer || 'Customer'}: {customerName}</p>
-                        <p>{languageData[language].company_brand || 'Company'}: {selectedCompany}</p>
+                        <p>{languageData[language].company_brand || 'Company'}: {companyName}</p> {/* <-- Fixed */}
                         <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr>
-                                    <th>{languageData[language].date || 'Date'}</th>
-                                    <th>{languageData[language].customer_name || 'Customer Name'}</th>
-                                    <th>{languageData[language].product_name || 'Product Name'}</th>
-                                    <th>{languageData[language].company_brand || 'Company'}</th>
-                                    <th className="text-right">{languageData[language].quantity || 'Qty'}</th>
-                                    <th className="text-right">{languageData[language].total_sale || 'Total Sale'}</th>
-                                    <th className="text-right">{languageData[language].total_profit || 'Total Profit'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportData.data.map((item, index) => (
-                                    <tr key={index} className="border-b hover:bg-gray-50">
-                                        <td>{item.saleDate}</td>
-                                        <td>{item.customerName}</td>
-                                        <td className="font-medium">{item.name}</td>
-                                        <td>{item.company}</td>
-                                        <td className="text-right font-bold">{item.quantity}</td>
-                                        <td className="text-right font-semibold">{currency} {item.totalSale.toFixed(2)}</td>
-                                        <td className={`text-right font-bold ${item.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {currency} {item.totalProfit.toFixed(2)}
+                    {reportData.data.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="py-2 px-3 text-left">{languageData[language].date || 'Date'}</th>
+                                        <th className="py-2 px-3 text-left">{languageData[language].customer_name || 'Customer Name'}</th>
+                                        <th className="py-2 px-3 text-left">{languageData[language].product_name || 'Product Name'}</th>
+                                        <th className="py-2 px-3 text-left">{languageData[language].company_brand || 'Company'}</th>
+                                        <th className="py-2 px-3 text-right">{languageData[language].quantity || 'Qty'}</th>
+                                        <th className="py-2 px-3 text-right">{languageData[language].total_sale || 'Total Sale'}</th>
+                                        <th className="py-2 px-3 text-right">{languageData[language].total_profit || 'Total Profit'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reportData.data.map((item, index) => (
+                                        <tr key={index} className="border-b hover:bg-gray-50">
+                                            <td className="py-2 px-3">{item.saleDate}</td>
+                                            <td className="py-2 px-3">{item.customerName}</td>
+                                            <td className="py-2 px-3 font-medium">{item.name}</td>
+                                            <td className="py-2 px-3">{item.companyName}</td> {/* <-- Fixed */}
+                                            <td className="py-2 px-3 text-right font-bold">{item.quantity}</td>
+                                            <td className="py-2 px-3 text-right font-semibold">{currency} {item.totalSale.toFixed(2)}</td>
+                                            <td className={`py-2 px-3 text-right font-bold ${item.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {currency} {item.totalProfit.toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot className="bg-gray-100 font-bold">
+                                    <tr>
+                                        <td colSpan="4" className="py-3 px-3 text-right">{languageData[language].totals || 'Totals'}:</td>
+                                        <td className="py-3 px-3 text-right">{reportData.summary.totalQuantity}</td>
+                                        <td className="py-3 px-3 text-right">{currency} {reportData.summary.totalSale.toFixed(2)}</td>
+                                        <td className={`py-3 px-3 text-right ${reportData.summary.totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                            {currency} {reportData.summary.totalProfit.toFixed(2)}
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colSpan="4" className="text-right">{languageData[language].totals || 'Totals'}:</td>
-                                    <td className="text-right">{reportData.summary.totalQuantity}</td>
-                                    <td className="text-right">{currency} {reportData.summary.totalSale.toFixed(2)}</td>
-                                    <td className={`text-right ${reportData.summary.totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                        {currency} {reportData.summary.totalProfit.toFixed(2)}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                                </tfoot>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center p-10 no-print">
+                            <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
+                        </div>
+                    )}
+                    
                     <div className="print-footer">
                         {languageData[language].total_profit || 'Total Profit'}: {currency} {reportData.summary.totalProfit.toFixed(2)}
                     </div>
                 </div>
             )}
             {reportData && reportData.data.length === 0 && !showFilters && (
-                 <div className="text-center p-10">
+                 <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
                     <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
-                    <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto">
+                    <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto hover:underline">
                         <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
                     </button>
                  </div>

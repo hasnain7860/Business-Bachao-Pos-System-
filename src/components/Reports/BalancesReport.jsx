@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useAppContext } from '../../Appfullcontext';
-import languageData from '../../assets/languageData.json';
+import { useAppContext } from '../../Appfullcontext'; // Path update karein
+import languageData from '../../assets/languageData.json'; // Path update karein
 
-// Simple component: Koi filter nahi, sirf data dikhata hai
+// Component mein ab filters hain
 const BalancesReport = () => {
     const { language, peopleContext, SaleContext, purchaseContext, creditManagementContext, SellReturnContext, purchaseReturnContext, settingContext } = useAppContext();
 
@@ -18,29 +18,40 @@ const BalancesReport = () => {
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
 
     const [sortConfig, setSortConfig] = useState({ key: 'balance', direction: 'descending' });
+    // --- NAYA STATE FILTER KE LIYE ---
+    const [balanceFilter, setBalanceFilter] = useState('all'); // 'all', 'receivable', 'payable'
 
     const reportData = useMemo(() => {
         const balancesData = allPeoples.map(person => {
+            // ... (Balance calculation logic - jaisa pehle tha) ...
             const totalSalesCredit = allSales.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
             const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
             const totalReceivable = totalSalesCredit + manualCredit;
-            
             const manualPayments = submittedRecords.filter(r => r.personId === person.id && r.type === 'payment').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
             const sellReturnAdjustments = sellReturns.filter(r => r.peopleId === person.id || r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
             const totalReductions = manualPayments + sellReturnAdjustments;
-            
             const netReceivable = totalReceivable - totalReductions;
-
             const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
             const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
             const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
-
             const finalBalance = netReceivable - netPayable;
             
             return { id: person.id, name: person.name, balance: finalBalance };
-        }).filter(p => p.balance !== 0);
+        });
 
-        const summary = balancesData.reduce((acc, item) => {
+        // --- FILTERING LOGIC UPDATE HUA ---
+        let filteredBalances = balancesData.filter(p => p.balance !== 0);
+
+        // Naya filter apply karein
+        if (balanceFilter === 'receivable') {
+            filteredBalances = filteredBalances.filter(p => p.balance > 0);
+        } else if (balanceFilter === 'payable') {
+            filteredBalances = filteredBalances.filter(p => p.balance < 0);
+        }
+        // 'all' ke liye kuch nahi karna
+
+        // Ab summary *filtered* data par calculate karein
+        const summary = filteredBalances.reduce((acc, item) => {
             if (item.balance > 0) {
                 acc.totalReceivable += item.balance;
                 acc.debtorsCount += 1;
@@ -51,8 +62,8 @@ const BalancesReport = () => {
             return acc;
         }, { totalReceivable: 0, totalPayable: 0, debtorsCount: 0, creditorsCount: 0 });
 
-        return { data: balancesData, summary };
-    }, [allPeoples, allSales, allPurchases, submittedRecords, sellReturns, purchaseReturns]);
+        return { data: filteredBalances, summary };
+    }, [allPeoples, allSales, allPurchases, submittedRecords, sellReturns, purchaseReturns, balanceFilter]); // <-- Filter state ko dependency banayein
 
     const sortedData = useMemo(() => {
         let sortableItems = [...reportData.data];
@@ -85,6 +96,29 @@ const BalancesReport = () => {
             
             <h3 className="text-xl font-semibold mb-4 no-print">{languageData[language].balances_report || 'Balances Report'}</h3>
             
+            {/* --- NAYE FILTER BUTTONS --- */}
+            <div className="flex rounded-md shadow-sm mb-4 no-print">
+                <button 
+                    onClick={() => setBalanceFilter('all')} 
+                    className={`flex-1 p-2 rounded-l-md text-sm font-medium transition-colors ${balanceFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                >
+                    {languageData[language].all || 'All'} ({languageData[language].total || 'Total'}: {reportData.data.length})
+                </button>
+                <button 
+                    onClick={() => setBalanceFilter('receivable')} 
+                    className={`flex-1 p-2 text-sm font-medium transition-colors border-l border-r border-gray-300 ${balanceFilter === 'receivable' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                >
+                    {languageData[language].receivable || 'Receivable'} ({summary.debtorsCount})
+                </button>
+                <button 
+                    onClick={() => setBalanceFilter('payable')} 
+                    className={`flex-1 p-2 rounded-r-md text-sm font-medium transition-colors ${balanceFilter === 'payable' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                >
+                    {languageData[language].payable || 'Payable'} ({summary.creditorsCount})
+                </button>
+            </div>
+            
+            {/* Summary Cards ab filter ke hisab se update honge */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 no-print">
                 <div className="bg-green-100 p-4 rounded-lg shadow text-center">
                     <h4 className="text-sm font-semibold text-green-800">{languageData[language].total_receivable || 'Total Receivable'}</h4>
@@ -115,7 +149,7 @@ const BalancesReport = () => {
                     </thead>
                     <tbody>
                         {sortedData.length > 0 ? sortedData.map(p => (
-                            <tr key={p.id} className="border-b">
+                            <tr key={p.id} className="border-b hover:bg-gray-50">
                                 <td>{p.name}</td>
                                 <td className="font-semibold">
                                     {p.balance > 0 
@@ -133,12 +167,16 @@ const BalancesReport = () => {
                     </tbody>
                 </table>
             </div>
-             <div className="print-footer">
-                {languageData[language].total_receivable || 'Total Receivable'}: {currency} {summary.totalReceivable.toFixed(2)} | {languageData[language].total_payable || 'Total Payable'}: {currency} {summary.totalPayable.toFixed(2)}
-            </div>
+             
+             {/* --- TOTALS WALA FOOTER HATA DIYA GAYA --- */}
+             {/* <div className="print-footer">
+                    ... (Yeh hissa remove kar diya gaya hai) ...
+                </div> 
+             */}
         </div>
     );
 };
 
 export default BalancesReport;
+
 

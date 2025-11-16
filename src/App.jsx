@@ -127,6 +127,16 @@ function App() {
                     }
                 />
                 <Route
+                    path="/preorders/edit/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <NewPreorders/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/settings"
                     element={
                         <ProtectedRoute>
