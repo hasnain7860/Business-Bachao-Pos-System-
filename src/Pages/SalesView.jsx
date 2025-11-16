@@ -137,7 +137,7 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- 80MM PRINT FIX (NO S.NO.) --- */}
+            {/* --- 80MM PRINT FIX --- */}
             <style>{`
                 @media print {
                     @page { size: 80mm auto; margin: 0 !important; }
@@ -169,19 +169,53 @@ const SalesView = () => {
                     .text-xs { font-size: 11px !important; }
                     .py-1 { padding-top: 1px !important; padding-bottom: 1px !important; }
                     
-                    /* --- YEH ASLI FIX HAI (NO S.NO.) --- */
-                    .print-container table { table-layout: fixed; width: 100%; }
+                    /* --- START OF PRINT FIX --- */
+                    .print-container table { 
+                        table-layout: fixed; 
+                        width: 100%; 
+                    }
                     
+                    .print-container td {
+                        vertical-align: top; /* Ensures all cells align to the top */
+                    }
+
                     /* Products Table (4 columns) */
-                    .products-table th:nth-child(1), .products-table td:nth-child(1) { width: 50%; } /* Item */
-                    .products-table th:nth-child(2), .products-table td:nth-child(2) { width: 15%; text-align: center !important; } /* Qty */
-                    .products-table th:nth-child(3), .products-table td:nth-child(3) { width: 20%; text-align: right !important; } /* Rate */
-                    .products-table th:nth-child(4), .products-table td:nth-child(4) { width: 15%; text-align: right !important; } /* Total */
+                    .products-table th:nth-child(1), .products-table td:nth-child(1) { 
+                        width: 50%; 
+                        word-break: break-word; /* Allows long item names to wrap */
+                    } /* Item */
+                    .products-table th:nth-child(2), .products-table td:nth-child(2) { 
+                        width: 15%; 
+                        text-align: center !important; 
+                        white-space: nowrap; /* Prevents Qty from wrapping */
+                    } /* Qty */
+                    .products-table th:nth-child(3), .products-table td:nth-child(3) { 
+                        width: 20%; 
+                        text-align: right !important; 
+                        white-space: nowrap; /* Prevents Rate from wrapping */
+                    } /* Rate */
+                    .products-table th:nth-child(4), .products-table td:nth-child(4) { 
+                        width: 15%; 
+                        text-align: right !important; 
+                        white-space: nowrap; /* Prevents Total from wrapping */
+                    } /* Total */
 
                     /* Returns Table (3 columns) */
-                    .returns-table th:nth-child(1), .returns-table td:nth-child(1) { width: 50%; } /* Item */
-                    .returns-table th:nth-child(2), .returns-table td:nth-child(2) { width: 20%; text-align: center !important; } /* Qty */
-                    .returns-table th:nth-child(3), .returns-table td:nth-child(3) { width: 30%; text-align: right !important; } /* Amount */
+                    .returns-table th:nth-child(1), .returns-table td:nth-child(1) { 
+                        width: 50%; 
+                        word-break: break-word; /* Allows long item names to wrap */
+                    } /* Item */
+                    .returns-table th:nth-child(2), .returns-table td:nth-child(2) { 
+                        width: 20%; 
+                        text-align: center !important; 
+                        white-space: nowrap; /* Prevents Qty from wrapping */
+                    } /* Qty */
+                    .returns-table th:nth-child(3), .returns-table td:nth-child(3) { 
+                        width: 30%; 
+                        text-align: right !important; 
+                        white-space: nowrap; /* Prevents Amount from wrapping */
+                    } /* Amount */
+                    /* --- END OF PRINT FIX --- */
                 }
             `}</style>
 
@@ -379,7 +413,7 @@ const SalesView = () => {
                             )}
                             {netBalance === 0 && (
                                 <div className="flex justify-between text-base font-bold net-balance"><span>{languageData[language]?.balance_cleared || 'Balance Cleared:'}</span><span>{currency} 0.00</span></div>
-                            )}
+                           )}
                         </div>
                     )}
 
