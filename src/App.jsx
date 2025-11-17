@@ -44,6 +44,8 @@ import ProductUploadPage from "./Pages/ProductUploadPage";
 import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
 import SellReturn from "./Pages/SellReturn.jsx";
 import AddSellReturn from "./Pages/AddSellReturn.jsx";
+import PreorderView from "./Pages/PreorderView.jsx";
+
 import { useEffect } from "react";
 // import eruda from 'eruda';
 
@@ -132,7 +134,17 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Layout>
-                                <NewPreorders/>
+                                <PreorderView/>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/preorders/view/:id/print"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <PreorderView/>
                             </Layout>
                         </ProtectedRoute>
                     }
