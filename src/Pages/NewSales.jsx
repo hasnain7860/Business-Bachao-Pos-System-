@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-// 1. Import useLocation to read navigation state
 import { useNavigate, useLocation } from "react-router-dom";
 import SelectedProductsTable from "../components/element/SelectedProductsTable.jsx";
 import ProductSearch from "../components/element/ProductSearch.jsx";
@@ -18,7 +17,6 @@ const NewSales = () => {
     
     const products = context.productContext.products;
     const editProduct = context.productContext.edit;
-    // 2. Get preorder context to update its status
     const preordersContext = context.preordersContext; 
 
     const isPrint = useRef(false);
@@ -37,9 +35,10 @@ const NewSales = () => {
     const [selectedModalProduct, setSelectedModalProduct] = useState(null);
     const [message, setMessage] = useState("");
     const [userCreditData, setUserCreditData] = useState(null);
-
-    // 3. New state to track the source preorder
     const [sourcePreorderId, setSourcePreorderId] = useState(null);
+
+    // NEW FEATURE: Global state for price mode ('sell' or 'wholesale')
+    const [globalPriceMode, setGlobalPriceMode] = useState('sell');
 
     useEffect(() => {
         if (selectedPerson) {
@@ -47,40 +46,35 @@ const NewSales = () => {
         }
     }, [selectedPerson]);
 
-    // 4. New Effect to load data from Preorder
+    // Effect to load data from Preorder
     useEffect(() => {
-        // Check if we navigated here with preorderData
         if (location.state && location.state.preorderData) {
             const { preorderData } = location.state;
 
-            // Set all the form fields
             setSourcePreorderId(preorderData.id);
             setSelectedPerson(preorderData.personId);
             setDiscount(preorderData.discount || 0);
             
             let stockWarning = false;
 
-            // CRITICAL: Validate preorder products against *current* stock
             const validatedProducts = preorderData.products.map(p => {
-                // Find the real, current product and batch
                 const realProduct = products.find(prod => prod.id === p.id);
                 const realBatch = realProduct?.batchCode.find(b => b.batchCode === p.batchCode);
                 const currentStock = realBatch ? realBatch.quantity : 0;
 
                 let finalQuantity = p.SellQuantity;
                 
-                // Check if preorder quantity is more than current stock
                 if (p.SellQuantity > currentStock) {
-                    finalQuantity = currentStock; // Cap quantity at current stock
+                    finalQuantity = currentStock; 
                     stockWarning = true;
                 }
 
                 return {
-                    ...p, // Spread all other properties from preorder product
+                    ...p, 
                     SellQuantity: finalQuantity,
-                    batchQuantity: currentStock // <-- CRITICAL: Update to *current* stock
+                    batchQuantity: currentStock 
                 };
-            }).filter(p => p.SellQuantity > 0); // Remove items that are now fully out of stock
+            }).filter(p => p.SellQuantity > 0); 
 
             setSelectedProducts(validatedProducts);
             
@@ -93,14 +87,14 @@ const NewSales = () => {
             // Clear the location state to prevent re-loading on refresh
             navigate(location.pathname, { replace: true, state: {} });
         }
-    }, [location.state, products, navigate]); // Depend on products to get correct stock
+    }, [location.state, products, navigate]); 
 
     useEffect(() => {
         // Only generate a new ref no if we are NOT loading from a preorder
         if (!sourcePreorderId) {
             generateSalesRefNo();
         }
-    }, [sourcePreorderId]); // Run when sourcePreorderId changes
+    }, [sourcePreorderId]); 
 
     const generateSalesRefNo = () => {
         setSalesRefNo(`SALE-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -110,7 +104,6 @@ const NewSales = () => {
         handleCalculateCredit();
     }, [selectedProducts, amountPaid, discount]);
 
-    // 5. Applied functional update fix to prevent stale state
     const handleAddProduct = (product, batch, quantity, chosenPrice, priceType) => {
         setSelectedProducts(currentProducts => {
             const existingProduct = currentProducts.find(
@@ -158,22 +151,24 @@ const NewSales = () => {
     
 
     const handleSellingPriceChange = (id, batchCode, value) => {
-    setSelectedProducts(currentProducts => {
-        return currentProducts.map(p => {
-            if (p.id === id && p.batchCode === batchCode) {
-                const newSellPrice = value;
-                const basePrice = p.priceUsedType === 'wholesale' 
-                                  ? p.wholeSalePrice 
-                                  : p.sellPrice;
-                let discountPercent = 100 - (Number(newSellPrice) * 100) / Number(basePrice);
-                discountPercent = Math.max(0, discountPercent);
-                return { ...p, newSellPrice: newSellPrice, discount: discountPercent.toFixed(2) };
-            }
-            return p;
+        setSelectedProducts(currentProducts => {
+            return currentProducts.map(p => {
+                if (p.id === id && p.batchCode === batchCode) {
+                    const newSellPrice = value;
+                    // Use the price type that was set when the product was added to calculate discount base
+                    const basePrice = p.priceUsedType === 'wholesale' 
+                                    ? p.wholeSalePrice 
+                                    : p.sellPrice;
+                    let discountPercent = 100 - (Number(newSellPrice) * 100) / Number(basePrice);
+                    discountPercent = Math.max(0, discountPercent);
+                    return { ...p, newSellPrice: newSellPrice, discount: discountPercent.toFixed(2) };
+                }
+                return p;
+            });
         });
-    });
-};
+    };
 
+    // Pass the global price mode to the modal
     const handleOpenAddModal = (product, batch) => {
         setSelectedModalProduct(product);
         setSelectedBatch(batch);
@@ -186,9 +181,6 @@ const NewSales = () => {
 
     // Calculate subtotal
     const calculateSubtotal = () => {
-        // This calculation is for NewSales, using SellQuantity.
-        // This is correct because our validation logic in useEffect
-        // ensures SellQuantity is the base unit quantity.
         return selectedProducts.reduce((total, product) => {
             const productTotal =
                 Number(product.newSellPrice) * Number(product.SellQuantity);
@@ -212,7 +204,6 @@ const NewSales = () => {
         setCredit(Number(calculateTotalPayment()) - Number(amountPaidcheck));
     };
 
-    // 6. Updated handleSaveSales
     const handleSaveSales = async () => {
         if (!selectedPerson) {
             setMessage("Please add a person first.");
@@ -248,11 +239,10 @@ const NewSales = () => {
             amountPaid,
             credit,
             dateTime: new Date().toISOString(),
-            // Link back to the preorder
             sourcePreorderId: sourcePreorderId 
         };
 
-        // Stock deduction loop (this is correct)
+        // Stock deduction loop 
         for (let product of selectedProducts) {
             const originalProduct = products.find(p => p.id === product.id);
             if (originalProduct) {
@@ -278,7 +268,7 @@ const NewSales = () => {
         // Save the new sale
         await context.SaleContext.add(salesData);
 
-        // --- NEW: Update Preorder Status ---
+        // Update Preorder Status 
         if (sourcePreorderId) {
             const originalPreorder = preordersContext.preorders.find(p => p.id === sourcePreorderId);
             if (originalPreorder) {
@@ -288,9 +278,11 @@ const NewSales = () => {
                 });
             }
         }
-        // --- END NEW ---
-
-        alert("Sales saved successfully!");
+        
+        // Use a better UI notification instead of alert()
+        // Here, we just navigate/reset
+        console.log("Sales saved successfully!"); 
+        
         if (isPrint.current) {
             return salesData;
         }
@@ -303,7 +295,8 @@ const NewSales = () => {
         setAmountPaid("0");
         setDiscount(0);
         setCredit(0);
-        setSourcePreorderId(null); // <-- NEW: Reset the preorder ID
+        setSourcePreorderId(null); 
+        setGlobalPriceMode('sell'); // NEW: Reset price mode
         generateSalesRefNo();
         setMessage("");
     };
@@ -341,7 +334,7 @@ const NewSales = () => {
                 {/* Left Content Area */}
                 <div className="flex-1 space-y-4">
                     {/* Top Row with responsive grid */}
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-3 gap-4">
                         {/* Sales Reference */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <label className="text-sm font-semibold text-gray-600">
@@ -355,7 +348,37 @@ const NewSales = () => {
                             />
                         </div>
 
-                        {/* 7. Person selection is now disabled if loaded from preorder */}
+                        {/* NEW: Global Price Mode Selector */}
+                        <div className="bg-white rounded-lg p-4 shadow flex flex-col justify-between">
+                            <label className="text-sm font-semibold text-gray-600 mb-2">
+                                Global Price Mode:
+                            </label>
+                            <div className="flex bg-gray-200 rounded-lg p-1">
+                                <button
+                                    onClick={() => setGlobalPriceMode('sell')}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                                        globalPriceMode === 'sell' 
+                                            ? 'bg-blue-600 text-white shadow-md' 
+                                            : 'text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                >
+                                    Retailer (Sell Price)
+                                </button>
+                                <button
+                                    onClick={() => setGlobalPriceMode('wholesale')}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                                        globalPriceMode === 'wholesale' 
+                                            ? 'bg-blue-600 text-white shadow-md' 
+                                            : 'text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                >
+                                    Wholesaler (Wholesale Price)
+                                </button>
+                            </div>
+                        </div>
+
+
+                        {/* Person selection is now disabled if loaded from preorder */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <div className="flex gap-2">
                                 <div className="flex-1">
@@ -598,6 +621,7 @@ const NewSales = () => {
                     batch={selectedBatch}
                     onClose={() => setShowAddModal(false)}
                     onAdd={handleAddProduct}
+                    defaultPriceMode={globalPriceMode} 
                 />
             )}
         </div>
