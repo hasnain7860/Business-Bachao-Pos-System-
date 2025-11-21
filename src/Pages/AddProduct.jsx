@@ -31,7 +31,7 @@ const AddProduct = () => {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [purchasePrice, setPurchasePrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
-  const [wholeSalePrice, setWholeSalePrice] = useState(""); // NEW: Wholesale price state
+  const [wholeSalePrice, setWholeSalePrice] = useState(""); 
   const [retailPrice, setRetailPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
@@ -80,7 +80,7 @@ const AddProduct = () => {
         setExpirationDate(batch.expirationDate);
         setPurchasePrice(batch.purchasePrice);
         setSellPrice(batch.sellPrice);
-        setWholeSalePrice(batch.wholeSalePrice || ""); // NEW: Load wholesale price
+        setWholeSalePrice(batch.wholeSalePrice || ""); 
         setRetailPrice(batch.retailPrice);
         setQuantity(batch.quantity);
       }
@@ -89,7 +89,6 @@ const AddProduct = () => {
 
   // Function to handle adding a new batch to the list
   const handleAddNewBatch = () => {
-    // UPDATED: Retail price removed from validation
     if (!purchasePrice || !sellPrice || !wholeSalePrice || !quantity) {
       alert("Please fill all the required fields (Purchase, Sell, Wholesale, Quantity) for the current batch first");
       return;
@@ -100,9 +99,14 @@ const AddProduct = () => {
       expirationDate: expirationDate || "",
       purchasePrice: purchasePrice,
       sellPrice: sellPrice,
-      wholeSalePrice: wholeSalePrice, // NEW: Add wholesale price to batch data
+      wholeSalePrice: wholeSalePrice,
       retailPrice: retailPrice,
-      quantity: quantity
+      quantity: quantity,
+      // --- NEW LOGIC: Initialize Opening Stock for New Batch ---
+      // Since this is a new batch entry, we treat current Qty as Opening Stock
+      openingStock: Number(quantity),
+      openingStockDate: new Date().toISOString(),
+      damageQuantity: 0
     };
 
     setBatches([...batches, batchData]);
@@ -114,7 +118,7 @@ const AddProduct = () => {
     setExpirationDate("");
     setPurchasePrice("");
     setSellPrice("");
-    setWholeSalePrice(""); // NEW: Clear wholesale price field
+    setWholeSalePrice(""); 
     setRetailPrice("");
     setQuantity("");
   };
@@ -138,14 +142,24 @@ const AddProduct = () => {
       return;
     }
 
+    // Find existing batch if in edit mode to preserve history
+    const existingBatch = edit ? batches.find(b => b.batchCode === selectedBatch) : null;
+
     const currentBatchData = {
       batchCode: edit ? selectedBatch : batchCode,
       expirationDate: expirationDate || "",
       purchasePrice: purchasePrice || "",
       sellPrice: sellPrice || "",
-      wholeSalePrice: wholeSalePrice || "", // NEW: Add wholesale price to final batch data
+      wholeSalePrice: wholeSalePrice || "",
       retailPrice: retailPrice || "",
       quantity: quantity || "",
+      
+      // --- NEW LOGIC: Preserve or Initialize Opening Stock ---
+      // 1. If editing an existing batch that HAS opening stock, keep it.
+      // 2. If it's a new batch (or old one without init), set Opening Stock to current Quantity.
+      openingStock: existingBatch?.openingStock !== undefined ? existingBatch.openingStock : Number(quantity || 0),
+      openingStockDate: existingBatch?.openingStockDate || new Date().toISOString(),
+      damageQuantity: existingBatch?.damageQuantity !== undefined ? existingBatch.damageQuantity : 0,
     };
 
     let updatedBatches;
@@ -328,3 +342,4 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
+

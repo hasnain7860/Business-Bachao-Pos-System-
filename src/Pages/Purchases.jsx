@@ -28,7 +28,7 @@ const toggleMenu = (index) => {
 
 
   
-  const handleSalesReturn = (id) => {
+  const handlePurchaseReturn = (id) => {
     navigate(`/return/purchase_return/add/${id}`);
   };
 
@@ -85,8 +85,8 @@ const toggleMenu = (index) => {
            overflowY: 'auto'
          }}>
     
-      <button onClick={() => handleSalesReturn(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
-        {languageData[language].sale_return}
+      <button onClick={() => handlePurchaseReturn(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700">
+        {languageData[language].purchase_return}
       </button>
       <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600">
         {languageData[language].delete}

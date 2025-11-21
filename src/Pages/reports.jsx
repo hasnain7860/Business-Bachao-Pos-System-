@@ -10,7 +10,12 @@ import PnLReport from '../components//Reports/PnLReport';
 import ProductPerformanceReport from '../components/Reports/ProductPerformanceReport';
 import CollectionSheet from '../components//Reports/CollectionSheet'; // <-- NAYA
 import CustomerCompanyReport from '../components//Reports/CustomerCompanyReport'; // <-- NAYA
- import PreorderAreaReport from '../components/Reports/PreorderAreaReport'; // <-- Ye aap baad mein banayeinge
+ import PreorderAreaReport from '../components/Reports/PreorderAreaReport';
+ import InventoryReport from '../components/Reports/InventoryReport';
+ 
+ 
+ 
+ // <-- Ye aap baad mein banayeinge
 
 
 const Reports = () => {
@@ -33,6 +38,10 @@ const Reports = () => {
                 return <SalesSummaryReport />;
             case 'pnl':
                 return <PnLReport />;
+                
+            case 'Inventory_Report':
+                return <InventoryReport />;
+                
             case 'product_performance':
                 return <ProductPerformanceReport />;
             default:
@@ -51,6 +60,7 @@ const Reports = () => {
         { key: 'balances', label: languageData[language].balances || 'Balances', icon: <FaUsers /> },
         { key: 'sales_summary', label: languageData[language].sales_summary || 'Sales Summary', icon: <FaChartBar /> },
         { key: 'pnl', label: languageData[language].pnl || 'P&L', icon: <FaMoneyBillWave /> },
+        { key: 'Inventory_Report', label: languageData[language].Inventory_Report || 'Inventory Report', icon: <FaMoneyBillWave /> },
         { key: 'product_performance', label: languageData[language].product_performance || 'Product Report', icon: <FaStar /> },
     ];
 

@@ -1,34 +1,100 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FaEdit, FaTrashAlt, FaCopy } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaCopy, FaWarehouse } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
 
+// Setting key for tracking if opening stock has been set
+const OPENING_STOCK_KEY = "isOpeningStockSet"; 
+
 const Products = () => {
     const context = useAppContext();
     const navigate = useNavigate();
+    
     const products = context.productContext.products;
+    const { edit: editProduct, delete: handleDelete } = context.productContext;
     const companies = context.companyContext.companies;
-    console.log(products)
-    const handleDelete = context.productContext.delete;
-    const userAndBusinessDetail = context.settingContext.settings;
+    const { selectedSetting, saveSetting } = context.settingContext;
     const { language } = context;
-    const [selectedCompany, setSelectedCompany] = useState(""); // Company Filter ke liye
+    
+    const [selectedCompany, setSelectedCompany] = useState(""); 
     const [currentPage, setCurrentPage] = useState(1);
-    const [productsPerPage, setProductsPerPage] = useState(25); // Har page par kitne products dikhane hain
-    const [searchTerm, setSearchTerm] = useState(""); // **Search Input State**
-    const [sortOrder, setSortOrder] = useState("asc"); // Sorting order state
+    const [productsPerPage, setProductsPerPage] = useState(25); 
+    const [searchTerm, setSearchTerm] = useState(""); 
+    const [sortOrder, setSortOrder] = useState("asc"); 
+    const [message, setMessage] = useState("");
+    
+    const isOpeningStockSet = selectedSetting[OPENING_STOCK_KEY] === true;
+
     const calculateTotalStock = (batchCode) => {
         if (!batchCode || batchCode.length === 0) {
             return 0;
         }
         return batchCode.reduce((total, batch) => total + Number(batch.quantity || 0), 0);
     };
+
+    // --- UPDATED FUNCTION: Set Opening Stock with DATE ---
+    const handleSetOpeningStock = async () => {
+        if (!window.confirm("Are you sure? This will set the CURRENT stock as the OPENING stock. Past purchase records will NOT be shown in the report for this opening balance.")) {
+            return;
+        }
+        
+        setMessage("Initializing opening stock... Please wait.");
+        let updatedCount = 0;
+        const currentDate = new Date().toISOString(); // Save the current timestamp
+
+        for (const product of products) {
+            let needsUpdate = false;
+            
+            const updatedBatchCode = product.batchCode.map(batch => {
+                // Only set if not already set
+                if (batch.openingStock === undefined || batch.openingStock === null) {
+                    needsUpdate = true;
+                    return {
+                        ...batch,
+                        // Set current quantity as Opening
+                        openingStock: Number(batch.quantity || 0), 
+                        // CRITICAL: Save WHEN we did this. 
+                        // Only transactions AFTER this date will be calculated in report columns
+                        openingStockDate: currentDate,
+                        damageQuantity: 0,
+                    };
+                }
+                // Initialize damage if missing
+                if (batch.damageQuantity === undefined || batch.damageQuantity === null) {
+                    needsUpdate = true;
+                    return { ...batch, damageQuantity: 0 };
+                }
+                return batch;
+            });
+
+            if (needsUpdate) {
+                const updatedProduct = {
+                    ...product,
+                    batchCode: updatedBatchCode
+                };
+                await editProduct(product.id, updatedProduct);
+                updatedCount++;
+            }
+        }
+        
+        const updatedSettings = {
+            ...selectedSetting,
+            [OPENING_STOCK_KEY]: true,
+        };
+        await saveSetting(updatedSettings);
+
+        setMessage(`Successfully initialized Opening Stock for ${updatedCount} products.`);
+    };
+    // --- END UPDATED FUNCTION ---
+
+    // ... (Rest of your existing code for Filtering, Sorting, Pagination, Export, Render remains EXACTLY the same) ...
+    
     // **Filtering Products Based on Search & Company**
-const filteredProducts = products.filter(product => 
+    const filteredProducts = products.filter(product => 
         (selectedCompany ? product.companyId === selectedCompany : true) &&
         (searchTerm ? 
             (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -168,18 +234,38 @@ const filteredProducts = products.filter(product =>
             <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'}`}>
                 <h1 className="text-2xl font-semibold">{languageData[language].products}</h1>
             </div>
+            
+            {/* Conditional Message Display */}
+            {message && (
+                <div className={`mb-4 p-3 rounded-lg ${message.includes('Successfully') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {message}
+                </div>
+            )}
 
-            <div className={`flex items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
+
+            <div className={`flex flex-wrap items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
                 {/* Add Product Button */}
                 <Link to="/inventory/addProduct">
                     <button className="btn btn-primary">
                         {languageData[language].add_product}
                     </button>
                 </Link>
+                
                 {/* Export to Excel Button */}
                 <button onClick={exportToExcel} className="btn btn-secondary">
                     Export to Excel
                 </button>
+                
+                {/* --- Initialize Opening Stock Button --- */}
+                {!isOpeningStockSet && products.length > 0 && (
+                    <button 
+                        onClick={handleSetOpeningStock} 
+                        className="btn bg-yellow-500 text-white hover:bg-yellow-600"
+                        title="Set current stock as the baseline for the Inventory Report."
+                    >
+                        <FaWarehouse className="mr-2" /> Initialize Opening Stock
+                    </button>
+                )}
             </div>
 
             {/* **Search Input & Filter** */}
@@ -223,11 +309,9 @@ const filteredProducts = products.filter(product =>
                         <tr className={language === 'ur' ? 'text-right' : 'text-left'}>
                             {language === 'ur' ? (
                                 <>
-                                    {/* <th className="p-2 border-b">{languageData[language].actions}</th> */}
                                     <th className="p-2 border-b">Delete</th>
-        <th className="p-2 border-b">Edit</th>
-        <th className="p-2 border-b">Copy</th>
-       
+                                    <th className="p-2 border-b">Edit</th>
+                                    <th className="p-2 border-b">Copy</th>
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].purchase_price}</th>
@@ -258,10 +342,8 @@ const filteredProducts = products.filter(product =>
                                     <th className="p-2 border-b">{languageData[language].sell_price}</th>
                                     <th className="p-2 border-b">{languageData[language].retail_price}</th>
                                     <th className="p-2 border-b">Copy</th>
-        <th className="p-2 border-b">Edit</th>
-        <th className="p-2 border-b">Delete</th>
-   
-                                    {/* <th className="p-2 border-b">{languageData[language].actions}</th> */}
+                                    <th className="p-2 border-b">Edit</th>
+                                    <th className="p-2 border-b">Delete</th>
                                 </>
                             )}
                         </tr>
@@ -285,40 +367,35 @@ const filteredProducts = products.filter(product =>
                                 <tr key={product.id} className="hover:bg-gray-100">
                                     {language === 'ur' ? (
                                         <>
-  <td className="p-2 border-b">
-            <button
-                onClick={() => {
-                    if (window.confirm(languageData[language].areYouSureDelete)) {
-                        handleDelete(product.id)
-                    }
-                }}
-                className="btn btn-danger"
-            >
-                <FaTrashAlt />
-            </button>
-        </td>
-        <td className="p-2 border-b">
-            <Link to={`/inventory/edit-product/${product.id}`}>
-                <button className="btn btn-warning">
-                    <FaEdit />
-                </button>
-            </Link>
-        </td>
-        <td className="p-2 border-b">
-           
-           <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
-           <button className="btn btn-info">       
-               <FaCopy />
-               </button>
-               </Link>
-             
-        
-       </td>
-
+                                            <td className="p-2 border-b">
+                                                <button
+                                                    onClick={() => {
+                                                        console.log(`${languageData[language].areYouSureDelete} - Product: ${product.name}`);
+                                                        handleDelete(product.id)
+                                                    }}
+                                                    className="btn btn-danger"
+                                                >
+                                                    <FaTrashAlt />
+                                                </button>
+                                            </td>
+                                            <td className="p-2 border-b">
+                                                <Link to={`/inventory/edit-product/${product.id}`}>
+                                                    <button className="btn btn-warning">
+                                                        <FaEdit />
+                                                    </button>
+                                                </Link>
+                                            </td>
+                                            <td className="p-2 border-b">
+                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
+                                                    <button className="btn btn-info">       
+                                                        <FaCopy />
+                                                    </button>
+                                                </Link>
+                                            </td>
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{totalstockprice}</td>
+                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
                                             
                                             <td className="p-2 border-b">
                                                 <select
@@ -330,7 +407,7 @@ const filteredProducts = products.filter(product =>
                                                 </select>
                                                 <div>{batch.quantity || languageData[language].batch_not_available}</div>
                                             </td>
-                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
+                                            <td className="p-2 border-b">{totalStock}</td>
                                             <td className="p-2 border-b">
                                                 {product.productImage ? (
                                                     <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover rounded" />
@@ -376,34 +453,30 @@ const filteredProducts = products.filter(product =>
                                             <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
                                             <td className="p-2 border-b">
-           
-            <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
-            <button className="btn btn-info">       
-                <FaCopy />
-                </button>
-                </Link>
-              
-         
-        </td>
-        <td className="p-2 border-b">
-            <Link to={`/inventory/edit-product/${product.id}`}>
-                <button className="btn btn-warning">
-                    <FaEdit />
-                </button>
-                </Link>
-        </td>
-        <td className="p-2 border-b">
-            <button
-                onClick={() => {
-                    if (window.confirm(languageData[language].areYouSureDelete)) {
-                        handleDelete(product.id)
-                    }
-                }}
-                className="btn btn-danger"
-            >
-                <FaTrashAlt />
-            </button>
-        </td>
+                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
+                                                    <button className="btn btn-info">       
+                                                        <FaCopy />
+                                                    </button>
+                                                </Link>
+                                            </td>
+                                            <td className="p-2 border-b">
+                                                <Link to={`/inventory/edit-product/${product.id}`}>
+                                                    <button className="btn btn-warning">
+                                                        <FaEdit />
+                                                    </button>
+                                                </Link>
+                                            </td>
+                                            <td className="p-2 border-b">
+                                                <button
+                                                    onClick={() => {
+                                                        console.log(`${languageData[language].areYouSureDelete} - Product: ${product.name}`);
+                                                        handleDelete(product.id)
+                                                    }}
+                                                    className="btn btn-danger"
+                                                >
+                                                    <FaTrashAlt />
+                                                </button>
+                                            </td>
                                         
                                         </>
                                     )}
@@ -445,3 +518,5 @@ const filteredProducts = products.filter(product =>
 };
 
 export default Products;
+
+

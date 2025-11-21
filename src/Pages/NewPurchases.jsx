@@ -38,7 +38,7 @@ const NewPurchases = () => {
                 batchCode: `BATCH-${String(1).padStart(3, '0')}`,
                 purchasePrice: '',
                 sellPrice: '',
-                wholeSalePrice: '', // NEW
+                wholeSalePrice: '', 
                 retailPrice: '',
                 expirationDate: '',
                 quantity: 0,
@@ -51,7 +51,7 @@ const NewPurchases = () => {
                 purchaseRefNo: generatePurchaseRefNo(),
                 unitId: product.unitId || '',
                 sellPrice: batchInfo.sellPrice,
-                wholeSalePrice: batchInfo.wholeSalePrice || '', // NEW
+                wholeSalePrice: batchInfo.wholeSalePrice || '', 
                 retailPrice: batchInfo.retailPrice,
                 purchasePrice: batchInfo.purchasePrice,
                 expirationDate: batchInfo.expirationDate,
@@ -75,7 +75,7 @@ const NewPurchases = () => {
         product.batchCode = newBatchCode;
         product.expirationDate = selectedBatch.expirationDate || product.expirationDate;
         product.sellPrice = selectedBatch.sellPrice || product.sellPrice;
-        product.wholeSalePrice = selectedBatch.wholeSalePrice || product.wholeSalePrice; // NEW
+        product.wholeSalePrice = selectedBatch.wholeSalePrice || product.wholeSalePrice;
         product.retailPrice = selectedBatch.retailPrice || product.retailPrice;
         product.purchasePrice = selectedBatch.purchasePrice || product.purchasePrice;
         product.quantity = 0;
@@ -135,6 +135,10 @@ const NewPurchases = () => {
             return;
         }
 
+        // Use a timestamp from the past (Epoch) for auto-initialized batches.
+        // This ensures the current purchase (which happens 'today') is counted as an inflow AFTER the opening date.
+        const autoInitDate = new Date(0).toISOString(); 
+
         selectedProducts.forEach((product) => {
             const existingProduct = products.find((p) => p.id === product.id);
             if (existingProduct) {
@@ -146,14 +150,24 @@ const NewPurchases = () => {
                 if (existingBatch) {
                     const batchIndex = batches.findIndex(batch => batch.batchCode === existingBatch.batchCode);
                     if (batchIndex !== -1) {
+                        // --- CRITICAL UPDATE: Initialize tracking if missing ---
+                        if (batches[batchIndex].openingStock === undefined) {
+                            // If this batch exists but wasn't initialized, treat its CURRENT quantity (before this purchase) as Opening.
+                            batches[batchIndex].openingStock = Number(batches[batchIndex].quantity || 0);
+                            batches[batchIndex].openingStockDate = autoInitDate;
+                            batches[batchIndex].damageQuantity = 0;
+                        }
+
                         batches[batchIndex].purchasePrice = product.purchasePrice;
                         batches[batchIndex].sellPrice = product.sellPrice;
-                        batches[batchIndex].wholeSalePrice = product.wholeSalePrice; // NEW
+                        batches[batchIndex].wholeSalePrice = product.wholeSalePrice;
                         batches[batchIndex].retailPrice = product.retailPrice;
                         batches[batchIndex].expirationDate = product.expirationDate;
+                        // Update Quantity
                         batches[batchIndex].quantity = Number(batches[batchIndex].quantity) + Number(product.quantity);
                     }
                 } else {
+                    // --- NEW BATCH LOGIC ---
                     const nextBatchNumber = batches.length + 1;
                     const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
                     const newBatch = {
@@ -161,9 +175,14 @@ const NewPurchases = () => {
                         expirationDate: product.expirationDate,
                         purchasePrice: product.purchasePrice,
                         sellPrice: product.sellPrice,
-                        wholeSalePrice: product.wholeSalePrice, // NEW
+                        wholeSalePrice: product.wholeSalePrice,
                         retailPrice: product.retailPrice,
                         quantity: Number(product.quantity),
+                        
+                        // Initialize for Report: Opening is 0, so this purchase shows as +Quantity
+                        openingStock: 0,
+                        openingStockDate: autoInitDate,
+                        damageQuantity: 0
                     };
                     batches = [...batches, newBatch];
                     product.batchCode = newBatchCode;
@@ -184,7 +203,7 @@ const NewPurchases = () => {
                 quantity: p.quantity,
                 purchasePrice: p.purchasePrice,
                 sellPrice: p.sellPrice,
-                wholeSalePrice: p.wholeSalePrice, // NEW
+                wholeSalePrice: p.wholeSalePrice, 
                 retailPrice: p.retailPrice,
                 batchCode: p.batchCode,
             })),
@@ -238,7 +257,7 @@ const NewPurchases = () => {
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Batch</th>
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Expire</th>
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Sell ₨</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Wholesale ₨</th> {/* NEW */}
+                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Wholesale ₨</th> 
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Retail ₨</th>
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Purchase ₨</th>
                                             <th className="text-white font-semibold text-xs md:text-sm px-2">Qty</th>
@@ -255,7 +274,7 @@ const NewPurchases = () => {
                                             </td>
                                             <td className="text-xs md:text-sm px-2"><input type="date" value={product.expirationDate || ''} onChange={(e) => updateProductField(index, 'expirationDate', e.target.value)} className="input input-bordered input-sm w-full max-w-xs"/></td>
                                             <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.sellPrice} onChange={(e) => updateProductField(index, 'sellPrice', parseFloat(e.target.value) || '')}/></td>
-                                            {/* NEW */}
+                                            
                                             <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.wholeSalePrice} onChange={(e) => updateProductField(index, 'wholeSalePrice', parseFloat(e.target.value) || '')}/></td>
                                             <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.retailPrice} onChange={(e) => updateProductField(index, 'retailPrice', parseFloat(e.target.value) || '')}/></td>
                                             <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.purchasePrice} onChange={(e) => updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || '')}/></td>
@@ -285,3 +304,4 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
+
