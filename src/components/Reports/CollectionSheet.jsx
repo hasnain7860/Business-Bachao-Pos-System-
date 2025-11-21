@@ -7,7 +7,7 @@ const CollectionSheet = () => {
     const context = useAppContext();
     const { language } = context;
 
-    // --- Data (No Change) ---
+    // --- Data ---
     const { areas } = context.areasContext;
     const allSales = context.SaleContext.Sales || [];
     const allPurchases = context.purchaseContext.purchases || [];
@@ -20,15 +20,26 @@ const CollectionSheet = () => {
     const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
 
-    // --- State (No Change) ---
+    // --- State ---
     const [selectedArea, setSelectedArea] = useState('all');
     const [reportData, setReportData] = useState([]);
     const [showFilters, setShowFilters] = useState(true);
 
-    // --- Memos (No Change) ---
+    // --- Memos ---
     const uniqueAreas = useMemo(() => {
         return areas.sort((a, b) => a.name.localeCompare(b.name));
     }, [areas]);
+
+    // --- UPDATED: P- prefix removed for reporting ---
+    const getPersonDetails = (personId) => {
+        const person = allPeoples.find(p => p.id === personId);
+        // Code will now be displayed as raw number (e.g., 1000)
+        const codeDisplay = person && person.code ? `${person.code}` : 'N/A'; 
+        return {
+            name: person?.name || 'Unknown',
+            codeDisplay: codeDisplay
+        };
+    }
 
     const calculateBalances = () => {
         return allPeoples.map(person => {
@@ -45,16 +56,20 @@ const CollectionSheet = () => {
             const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
             const finalBalance = netReceivable - netPayable;
             
+            // --- UPDATED: Combine name and code without 'P-' prefix ---
+            const { name, codeDisplay } = getPersonDetails(person.id);
+
             return {
                 id: person.id,
-                name: person.name,
+                // Result: "Name - 1000"
+                displayName: `${name} - ${codeDisplay}`,
                 areaId: person.areaId,
                 balance: finalBalance,
             };
         });
     };
 
-    // --- Functions (No Change) ---
+    // --- Functions ---
     const handleGenerateReport = () => {
         const allBalances = calculateBalances();
         let filteredData = allBalances.filter(p => p.balance > 0); 
@@ -79,7 +94,7 @@ const CollectionSheet = () => {
 
     return (
         <div>
-            {/* --- FILTERS (UI Improved) --- */}
+            {/* --- FILTERS --- */}
             <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].collection_sheet || 'Collection Sheet'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -107,7 +122,6 @@ const CollectionSheet = () => {
             </div>
 
             {/* --- Report Data --- */}
-            {/* Ab reportData array check karne ke bajaye, check karein ke filters hide hain ya nahi */}
             {!showFilters && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
@@ -131,11 +145,12 @@ const CollectionSheet = () => {
                     {reportData.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="min-w-full collection-sheet-table">
-                                {/* Table Header (UI Improved) */}
+                                {/* Table Header */}
                                 <thead className="bg-gray-100">
                                     <tr>
                                         <th className="py-2 px-3 text-center">S.No.</th>
-                                        <th className="py-2 px-3 text-left">{languageData[language].customer_name || 'Customer Name'}</th>
+                                        {/* Header updated to reflect simple Code */}
+                                        <th className="py-2 px-3 text-left">{languageData[language].customer_name || 'Customer Name'} (Code)</th>
                                         <th className="py-2 px-3 text-left">{languageData[language].area || 'Area'}</th>
                                         <th className="py-2 px-3 text-right">{languageData[language].total_bqaya || 'Total Bqaya'}</th>
                                         <th className="py-2 px-3 text-left">{languageData[language].received_amount || 'Received Amount'}</th>
@@ -146,31 +161,31 @@ const CollectionSheet = () => {
                                     {reportData.map((person, index) => (
                                         <tr key={person.id} className="border-b hover:bg-gray-50">
                                             <td className="py-2 px-3 text-center">{index + 1}</td>
-                                            <td className="py-2 px-3 font-medium">{person.name}</td>
+                                            {/* --- UPDATED: Uses displayName which is "Name - Code" --- */}
+                                            <td className="py-2 px-3 font-medium">{person.displayName}</td>
                                             <td className="py-2 px-3">{getAreaName(person.areaId)}</td>
                                             <td className="py-2 px-3 text-right font-bold text-red-600">
                                                 {currency} {person.balance.toFixed(2)}
                                             </td>
-                                            {/* Yeh A4 print ke liye khali lines hain */}
                                             <td className="received-line"></td>
                                             <td className="signature-line"></td>
                                         </tr>
                                     ))}
                                 </tbody>
-                                {/* Footer (UI Improved) */}
+                                {/* Footer */}
                                 <tfoot className="bg-gray-100 font-bold">
                                     <tr>
                                         <td colSpan="3" className="py-3 px-3 text-right">{languageData[language].total || 'Total'}:</td>
                                         <td className="py-3 px-3 text-right text-red-700">
                                             {currency} {totalBqaya.toFixed(2)}
                                         </td>
-                                        <td colSpan="2" className="no-print"></td> {/* Screen par khali rakhein */}
+                                        <td colSpan="2" className="no-print"></td> 
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
                     ) : (
-                        // "No Data" message (UI Improved)
+                        // "No Data" message
                         <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
                             <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
                             <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto hover:underline">
@@ -178,9 +193,6 @@ const CollectionSheet = () => {
                             </button>
                         </div>
                     )}
-                    
-                    {/* --- REDUNDANT FOOTER REMOVED --- */}
-                    {/* <div className="print-footer"> ... YEH HATA DIYA GAYA ... </div> */}
                 </div>
             )}
         </div>
@@ -188,5 +200,4 @@ const CollectionSheet = () => {
 };
 
 export default CollectionSheet;
-
 
