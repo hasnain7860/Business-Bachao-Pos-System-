@@ -16,6 +16,10 @@ import usePeopleContext from './Logic/People.jsx';
 import useAreasContext from './Logic/useAreasContext.jsx';
 import usePreordersContext from './Logic/usePreordersContext.jsx';
 import usePurchaseReturnContext from './Logic/PurchaseReturn.jsx';
+import useDamageContext from './Logic/useDamageContext.jsx';
+
+
+
 
 // Utility functions (Aapke original code se)
 const updateItem = (items, id, updatedItem) =>
@@ -40,6 +44,7 @@ export const AppContextProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   // Contexts
+  const damageContext = useDamageContext();
   const companyContext = useCompanyContext();
   const purchaseReturnContext = usePurchaseReturnContext();
   const unitContext = useUnitsContext();
@@ -121,7 +126,7 @@ export const AppContextProvider = ({ children }) => {
         setLanguage,
         isOpen,
         setIsOpen,
-        
+        damageContext,
         // Auth state & functions
         isAuthenticated,
         setIsAuthenticated,

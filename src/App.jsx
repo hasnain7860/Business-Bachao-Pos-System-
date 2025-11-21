@@ -39,6 +39,8 @@ import ViewPayments from "./Pages/ViewPayments";
 import Notification from "./Pages/Notification";
 import Preorders from './Pages/PreordersList.jsx'
 import NewPreorders from './Pages/NewPreorder.jsx'
+import AddDamage from './Pages/AddDamage.jsx'
+import DamageList from './Pages/DamageList.jsx'
 
 import ProductUploadPage from "./Pages/ProductUploadPage";
 import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
@@ -104,6 +106,26 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <CreditManagement />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/damage"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <DamageList />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/damage/add"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                <AddDamage/>
                             </Layout>
                         </ProtectedRoute>
                     }

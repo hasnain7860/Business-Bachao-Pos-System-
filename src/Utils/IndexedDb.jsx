@@ -6,9 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 15;
+const DB_VERSION = 17;
 
 export const STORE_NAMES = {
+  damage:'damage',
   cost: 'cost',
   company: 'company',
   areas:'areas',

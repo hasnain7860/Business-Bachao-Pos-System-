@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useAppContext } from '../../Appfullcontext';
-import { FaPrint, FaFilter } from 'react-icons/fa';
+import { useAppContext } from '../../Appfullcontext.jsx';
+import { FaPrint, FaFilter } from 'react-icons/fa'; // Use lucide-react if prefered: import { Printer, Filter } from 'lucide-react';
 import languageData from '../../assets/languageData.json';
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +18,8 @@ const InventoryReport = () => {
     const allPurchases = context.purchaseContext.purchases || [];
     const sellReturns = context.SellReturnContext.sellReturns || [];
     const purchaseReturns = context.purchaseReturnContext.purchaseReturns || [];
+    // NEW: Get Damages Data
+    const allDamages = context.damageContext?.damages || [];
     
     const userAndBusinessDetail = context.settingContext.settings;
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Inventory';
@@ -59,12 +61,11 @@ const InventoryReport = () => {
                     let saleQty = 0;
                     let saleReturnQty = 0;
                     let purReturnQty = 0;
-                    const damageQty = Number(batch.damageQuantity || 0);
+                    let damageQty = 0; // Calculated dynamically now
 
                     if (isInitialized) {
                         // A. Calculate Purchases
                         allPurchases.forEach(pur => {
-                            // Use updatedAt if available for precision, else date
                             const compareDate = pur.updatedAt || pur.date; 
                             if (isAfterOpening(compareDate, openingDateStr) && pur.products) {
                                 pur.products.forEach(item => {
@@ -99,18 +100,28 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // D. Calculate Purchase Returns (UPDATED FOR YOUR JSON)
+                        // D. Calculate Purchase Returns
                         purchaseReturns.forEach(ret => {
-                            // Priority: updatedAt > returnDate
                             const compareDate = ret.updatedAt || ret.returnDate;
-                            
                             if (isAfterOpening(compareDate, openingDateStr) && ret.items) {
                                 ret.items.forEach(item => {
-                                    // Check: Product ID match AND Batch Code match
                                     if (item.id === product.id && item.batchCode === batch.batchCode) {
                                         purReturnQty += Number(item.quantity || 0);
                                     }
                                 });
+                            }
+                        });
+
+                        // E. Calculate Damages (NEW LOGIC)
+                        allDamages.forEach(dmg => {
+                            // Priority: updatedAt > date
+                            const compareDate = dmg.updatedAt || dmg.date;
+                            
+                            if (isAfterOpening(compareDate, openingDateStr)) {
+                                // Match Product ID and Batch Code
+                                if (dmg.productId === product.id && dmg.batchCode === batch.batchCode) {
+                                    damageQty += Number(dmg.quantity || 0);
+                                }
                             }
                         });
                     }
@@ -143,7 +154,7 @@ const InventoryReport = () => {
         });
 
         return reportRows;
-    }, [products, allSales, allPurchases, sellReturns, purchaseReturns, selectedCompany]);
+    }, [products, allSales, allPurchases, sellReturns, purchaseReturns, allDamages, selectedCompany]);
 
     const grandTotalValue = reportData.reduce((acc, row) => acc + row.totalValue, 0);
     const handlePrint = () => window.print();

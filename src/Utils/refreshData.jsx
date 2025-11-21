@@ -53,6 +53,10 @@ const refreshData = async (context, storeName) => {
       await context.creditManagementContext.refreshData();
       console.log("✅ Credit Management context refreshed!");
       break;
+    case "damage":
+      await context.damageContext.refreshData();
+      console.log("✅damage context refreshed")
+      break;
     case "preorders":
       await context.preordersContext.refreshData();
       console.log("✅  preorders Context refreshed!");
