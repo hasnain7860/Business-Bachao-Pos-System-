@@ -14,7 +14,6 @@ const NewSales = () => {
     const context = useAppContext();
 
     const people = context.peopleContext.people;
-    
     const products = context.productContext.products;
     const editProduct = context.productContext.edit;
     const preordersContext = context.preordersContext; 
@@ -45,7 +44,7 @@ const NewSales = () => {
         }
     }, [selectedPerson]);
 
-    // Preorder Loading Logic (unchanged mostly, but be careful with units here later)
+    // Preorder Loading Logic
     useEffect(() => {
         if (location.state && location.state.preorderData) {
             const { preorderData } = location.state;
@@ -71,7 +70,7 @@ const NewSales = () => {
                 return {
                     ...p, 
                     SellQuantity: finalQuantity,
-                    enteredQty: finalQuantity, // Default to Pieces if coming from preorder for now
+                    enteredQty: finalQuantity, 
                     unitMode: 'base',
                     batchQuantity: currentStock 
                 };
@@ -103,15 +102,12 @@ const NewSales = () => {
         handleCalculateCredit();
     }, [selectedProducts, amountPaid, discount]);
 
-    // --- CORE ADD PRODUCT LOGIC ---
     const handleAddProduct = (product, batch, userEnteredQty, basePrice, priceType, unitMode, conversionRate, unitName) => {
         setSelectedProducts(currentProducts => {
-            // Calculate total pieces for DB
             const totalPieces = unitMode === 'secondary' 
                 ? Number(userEnteredQty) * Number(conversionRate)
                 : Number(userEnteredQty);
 
-            // Calculate Display Price (Carton Price or Piece Price)
             const displayPrice = unitMode === 'secondary'
                 ? Number(basePrice) * Number(conversionRate)
                 : Number(basePrice);
@@ -131,21 +127,18 @@ const NewSales = () => {
                     {
                         ...product,
                         batchCode: batch.batchCode,
-                        
-                        // DATA FOR DATABASE (MATHS)
-                        SellQuantity: totalPieces, // Always in Base Unit (Pieces)
+                        SellQuantity: totalPieces,
                         purchasePrice: batch.purchasePrice,
-                        
-                        // DATA FOR UI (DISPLAY)
                         enteredQty: userEnteredQty, 
                         unitMode: unitMode || 'base',
                         unitName: unitName || 'Pcs',
                         conversionRate: conversionRate || 1,
-                        newSellPrice: displayPrice, // This is user editable price
-                        
+                        newSellPrice: displayPrice,
                         discount: 0,
                         priceUsedType: priceType,
-                        batchQuantity: batch.quantity
+                        batchQuantity: batch.quantity,
+                        sellPrice: batch.sellPrice,         // Store Original Sell Price
+                        wholeSalePrice: batch.wholeSalePrice // Store Original Wholesale Price
                     }
                 ];
             }
@@ -153,31 +146,20 @@ const NewSales = () => {
         });
     };
 
-    // --- HANDLE QUANTITY CHANGE IN TABLE ---
     const handleProductChange = (id, batchCode, field, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    
                     if (field === "enteredQty") { 
-                        // User is changing the number of Cartons (or Pieces)
                         const val = Number(value);
                         const conv = p.conversionRate || 1;
-                        const totalStock = p.batchQuantity; // In Pieces
-                        
-                        // Calculate required pieces
+                        const totalStock = p.batchQuantity; 
                         const requiredPieces = val * conv;
-
-                        if (requiredPieces > totalStock) {
-                             // Don't block typing, but visual error shows in table.
-                             // Or we can clamp it:
-                             // return p; 
-                        }
 
                         return { 
                             ...p, 
                             enteredQty: val,
-                            SellQuantity: requiredPieces // Auto update backend quantity
+                            SellQuantity: requiredPieces 
                         };
                     }
                     return { ...p, [field]: value };
@@ -187,19 +169,38 @@ const NewSales = () => {
         });
     };
     
-    // --- HANDLE PRICE CHANGE ---
+    // --- FIXED: DISCOUNT LOGIC ---
     const handleSellingPriceChange = (id, batchCode, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    // User is updating the UNIT PRICE (e.g. Carton Price)
-                    const newPrice = value;
+                    const newSellPrice = Number(value);
                     
-                    // Recalculate discount % for display
-                    // We need 'Base Display Price' (Original Carton Price)
-                    // This is tricky if we didn't store original display price, 
-                    // but for now simple update is enough.
-                    return { ...p, newSellPrice: newPrice }; 
+                    // 1. Determine Base Price (Piece Price)
+                    const type = p.priceUsedType || 'sell';
+                    let baseStandardPrice = type === 'wholesale' ? Number(p.wholeSalePrice) : Number(p.sellPrice);
+                    
+                    // 2. Calculate Unit Standard Price (Carton or Piece)
+                    let standardDisplayPrice = p.unitMode === 'secondary' 
+                        ? baseStandardPrice * (Number(p.conversionRate) || 1)
+                        : baseStandardPrice;
+
+                    // 3. Calculate Discount %
+                    let discountPercent = 0;
+                    if (standardDisplayPrice > 0) {
+                        discountPercent = ((standardDisplayPrice - newSellPrice) / standardDisplayPrice) * 100;
+                    }
+                    
+                    // --- FIX: Clamp Discount to 0 if negative (Price Increased) ---
+                    if (discountPercent < 0) {
+                        discountPercent = 0;
+                    }
+
+                    return { 
+                        ...p, 
+                        newSellPrice: newSellPrice,
+                        discount: discountPercent.toFixed(2) 
+                    }; 
                 }
                 return p;
             });
@@ -212,17 +213,16 @@ const NewSales = () => {
         setShowAddModal(true);
     };
 
-    // Validation checks if Selling Price < Purchase Price
-    // MUST Account for Conversion Rate!
+    // --- VALIDATION: RED BORDER ---
     const validateSellingPrice = product => {
-        const totalPurchasePrice = Number(product.purchasePrice) * (product.conversionRate || 1);
-        // If selling 1 Carton (newSellPrice = 600), Purchase Price of 12 Pcs (50*12 = 600).
-        // If 600 < 600 (False). If 590 < 600 (True - Error).
-        return Number(product.newSellPrice) < totalPurchasePrice;
+        const costPerPiece = Number(product.purchasePrice);
+        const totalCostForUnit = product.unitMode === 'secondary' 
+            ? costPerPiece * (product.conversionRate || 1) 
+            : costPerPiece;
+
+        return Number(product.newSellPrice) < totalCostForUnit;
     };
 
-    // Subtotal = Entered Qty * Display Price
-    // 1 Carton * 600 = 600
     const calculateSubtotal = () => {
         return selectedProducts.reduce((total, product) => {
             const productTotal = Number(product.newSellPrice) * Number(product.enteredQty);
@@ -256,7 +256,6 @@ const NewSales = () => {
             return;
         }
         
-        // Check Stock Limit before saving
         for (let p of selectedProducts) {
             if(p.SellQuantity > p.batchQuantity) {
                 setMessage(`Stock Insufficient for ${p.name}. Need ${p.SellQuantity}, Have ${p.batchQuantity}.`);
@@ -274,7 +273,7 @@ const NewSales = () => {
             id: uniqueId,
             salesRefNo,
             personId: selectedPerson,
-            products: selectedProducts, // Contains both enteredQty and SellQuantity
+            products: selectedProducts,
             paymentMode,
             subtotal: calculateSubtotal().toFixed(2),
             discount: discount,
@@ -285,7 +284,6 @@ const NewSales = () => {
             sourcePreorderId: sourcePreorderId 
         };
 
-        // Deduct Stock (Uses SellQuantity - Base Unit)
         for (let product of selectedProducts) {
             const originalProduct = products.find(p => p.id === product.id);
             if (originalProduct) {
@@ -294,7 +292,7 @@ const NewSales = () => {
                         if (batch.batchCode === product.batchCode) {
                             return {
                                 ...batch,
-                                quantity: batch.quantity - product.SellQuantity // Deduct Pieces
+                                quantity: batch.quantity - product.SellQuantity 
                             };
                         }
                         return batch;
@@ -367,13 +365,11 @@ const NewSales = () => {
             <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1 space-y-4">
                     <div className="grid md:grid-cols-3 gap-4">
-                        {/* Ref No */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <label className="text-sm font-semibold text-gray-600">Sales Reference:</label>
                             <input type="text" value={salesRefNo} readOnly className="input input-bordered w-full bg-gray-50"/>
                         </div>
 
-                        {/* Price Mode */}
                         <div className="bg-white rounded-lg p-4 shadow flex flex-col justify-between">
                             <label className="text-sm font-semibold text-gray-600 mb-2">Global Price Mode:</label>
                             <div className="flex bg-gray-200 rounded-lg p-1">
@@ -382,7 +378,6 @@ const NewSales = () => {
                             </div>
                         </div>
 
-                        {/* Person Select */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <div className="flex gap-2">
                                 <div className="flex-1">
@@ -416,7 +411,6 @@ const NewSales = () => {
 
                     <ProductSearch searchProduct={searchProduct} setSearchProduct={setSearchProduct} products={products} handleOpenAddModal={handleOpenAddModal} />
 
-                    {/* --- TABLE --- */}
                     <SelectedProductsTable
                         selectedProducts={selectedProducts}
                         handleProductChange={handleProductChange}
@@ -426,7 +420,6 @@ const NewSales = () => {
                     />
                 </div>
 
-                {/* Right Sidebar */}
                 <div className="lg:w-1/4 lg:min-w-[300px] w-full">
                     <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
                         <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
@@ -484,4 +477,5 @@ const NewSales = () => {
 };
 
 export default NewSales;
+
 
