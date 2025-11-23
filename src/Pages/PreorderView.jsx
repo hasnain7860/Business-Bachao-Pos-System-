@@ -28,7 +28,6 @@ const PreorderView = () => {
     
     const area = useMemo(() => {
         if (!preorder) return null;
-        // areaId is directly on the preorder object
         return areas.find((a) => a.id === preorder.areaId) || null;
     }, [preorder, areas]);
 
@@ -52,15 +51,12 @@ const PreorderView = () => {
             
             const handleAfterPrint = () => {
                 document.title = originalTitle;
-                navigate(-1); // Go back after print dialog closes
+                navigate(-1);
             };
 
             window.addEventListener("afterprint", handleAfterPrint);
-            
-            // Give a moment for content to render before printing
             setTimeout(() => window.print(), 500);
 
-            // Cleanup
             return () => {
                 window.removeEventListener("afterprint", handleAfterPrint);
                 document.title = originalTitle;
@@ -68,23 +64,19 @@ const PreorderView = () => {
         }
     }, [isPrintMode, loading, preorder, navigate]);
 
-    // --- Handlers ---
     const handlePrint = () => {
         navigate(`/preorders/view/${id}/print`);
     };
 
-    // --- Render Logic ---
     if (loading) return <div className="text-center text-lg p-10">Loading Preorder Receipt...</div>;
     if (!preorder) return <div className="text-center text-red-500 text-lg p-10">Preorder not found</div>;
 
-    // Parse values from preorder object
     const discount = parseFloat(preorder.discount || 0);
     const subtotal = parseFloat(preorder.subtotal || 0);
     const totalBill = parseFloat(preorder.totalBill || 0);
 
     return (
         <>
-            {/* --- Print Styles (Same as SalesView) --- */}
             <style>{`
                 @media print {
                     body, html { 
@@ -130,8 +122,6 @@ const PreorderView = () => {
 
             <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
                 
-                {/* --- Removed Naq Edit Form --- */}
-
                 <div className="no-print flex justify-end mb-4 max-w-md mx-auto">
                     <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full">
                         <FaPrint /> Print Preorder
@@ -139,7 +129,6 @@ const PreorderView = () => {
                 </div>
 
                 <div className="print-container w-72 mx-auto p-3 bg-white text-black shadow-lg font-sans">
-                    {/* --- Business Header --- */}
                     {userAndBusinessDetail[0]?.business ? (
                         <div className="text-center mb-2">
                             <h2 className="text-xl font-bold">{userAndBusinessDetail[0].business.businessName}</h2>
@@ -152,7 +141,6 @@ const PreorderView = () => {
 
                     <hr className="my-2 border-dashed border-gray-400" />
                     
-                    {/* --- Preorder Info --- */}
                     <div className="text-xs space-y-0.5">
                         <div className="flex justify-between"><span>Ref No:</span> <span>{preorder.preorderRefNo}</span></div>
                         {person && (<div className="flex justify-between"><span>Customer:</span> <span>{person.name}</span></div>)}
@@ -175,19 +163,27 @@ const PreorderView = () => {
                         </thead>
                         <tbody>
                             {preorder.products.length > 0 ? (
-                                preorder.products.map((product, index) => (
+                                preorder.products.map((product, index) => {
+                                    
+                                    // --- LOGIC UPDATE: Use 'enteredQty' if available (New System) ---
+                                    const displayQty = product.enteredQty || product.SellQuantity;
+                                    const unitLabel = product.unitName || '';
+                                    const rate = parseFloat(product.newSellPrice || 0);
+                                    const rowTotal = rate * parseFloat(displayQty);
+
+                                    return (
                                     <tr key={`${product.id}-${index}`}>
-                                        <td className="py-1">{product.name}</td>
-                                        {/* Using saleUnitDetails.displayQuantity as per NewPreorder.jsx logic */}
-                                        <td className="py-1 text-center">{product.saleUnitDetails?.displayQuantity || product.SellQuantity}</td>
-                                        <td className="py-1 text-right">{parseFloat(product.newSellPrice).toFixed(2)}</td>
-                                        <td className="py-1 text-right">
-                                            {(
-                                                parseFloat(product.newSellPrice) * parseFloat(product.saleUnitDetails?.displayQuantity || product.SellQuantity)
-                                            ).toFixed(2)}
+                                        <td className="py-1">
+                                            {product.name}
+                                            {/* Show Unit (e.g. Ctn) */}
+                                            {unitLabel && <span className="text-[10px] font-bold ml-1">({unitLabel})</span>}
                                         </td>
+                                        <td className="py-1 text-center">{displayQty}</td>
+                                        <td className="py-1 text-right">{rate.toFixed(2)}</td>
+                                        <td className="py-1 text-right">{rowTotal.toFixed(2)}</td>
                                     </tr>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <tr><td colSpan="4" className="text-center py-2">No products in this preorder</td></tr>
                             )}
@@ -196,15 +192,12 @@ const PreorderView = () => {
                     
                     <hr className="my-2 border-t-2 border-dashed border-gray-400" />
                     
-                    {/* --- Totals --- */}
                     <div className="text-xs space-y-1">
                         <div className="flex justify-between"><span className="font-semibold">Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
                         {discount > 0 && (<div className="flex justify-between"><span className="font-semibold">Discount:</span><span>- {currency} {discount.toFixed(2)}</span></div>)}
                         <div className="flex justify-between text-sm font-bold mt-1 grand-total"><span>Grand Total:</span><span>{currency} {totalBill.toFixed(2)}</span></div>
-                        {/* Removed Amount Paid and Credit as they don't apply to preorders */}
                     </div>
 
-                    {/* --- Notes Section --- */}
                     {preorder.notes && (
                          <>
                             <hr className="my-2 border-t-2 border-dashed border-gray-400" />
@@ -215,9 +208,6 @@ const PreorderView = () => {
                         </>
                     )}
 
-                    {/* Removed Balance (Hisab ka Khulasa) Section */}
-
-                    {/* --- Footer --- */}
                     <hr className="my-3 border-dashed border-gray-400" />
                     <div className="text-center text-[10px] text-gray-600 footer-text">
                         <p className="font-bold">Powered by: Business Bachao</p>

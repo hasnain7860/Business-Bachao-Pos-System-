@@ -13,6 +13,7 @@ const AddPurchaseReturn = () => {
   const products = context.productContext.products;
   const suppliers = context.peopleContext.people;
   const purchases = context.purchaseContext.purchases;
+  const units = context.unitContext.units; // Added units context
   const existingReturns = context.purchaseReturnContext.purchaseReturns || []; 
   const addPurchaseReturn = context.purchaseReturnContext.add;
   const updateProduct = context.productContext.edit; 
@@ -30,7 +31,7 @@ const AddPurchaseReturn = () => {
   // Payment/Ledger State
   const [cashReturn, setCashReturn] = useState(0);
 
-  // --- HELPER: Calculate Already Returned Quantity ---
+  // --- HELPER: Calculate Already Returned Quantity (In Base Units) ---
   const getAlreadyReturnedQty = (purchaseRefNo, productId, batchCode) => {
       if (!purchaseRefNo) return 0;
       
@@ -41,6 +42,7 @@ const AddPurchaseReturn = () => {
           if (ret.items) {
               const item = ret.items.find(i => i.id === productId && i.batchCode === batchCode);
               if (item) {
+                  // We assume 'quantity' in DB is always Base Unit
                   totalReturned += Number(item.quantity || 0);
               }
           }
@@ -69,30 +71,58 @@ const AddPurchaseReturn = () => {
                 const realBatch = realProduct.batchCode.find(b => b.batchCode === purItem.batchCode);
                 
                 if (realBatch) {
-                    // 2. History Check (Invoice Limit)
-                    const originalPurchasedQty = Number(purItem.quantity);
+                    // --- UNIT LOGIC ---
+                    const hasSecondary = realProduct.secondaryUnitId && realProduct.conversionRate > 1;
+                    const convRate = hasSecondary ? Number(realProduct.conversionRate) : 1;
+                    
+                    // Prefer the mode used during Purchase, else default to base
+                    const preferredMode = purItem.unitMode || 'base';
+                    const unitName = preferredMode === 'secondary' 
+                        ? (units.find(u => u.id === realProduct.secondaryUnitId)?.name || "Ctn")
+                        : (units.find(u => u.id === realProduct.unitId)?.name || "Pcs");
+
+                    // 2. History Check (Invoice Limit - Base Units)
+                    const originalPurchasedQty = Number(purItem.quantity); // Base units
                     const alreadyReturned = getAlreadyReturnedQty(purchase.purchaseRefNo, purItem.id, purItem.batchCode);
                     const remainingInvoiceQty = Math.max(0, originalPurchasedQty - alreadyReturned);
                     
-                    // 3. Current Stock Limit
+                    // 3. Current Stock Limit (Base Units)
                     const currentStockQty = Number(realBatch.quantity);
 
-                    // FINAL MAX: Lowest of (Remaining Invoice vs Current Stock)
-                    const finalMaxQty = Math.min(remainingInvoiceQty, currentStockQty);
+                    // FINAL MAX (Base Units)
+                    const finalMaxQtyBase = Math.min(remainingInvoiceQty, currentStockQty);
+
+                    // Convert to Display Unit
+                    const maxDisplayQty = finalMaxQtyBase / (preferredMode === 'secondary' ? convRate : 1);
+                    const displayPrice = Number(purItem.purchasePrice) * (preferredMode === 'secondary' ? convRate : 1);
 
                     // Only add if returnable > 0
-                    if (finalMaxQty > 0) {
+                    if (finalMaxQtyBase > 0) {
                         loadedItems.push({
                             id: purItem.id,
                             productName: purItem.name || realProduct.name,
                             batchCode: purItem.batchCode,
-                            maxQuantity: finalMaxQty, 
-                            quantity: 1, // Default 1
-                            price: Number(purItem.purchasePrice),
-                            total: Number(purItem.purchasePrice),
+                            
+                            // Unit Data
+                            unitMode: preferredMode,
+                            unitName: unitName,
+                            conversionRate: convRate,
+                            hasSecondary: hasSecondary,
+                            baseUnitName: units.find(u => u.id === realProduct.unitId)?.name || "Pcs",
+                            secUnitName: units.find(u => u.id === realProduct.secondaryUnitId)?.name || "Ctn",
+
+                            // Quantities
+                            maxDisplayQuantity: maxDisplayQty, 
+                            quantity: 0, // Start with 0 for safety
+                            
+                            // Prices
+                            basePrice: Number(purItem.purchasePrice), // Cost per Piece
+                            price: displayPrice, // Cost per Display Unit
+                            total: 0,
+                            
                             // Metadata for UI
-                            originalQty: originalPurchasedQty,
-                            returnedQty: alreadyReturned
+                            originalQtyDisplay: purItem.enteredQty || originalPurchasedQty,
+                            returnedQtyBase: alreadyReturned
                         });
                     }
                 }
@@ -110,7 +140,6 @@ const AddPurchaseReturn = () => {
         setSelectedSupplier(purchase.personId);
         setReturnMode('invoice');
         setSelectedPurchaseId(purchase.id);
-        // Trigger load logic
         loadItemsFromInvoice(purchase.id);
       }
     }
@@ -121,7 +150,6 @@ const AddPurchaseReturn = () => {
   const handleInvoiceChange = (e) => {
       const newId = e.target.value;
       setSelectedPurchaseId(newId);
-      // Trigger load logic manually when user selects from dropdown
       loadItemsFromInvoice(newId);
   };
 
@@ -150,14 +178,31 @@ const AddPurchaseReturn = () => {
       return;
     }
 
-    const maxQty = Number(targetBatch.quantity || 0);
+    // Unit Setup
+    const hasSecondary = product.secondaryUnitId && product.conversionRate > 1;
+    const convRate = hasSecondary ? Number(product.conversionRate) : 1;
+    const baseUnitName = units.find(u => u.id === product.unitId)?.name || "Pcs";
+    const secUnitName = hasSecondary ? (units.find(u => u.id === product.secondaryUnitId)?.name || "Ctn") : "";
+
+    const maxQtyBase = Number(targetBatch.quantity || 0);
 
     const newItem = {
       id: product.id,
       productName: product.name,
       batchCode: targetBatch.batchCode,
-      maxQuantity: maxQty, 
+      
+      // Unit Data
+      unitMode: 'base', // Default to base for manual
+      unitName: baseUnitName,
+      conversionRate: convRate,
+      hasSecondary: hasSecondary,
+      baseUnitName: baseUnitName,
+      secUnitName: secUnitName,
+
+      maxDisplayQuantity: maxQtyBase, 
       quantity: 1, 
+      
+      basePrice: Number(targetBatch.purchasePrice || 0),
       price: Number(targetBatch.purchasePrice || 0), 
       total: Number(targetBatch.purchasePrice || 0)
     };
@@ -173,13 +218,47 @@ const AddPurchaseReturn = () => {
       const val = value === "" ? "" : Number(value);
       item.quantity = val;
       item.total = val * item.price;
+    
+    } else if (field === "unitMode") {
+        // Toggle Logic
+        const newMode = value;
+        item.unitMode = newMode;
+        
+        if (newMode === 'secondary') {
+            item.unitName = item.secUnitName;
+            item.price = item.basePrice * item.conversionRate;
+            // Adjust Max Qty Display
+            // Note: We need the raw Max Base Qty to recalc correctly. 
+            // Approximation: current max * conversion (if moving from base->sec, divide)
+            // Better: Store maxBaseQuantity in state. 
+            // But for now, let's recalculate based on logic:
+            // If switching Base -> Sec: Max / Rate. Qty / Rate.
+             item.maxDisplayQuantity = item.maxDisplayQuantity / item.conversionRate;
+             item.quantity = Number((item.quantity / item.conversionRate).toFixed(2));
+        } else {
+            item.unitName = item.baseUnitName;
+            item.price = item.basePrice;
+            item.maxDisplayQuantity = item.maxDisplayQuantity * item.conversionRate;
+            item.quantity = item.quantity * item.conversionRate;
+        }
+        item.total = item.quantity * item.price;
+
     } else if (field === "batchCode") {
       const product = products.find(p => p.id === item.id);
       const newBatch = product.batchCode.find(b => b.batchCode === value);
       if (newBatch) {
         item.batchCode = value;
-        item.maxQuantity = Number(newBatch.quantity || 0);
-        item.price = Number(newBatch.purchasePrice || 0);
+        // Reset to base unit values when batch changes
+        const maxBase = Number(newBatch.quantity || 0);
+        item.basePrice = Number(newBatch.purchasePrice || 0);
+        
+        if (item.unitMode === 'secondary') {
+             item.maxDisplayQuantity = maxBase / item.conversionRate;
+             item.price = item.basePrice * item.conversionRate;
+        } else {
+             item.maxDisplayQuantity = maxBase;
+             item.price = item.basePrice;
+        }
         item.total = Number(item.quantity || 0) * item.price;
       }
     }
@@ -193,12 +272,31 @@ const AddPurchaseReturn = () => {
 
   const grandTotal = returnItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0);
   const creditAdjustment = Math.max(0, grandTotal - Number(cashReturn));
-  const isValid = returnItems.every(item => item.quantity > 0 && item.quantity <= item.maxQuantity);
+  
+  // Validation: quantity > 0 AND quantity <= maxDisplayQuantity
+  const isValid = returnItems.every(item => Number(item.quantity) > 0 && Number(item.quantity) <= (item.maxDisplayQuantity + 0.001));
 
   const handleSave = () => {
     if (!selectedSupplier) return alert("Please select a supplier.");
     if (returnItems.length === 0) return alert("Please add items to return.");
-    if (!isValid) return alert("Please correct quantities in red.");
+    if (!isValid) return alert("Please correct quantities in red (cannot exceed purchased/stock amount).");
+
+    // Prepare Items for Storage
+    const processedItems = returnItems.map(item => ({
+        id: item.id,
+        productName: item.productName,
+        batchCode: item.batchCode,
+        
+        // Visual
+        displayQuantity: Number(item.quantity),
+        unitName: item.unitName,
+        unitMode: item.unitMode,
+        
+        // Actual Database Values (Base Units)
+        quantity: Number(item.quantity) * (item.unitMode === 'secondary' ? item.conversionRate : 1),
+        price: item.price, // We store the unit price used for refund calculation
+        total: item.total
+    }));
 
     const returnData = {
       id: uuidv4(),
@@ -208,29 +306,22 @@ const AddPurchaseReturn = () => {
       returnDate: returnDate,    
       updatedAt: new Date().toISOString(),
       totalAmount: grandTotal,
-      items: returnItems.map(item => ({
-        id: item.id,
-        productName: item.productName,
-        batchCode: item.batchCode,
-        quantity: Number(item.quantity),
-        price: item.price,
-        total: item.total
-      })),
+      items: processedItems,
       paymentDetails: {
         cashReturn: Number(cashReturn),
         creditAdjustment: creditAdjustment
       }
     };
 
-    // Update Stock
-    returnItems.forEach(item => {
+    // Update Stock (Subtract Base Units)
+    processedItems.forEach(item => {
       const product = products.find(p => p.id === item.id);
       if (product) {
         const updatedBatchCode = product.batchCode.map(batch => {
           if (batch.batchCode === item.batchCode) {
             return {
               ...batch,
-              quantity: Number(batch.quantity) - Number(item.quantity)
+              quantity: Number(batch.quantity) - Number(item.quantity) // Subtract Base Units
             };
           }
           return batch;
@@ -318,7 +409,7 @@ const AddPurchaseReturn = () => {
                 <select 
                   className="select select-bordered select-sm"
                   value={selectedPurchaseId}
-                  onChange={handleInvoiceChange} // UPDATED HANDLER
+                  onChange={handleInvoiceChange} 
                   disabled={!!paramPurchaseId}
                 >
                   <option value="">Select Invoice</option>
@@ -328,7 +419,6 @@ const AddPurchaseReturn = () => {
                     </option>
                   ))}
                 </select>
-                {/* Helper Text */}
                 {selectedPurchaseId && (
                     <div className="text-xs text-green-600 mt-1 text-center">
                         ✓ Items loaded automatically
@@ -338,7 +428,6 @@ const AddPurchaseReturn = () => {
             )}
           </div>
 
-          {/* Manual Search (Only if items need to be added manually) */}
           {returnMode === 'manual' && (
             <div className="bg-white p-4 rounded-lg shadow">
                 <h3 className="font-bold mb-2 flex items-center gap-2">
@@ -378,24 +467,25 @@ const AddPurchaseReturn = () => {
                 <table className="table table-compact w-full">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th>Product</th>
+                      <th className="w-1/3">Product</th>
                       <th>Batch</th>
-                      <th className="w-28 text-center">Qty (Max)</th>
-                      <th className="w-24 text-right">Price</th>
-                      <th className="w-24 text-right">Total</th>
+                      <th>Unit</th>
+                      <th className="text-center w-24">Qty (Max)</th>
+                      <th className="text-right w-24">Refund Rate</th>
+                      <th className="text-right w-24">Total</th>
                       <th className="w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {returnItems.length > 0 ? returnItems.map((item, index) => {
-                       const isQtyInvalid = Number(item.quantity) > item.maxQuantity || Number(item.quantity) <= 0;
+                       const isQtyInvalid = Number(item.quantity) > item.maxDisplayQuantity || Number(item.quantity) <= 0;
                        return (
                         <tr key={index}>
                           <td>
                             <div className="font-bold text-sm">{item.productName}</div>
                             {returnMode === 'invoice' && (
                                 <div className="text-[10px] text-gray-400">
-                                    Orig: {item.originalQty} | Prev: {item.returnedQty}
+                                    Orig: {item.originalQtyDisplay} | Returned: {item.returnedQtyBase} Pcs
                                 </div>
                             )}
                           </td>
@@ -414,6 +504,23 @@ const AddPurchaseReturn = () => {
                                 </select>
                              )}
                           </td>
+                          
+                          {/* Unit Selector */}
+                          <td>
+                             {item.hasSecondary ? (
+                                 <select 
+                                    className="select select-bordered select-xs w-full font-bold text-blue-600"
+                                    value={item.unitMode}
+                                    onChange={(e) => handleItemChange(index, 'unitMode', e.target.value)}
+                                 >
+                                    <option value="base">{item.baseUnitName}</option>
+                                    <option value="secondary">{item.secUnitName}</option>
+                                 </select>
+                             ) : (
+                                 <span className="text-xs font-bold pl-2">{item.baseUnitName}</span>
+                             )}
+                          </td>
+
                           <td>
                              <div className="relative">
                                <input 
@@ -423,7 +530,7 @@ const AddPurchaseReturn = () => {
                                  onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                />
                                <div className={`text-[10px] text-center mt-0.5 ${isQtyInvalid ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
-                                 Max: {item.maxQuantity}
+                                 Max: {Number(item.maxDisplayQuantity).toFixed(2)}
                                </div>
                              </div>
                           </td>
@@ -435,7 +542,7 @@ const AddPurchaseReturn = () => {
                         </tr>
                        );
                     }) : (
-                      <tr><td colSpan="6" className="text-center py-10 text-gray-400">No items selected.</td></tr>
+                      <tr><td colSpan="7" className="text-center py-10 text-gray-400">No items selected.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -445,12 +552,12 @@ const AddPurchaseReturn = () => {
            <div className="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               <div className="space-y-2">
                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Total Return Value:</span>
+                    <span className="text-gray-600">Total Refund:</span>
                     <span className="text-xl font-bold">Rs. {grandTotal.toFixed(2)}</span>
                  </div>
                  <div className="divider my-1"></div>
                  <div className="form-control">
-                    <label className="label text-sm font-semibold">Cash Received</label>
+                    <label className="label text-sm font-semibold">Cash Returned (Nagad)</label>
                     <input type="number" className="input input-bordered" value={cashReturn} onChange={e => setCashReturn(e.target.value)} />
                  </div>
                  <div className="flex justify-between items-center bg-blue-50 p-2 rounded border border-blue-100">

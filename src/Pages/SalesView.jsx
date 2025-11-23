@@ -25,15 +25,12 @@ const SalesView = () => {
 
     const currency = userAndBusinessDetail[0]?.business?.currency || 'Rs.';
 
-    // --- NAQ KO EDIT KARNE KE LIYE NAYI STATE ---
-    const [naqCount, setNaqCount] = useState(''); // Ab yeh string state hai
+    const [naqCount, setNaqCount] = useState(''); 
     const [saveMessage, setSaveMessage] = useState('');
-    // --- END ---
 
     useEffect(() => {
         if (salesData.length > 0 && sale) {
             setLoading(false);
-            // Jab sale load ho toh naq ki value state mein set kar dein
             setNaqCount(sale.naq || ''); 
         } else if (salesData.length > 0 && !sale) {
             setLoading(false);
@@ -44,7 +41,6 @@ const SalesView = () => {
         if (!person || !sale) {
             return { previousBalance: 0, netBalance: parseFloat(sale?.credit || 0) };
         }
-        // ... (baaqi balance logic waisi hi rahegi) ...
         const totalSalesCredit = salesData.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
         const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const totalReceivable = totalSalesCredit + manualCredit;
@@ -86,32 +82,24 @@ const SalesView = () => {
         navigate(`/sales/view/${id}/print`);
     };
 
-    // --- NAQ SAVE KARNE KA UPDATED FUNCTION ---
     const handleSaveNaq = async () => {
         if (!sale) return;
 
         setSaveMessage('Saving...');
         try {
-            // Poora sale object copy karein aur 'naq' ko update karein (bina parseFloat ke)
             const updatedSaleData = {
                 ...sale,
-                naq: naqCount || '' // Ab yeh text (string) save karega
+                naq: naqCount || '' 
             };
-            
-            // Context ka edit function call karein
             await context.SaleContext.edit(sale.id, updatedSaleData);
-            
             setSaveMessage('Naq Saved Successfully!');
         } catch (error) {
             console.error("Failed to save Naq:", error);
             setSaveMessage('Error saving Naq.');
         } finally {
-            // 3 second baad message hata dein
             setTimeout(() => setSaveMessage(''), 3000);
         }
     };
-    // --- END ---
-
 
     if (loading) return <div className="text-center text-lg p-10">Loading Receipt...</div>;
     if (!sale) return <div className="text-center text-red-500 text-lg p-10">Sale not found</div>;
@@ -124,7 +112,6 @@ const SalesView = () => {
 
     return (
         <>
-            {/* --- PRINT STYLE (waisa hi hai) --- */}
             <style>{`
                 @media print {
                     body, html { 
@@ -164,24 +151,23 @@ const SalesView = () => {
                       display:none !imoortant;
                     }
                     body * { visibility: hidden !important; }
-    .print-container, .print-container * { visibility: visible !important; }
+                    .print-container, .print-container * { visibility: visible !important; }
                 }
             `}</style>
 
             <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
                 
-                {/* --- YAHAN NAQ EDIT FORM UPDATE KIYA GAYA HAI --- */}
                 <div className="no-print mb-4 p-4 bg-white rounded-lg shadow-md max-w-md mx-auto">
                     <h3 className="text-lg font-bold mb-3 text-center">Update Naq (Bundles)</h3>
                     <div className="flex gap-2 items-center">
                         <label htmlFor="naqInput" className="font-semibold whitespace-nowrap">Total Naq:</label>
                         <input
-                            type="text" // --- TYPE CHANGE KI GAYI HAI ---
+                            type="text" 
                             id="naqInput"
                             value={naqCount}
                             onChange={(e) => setNaqCount(e.target.value)}
                             className="input input-bordered w-full"
-                            placeholder="e.g. 5 ctn, 2 sapar" // --- PLACEHOLDER CHANGE KIYA GAYA HAI ---
+                            placeholder="e.g. 5 ctn, 2 sapar" 
                         />
                         <button onClick={handleSaveNaq} className="btn btn-success flex items-center gap-2">
                             <FaSave /> Save
@@ -193,8 +179,6 @@ const SalesView = () => {
                         </p>
                     )}
                 </div>
-                {/* --- END NAQ EDIT FORM --- */}
-
 
                 <div className="no-print flex justify-end mb-4 max-w-md mx-auto">
                     <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full"><FaPrint /> Print Receipt</button>
@@ -214,12 +198,9 @@ const SalesView = () => {
                     <div className="text-xs">
                         <div className="flex justify-between"><span>Ref No:</span> <span>{sale.salesRefNo}</span></div>
                         
-                        {/* --- YAHAN NAQ DISPLAY LOGIC UPDATE KI GAYI HAI --- */}
-                        {/* Ab yeh check karega ke string khali (empty) na ho */}
                         {sale.naq && sale.naq !== '' && (
                              <div className="flex justify-between"><span>Total Naq:</span> <span>{sale.naq}</span></div>
                         )}
-                        {/* --- NAQ KA CODE YAHAN KHATAM HUA --- */}
 
                         {person && (<div className="flex justify-between"><span>Customer:</span> <span>{person.name}</span></div>)}
                         <div className="flex justify-between"><span>Date:</span> <span>{new Date(sale.dateTime).toLocaleString()}</span></div>
@@ -236,14 +217,39 @@ const SalesView = () => {
                         </thead>
                         <tbody>
                             {sale.products.length > 0 ? (
-                                sale.products.map((product, index) => (
-                                    <tr key={`${product.id}-${index}`}>
-                                        <td className="py-1">{product.name}</td>
-                                        <td className="py-1 text-center">{product.SellQuantity}</td>
-                                        <td className="py-1 text-right">{parseFloat(product.newSellPrice || product.sellPrice).toFixed(2)}</td>
-                                        <td className="py-1 text-right">{(parseFloat(product.newSellPrice || product.sellPrice) * parseInt(product.SellQuantity, 10)).toFixed(2)}</td>
-                                    </tr>
-                                ))
+                                sale.products.map((product, index) => {
+                                    // --- NEW LOGIC APPLIED HERE ---
+                                    
+                                    // 1. Qty Determination:
+                                    // Agar 'enteredQty' exist karta hai (New System), to woh use karein (e.g. 1 Carton).
+                                    // Agar nahi (Old System), to 'SellQuantity' (e.g. 12 Pcs) use karein.
+                                    const displayQty = product.enteredQty || product.SellQuantity;
+                                    
+                                    // 2. Rate Determination:
+                                    // Rate wohi hoga jo product pe save hai (Carton ka Rate ya Piece ka Rate)
+                                    const rate = parseFloat(product.newSellPrice || product.sellPrice);
+                                    
+                                    // 3. Unit Name:
+                                    // Agar unitName saved hai (e.g. Ctn) to show karein
+                                    const unitLabel = product.unitName || '';
+
+                                    // 4. Row Total:
+                                    // Simple math: Displayed Qty * Rate
+                                    const rowTotal = rate * parseFloat(displayQty);
+
+                                    return (
+                                        <tr key={`${product.id}-${index}`}>
+                                            <td className="py-1">
+                                                {product.name}
+                                                {/* Display Unit Name if available */}
+                                                {unitLabel && <span className="text-[10px] font-bold ml-1">({unitLabel})</span>}
+                                            </td>
+                                            <td className="py-1 text-center">{displayQty}</td>
+                                            <td className="py-1 text-right">{rate.toFixed(2)}</td>
+                                            <td className="py-1 text-right">{rowTotal.toFixed(2)}</td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr><td colSpan="4" className="text-center py-2">No products</td></tr>
                             )}
@@ -301,5 +307,4 @@ const SalesView = () => {
 };
 
 export default SalesView;
-
 

@@ -3,18 +3,22 @@ import { AiOutlinePlus } from 'react-icons/ai';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
+import { FaTrash } from 'react-icons/fa';
+
+// Reused Component
+import ProductSearch from "../components/element/ProductSearch.jsx";
 
 const NewPurchases = () => {
     const context = useAppContext();
 
     const peoples = context.peopleContext.people;
     const products = context.productContext.products;
-    const companies = context.companyContext.companies;
     const units = context.unitContext.units;
     const updateProduct = context.productContext.edit;
     const addPurchase = context.purchaseContext.add;
     const navigate = useNavigate();
 
+    // States
     const [selectedPeople, setselectedPeople] = useState('');
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [productSearch, setProductSearch] = useState('');
@@ -22,210 +26,265 @@ const NewPurchases = () => {
     const [paymentMode, setPaymentMode] = useState('Cash');
     const [totalPayment, setTotalPayment] = useState(0);
     const [credit, setCredit] = useState(0);
+    
     const [batchCodes, setBatchCodes] = useState({});
 
     const generatePurchaseRefNo = () => {
         return `PURCHASE-${Math.floor(100000 + Math.random() * 900000)}`;
     };
 
+    // --- 1. ADD PRODUCT LOGIC ---
     const handleAddProductToTable = (product) => {
         const existingProduct = selectedProducts.find((p) => p.id === product.id);
         if (existingProduct) {
             alert('Product is already added to the table!');
+            return;
+        } 
+
+        const batches = product.batchCode || [];
+        const batchInfo = batches.length ? batches[0] : {
+            batchCode: `BATCH-${String(1).padStart(3, '0')}`,
+            purchasePrice: 0,
+            sellPrice: 0,
+            wholeSalePrice: 0, 
+            retailPrice: 0,
+            expirationDate: '',
+            quantity: 0,
+        };
+
+        const hasSecondary = product.secondaryUnitId && product.conversionRate > 1;
+        const baseUnitName = units.find(u => u.id === product.unitId)?.name || "Pcs";
+        const secUnitName = hasSecondary ? (units.find(u => u.id === product.secondaryUnitId)?.name || "Ctn") : "";
+
+        const newProduct = {
+            id: product.id,
+            name: product.name,
+            companyId: product.companyId || '',
+            purchaseRefNo: generatePurchaseRefNo(),
+            unitId: product.unitId || '',
+            
+            // Unit Logic
+            hasSecondary: hasSecondary,
+            unitMode: 'base',
+            baseUnitName: baseUnitName,
+            secUnitName: secUnitName,
+            conversionRate: hasSecondary ? Number(product.conversionRate) : 1,
+            
+            enteredQty: 0, 
+            enteredPurchasePrice: batchInfo.purchasePrice,
+
+            sellPrice: batchInfo.sellPrice,
+            wholeSalePrice: batchInfo.wholeSalePrice || 0, 
+            retailPrice: batchInfo.retailPrice || 0,
+            purchasePrice: batchInfo.purchasePrice,
+            expirationDate: batchInfo.expirationDate || '',
+            quantity: 0, 
+            
+            total: 0,
+            batchCode: batchInfo.batchCode,
+            isNewBatch: false 
+        };
+
+        setSelectedProducts([...selectedProducts, newProduct]);
+        setBatchCodes({ ...batchCodes, [product.id]: batches });
+        setProductSearch(""); 
+    };
+
+    // --- 2. HANDLING UPDATES IN TABLE ---
+
+    const handleUnitModeChange = (index, mode) => {
+        const newProducts = [...selectedProducts];
+        const p = newProducts[index];
+        
+        p.unitMode = mode;
+        
+        if (mode === 'secondary') {
+             p.enteredPurchasePrice = p.purchasePrice * p.conversionRate;
         } else {
-            const batches = product.batchCode || [];
-            const batchInfo = batches.length ? batches[0] : {
-                batchCode: `BATCH-${String(1).padStart(3, '0')}`,
-                purchasePrice: '',
-                sellPrice: '',
-                wholeSalePrice: '', 
-                retailPrice: '',
-                expirationDate: '',
-                quantity: 0,
-            };
-
-            const newProduct = {
-                id: product.id,
-                name: product.name,
-                companyId: product.companyId || '',
-                purchaseRefNo: generatePurchaseRefNo(),
-                unitId: product.unitId || '',
-                sellPrice: batchInfo.sellPrice,
-                wholeSalePrice: batchInfo.wholeSalePrice || '', 
-                retailPrice: batchInfo.retailPrice,
-                purchasePrice: batchInfo.purchasePrice,
-                expirationDate: batchInfo.expirationDate,
-                quantity: 0,
-                total: 0,
-                batchCode: batchInfo.batchCode,
-            };
-
-            setSelectedProducts([...selectedProducts, newProduct]);
-            setBatchCodes({ ...batchCodes, [product.id]: batches });
+             p.enteredPurchasePrice = p.purchasePrice;
         }
-        calculateCredit();
-    };
-
-    const updateBatchCode = (productIndex, newBatchCode) => {
-        const newProducts = [...selectedProducts];
-        const product = newProducts[productIndex];
-        const batches = batchCodes[product.id] || [];
-        const selectedBatch = batches.find((batch) => batch.batchCode === newBatchCode) || {};
-
-        product.batchCode = newBatchCode;
-        product.expirationDate = selectedBatch.expirationDate || product.expirationDate;
-        product.sellPrice = selectedBatch.sellPrice || product.sellPrice;
-        product.wholeSalePrice = selectedBatch.wholeSalePrice || product.wholeSalePrice;
-        product.retailPrice = selectedBatch.retailPrice || product.retailPrice;
-        product.purchasePrice = selectedBatch.purchasePrice || product.purchasePrice;
-        product.quantity = 0;
-        product.total = 0;
-
+        
+        recalculateRow(p);
         setSelectedProducts(newProducts);
     };
 
-    const updateProductField = (index, field, value) => {
+    const updateBatchCode = (index, newBatchCode) => {
         const newProducts = [...selectedProducts];
-        const product = newProducts[index];
-        product[field] = value;
-        product.total = product.purchasePrice * product.quantity;
+        const p = newProducts[index];
+        
+        if (newBatchCode === 'NEW_BATCH') {
+            const batches = batchCodes[p.id] || [];
+            const nextNum = batches.length + 1;
+            p.batchCode = `BATCH-${String(nextNum).padStart(3, '0')}`;
+            p.isNewBatch = true;
+            p.enteredQty = 0;
+            p.quantity = 0;
+            p.total = 0;
+        } else {
+            const batches = batchCodes[p.id] || [];
+            const selectedBatch = batches.find((b) => b.batchCode === newBatchCode) || {};
+            
+            p.batchCode = newBatchCode;
+            p.isNewBatch = false;
+            p.purchasePrice = selectedBatch.purchasePrice || 0;
+            p.enteredPurchasePrice = p.unitMode === 'secondary' ? (selectedBatch.purchasePrice * p.conversionRate) : selectedBatch.purchasePrice;
+            
+            p.sellPrice = selectedBatch.sellPrice || 0;
+            p.wholeSalePrice = selectedBatch.wholeSalePrice || 0;
+            p.expirationDate = selectedBatch.expirationDate || '';
+        }
+        
+        recalculateRow(p);
         setSelectedProducts(newProducts);
-        calculateCredit();
+    };
+
+    const updateField = (index, field, value) => {
+        const newProducts = [...selectedProducts];
+        const p = newProducts[index];
+        
+        if (field === 'enteredQty') {
+            p.enteredQty = parseFloat(value) || 0;
+        } else if (field === 'enteredPurchasePrice') {
+            p.enteredPurchasePrice = parseFloat(value) || 0;
+        } else {
+            p[field] = value;
+        }
+
+        recalculateRow(p);
+        setSelectedProducts(newProducts);
+    };
+
+    const recalculateRow = (p) => {
+        p.total = p.enteredQty * p.enteredPurchasePrice;
+
+        if (p.unitMode === 'secondary') {
+            p.quantity = p.enteredQty * p.conversionRate; 
+            p.purchasePrice = p.enteredPurchasePrice / p.conversionRate; 
+        } else {
+            p.quantity = p.enteredQty;
+            p.purchasePrice = p.enteredPurchasePrice;
+        }
     };
 
     const calculateTotalBill = () => {
         return selectedProducts.reduce((total, product) => total + Number(product.total), 0);
     };
 
-    const calculateCredit = () => {
-        setCredit(calculateTotalBill() - Number(totalPayment));
-    };
+    useEffect(() => {
+        const total = calculateTotalBill();
+        const pay = totalPayment === '' ? 0 : parseFloat(totalPayment);
+        setCredit(total - pay);
+    }, [selectedProducts, totalPayment]);
 
     const handleTotalPaymentChange = (e) => {
         let value = e.target.value;
-        value = value.replace(/^0+(?=\d)/, '');
         const totalBill = calculateTotalBill();
-        const newPayment = value === '' ? 0 : parseFloat(value);
+        const newPayment = value === '' ? '' : parseFloat(value);
+        
         if (newPayment > totalBill) {
             alert("Paid amount cannot exceed total bill amount!");
-            setTotalPayment(totalBill);
-            setCredit(0);
             return;
         }
-        setTotalPayment(value === '' ? '' : newPayment);
-        setCredit(totalBill - newPayment);
+        setTotalPayment(newPayment);
     };
 
     const handleAddPurchase = () => {
-        if (!selectedPeople) {
-            alert("Please select a supplier.");
-            return;
-        }
-        if (!currentDate) {
-            alert("Please select a purchase date.");
-            return;
-        }
-        if (selectedProducts.length === 0) {
-            alert("Please add at least one product.");
-            return;
-        }
+        if (!selectedPeople) { alert("Please select a supplier."); return; }
+        if (!currentDate) { alert("Please select a purchase date."); return; }
+        if (selectedProducts.length === 0) { alert("Please add at least one product."); return; }
+        
         const invalidProduct = selectedProducts.find((p) => Number(p.quantity) <= 0);
         if (invalidProduct) {
-            alert(`Product "${invalidProduct.name}" must have at least 1 quantity.`);
+            alert(`Product "${invalidProduct.name}" quantity must be greater than 0.`);
             return;
         }
 
-        // Use a timestamp from the past (Epoch) for auto-initialized batches.
-        // This ensures the current purchase (which happens 'today') is counted as an inflow AFTER the opening date.
         const autoInitDate = new Date(0).toISOString(); 
 
         selectedProducts.forEach((product) => {
             const existingProduct = products.find((p) => p.id === product.id);
             if (existingProduct) {
-                let batches = existingProduct.batchCode || [];
-                const existingBatch = batches.find(
-                    (batch) => batch.purchasePrice === product.purchasePrice && batch.expirationDate === product.expirationDate
-                );
+                let batches = existingProduct.batchCode ? [...existingProduct.batchCode] : [];
+                
+                const existingBatchIndex = batches.findIndex(b => b.batchCode === product.batchCode);
 
-                if (existingBatch) {
-                    const batchIndex = batches.findIndex(batch => batch.batchCode === existingBatch.batchCode);
-                    if (batchIndex !== -1) {
-                        // --- CRITICAL UPDATE: Initialize tracking if missing ---
-                        if (batches[batchIndex].openingStock === undefined) {
-                            // If this batch exists but wasn't initialized, treat its CURRENT quantity (before this purchase) as Opening.
-                            batches[batchIndex].openingStock = Number(batches[batchIndex].quantity || 0);
-                            batches[batchIndex].openingStockDate = autoInitDate;
-                            batches[batchIndex].damageQuantity = 0;
-                        }
-
-                        batches[batchIndex].purchasePrice = product.purchasePrice;
-                        batches[batchIndex].sellPrice = product.sellPrice;
-                        batches[batchIndex].wholeSalePrice = product.wholeSalePrice;
-                        batches[batchIndex].retailPrice = product.retailPrice;
-                        batches[batchIndex].expirationDate = product.expirationDate;
-                        // Update Quantity
-                        batches[batchIndex].quantity = Number(batches[batchIndex].quantity) + Number(product.quantity);
+                if (existingBatchIndex !== -1) {
+                    const b = batches[existingBatchIndex];
+                    if (b.openingStock === undefined) {
+                        b.openingStock = Number(b.quantity || 0);
+                        b.openingStockDate = autoInitDate;
+                        b.damageQuantity = 0;
                     }
+                    b.purchasePrice = product.purchasePrice;
+                    b.sellPrice = product.sellPrice;
+                    b.wholeSalePrice = product.wholeSalePrice;
+                    b.retailPrice = product.retailPrice;
+                    b.expirationDate = product.expirationDate;
+                    b.quantity = Number(b.quantity) + Number(product.quantity);
                 } else {
-                    // --- NEW BATCH LOGIC ---
-                    const nextBatchNumber = batches.length + 1;
-                    const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
                     const newBatch = {
-                        batchCode: newBatchCode,
+                        batchCode: product.batchCode,
                         expirationDate: product.expirationDate,
                         purchasePrice: product.purchasePrice,
                         sellPrice: product.sellPrice,
                         wholeSalePrice: product.wholeSalePrice,
                         retailPrice: product.retailPrice,
                         quantity: Number(product.quantity),
-                        
-                        // Initialize for Report: Opening is 0, so this purchase shows as +Quantity
                         openingStock: 0,
                         openingStockDate: autoInitDate,
                         damageQuantity: 0
                     };
-                    batches = [...batches, newBatch];
-                    product.batchCode = newBatchCode;
+                    batches.push(newBatch);
                 }
                 updateProduct(product.id, { ...existingProduct, batchCode: batches });
             }
         });
 
-        const newPurchase1 = {
+        const newPurchase = {
             id: uuidv4(),
             purchaseRefNo: generatePurchaseRefNo(),
             personId: selectedPeople,
             date: currentDate,
             paymentMode,
             products: selectedProducts.map((p) => ({
-                id: p.id || "0",
+                id: p.id,
                 name: p.name,
                 quantity: p.quantity,
+                enteredQty: p.enteredQty,
+                unitMode: p.unitMode,
+                conversionRate: p.conversionRate,
                 purchasePrice: p.purchasePrice,
                 sellPrice: p.sellPrice,
                 wholeSalePrice: p.wholeSalePrice, 
                 retailPrice: p.retailPrice,
                 batchCode: p.batchCode,
+                total: p.total
             })),
-            totalPayment,
+            totalPayment: totalPayment === '' ? 0 : totalPayment,
             credit,
             totalBill: calculateTotalBill(),
         };
 
-        addPurchase(newPurchase1);
+        addPurchase(newPurchase);
         setSelectedProducts([]);
+        setTotalPayment(0);
         alert('Purchase added successfully!');
     };
 
     const filteredProducts = products.filter((product) =>
-        product.name && product.name.toLowerCase().includes(productSearch.toLowerCase())
+        (product.name && product.name.toLowerCase().includes(productSearch.toLowerCase())) ||
+        (product.barcode && product.barcode.includes(productSearch))
     );
 
     return (
         <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
             <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">New Purchase</h2>
+            
             <div className="flex flex-col lg:flex-row gap-4">
+                {/* LEFT SIDE */}
                 <div className="flex-1 min-w-0 space-y-3 sm:space-y-4">
+                    
+                    {/* Supplier & Date */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                         <div className="bg-white rounded-lg p-3 sm:p-4 shadow">
                             <label className="text-xs sm:text-sm font-semibold text-gray-600">Supplier *:</label>
@@ -239,63 +298,173 @@ const NewPurchases = () => {
                         </div>
                         <div className="bg-white rounded-lg p-4 shadow">
                             <label className="text-sm font-semibold text-gray-600">Purchase Date:</label>
-                            <input type="date" value={currentDate} max={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="input input-bordered w-full bg-white"/>
+                            <input type="date" value={currentDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setCurrentDate(e.target.value)} className="input input-bordered w-full bg-white"/>
                         </div>
                     </div>
-                    <div className="bg-white rounded-lg p-4 shadow">
-                        <label className="text-sm font-semibold text-gray-600">Search Products:</label>
-                        <input type="text" className="input input-bordered w-full" placeholder="Search product by name" value={productSearch} onChange={(e) => setProductSearch(e.target.value)}/>
-                        {productSearch && (<div className="overflow-y-auto max-h-60 mt-2 border rounded-lg">{filteredProducts.map((product) => (<div key={product.id} className="p-2 border-b last:border-b-0 hover:bg-gray-100 cursor-pointer" onClick={() => handleAddProductToTable(product)}>{product.name}</div>))}</div>)}
-                    </div>
+
+                    {/* Product Search */}
+                    <ProductSearch 
+                         searchProduct={productSearch}
+                         setSearchProduct={setProductSearch}
+                         products={products}
+                         handleOpenAddModal={(product) => handleAddProductToTable(product)}
+                    />
+
+                    {/* CUSTOM PURCHASE TABLE */}
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 sm:p-4 shadow-lg">
                         <div className="overflow-x-auto -mx-2 sm:mx-0">
-                            <div className="max-h-[calc(100vh-450px)] overflow-y-auto">
-                                <table className="table w-full table-auto min-w-[900px] sm:min-w-full">
-                                    <thead className="bg-gradient-to-r from-blue-600 to-purple-600 sticky top-0 z-10">
+                            {/* REMOVED max-h and overflow-y constraint here */}
+                            <div className="min-w-full inline-block align-middle">
+                                <table className="table w-full table-auto min-w-[1000px]">
+                                    <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
                                         <tr>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Product</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Batch</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Expire</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Sell ₨</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Wholesale ₨</th> 
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Retail ₨</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Purchase ₨</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Qty</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Total</th>
-                                            <th className="text-white font-semibold text-xs md:text-sm px-2">Action</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-32">Product</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Batch</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-20">Unit</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-20">Qty</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Cost (Unit)</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Total</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Sale (Pc)</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Wholesale (Pc)</th> 
+                                            <th className="text-white font-semibold text-xs px-2 w-24">Expiry</th>
+                                            <th className="text-white font-semibold text-xs px-2 w-10">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
-                                        {selectedProducts.length > 0 ? (selectedProducts.map((product, index) => (<tr key={product.id} className="hover:bg-blue-50 transition-colors">
-                                            <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{product.name}</td>
-                                            <td className="text-xs md:text-sm px-2">
-                                                <select value={product.batchCode} onChange={(e) => updateBatchCode(index, e.target.value)} className="select select-bordered select-sm w-full max-w-xs">{(batchCodes[product.id] || []).map((batch) => (<option key={batch.batchCode} value={batch.batchCode}>{batch.batchCode}</option>))}
+                                        {selectedProducts.length > 0 ? (selectedProducts.map((product, index) => (
+                                        <tr key={product.id + index} className="hover:bg-blue-50 transition-colors align-top border-b">
+                                            {/* Product Name */}
+                                            <td className="px-2 py-3">
+                                                <div className="font-bold text-xs md:text-sm">{product.name}</div>
+                                                <div className="text-[10px] text-gray-500">{product.hasSecondary ? 'Multi-Unit' : 'Single Unit'}</div>
+                                            </td>
+
+                                            {/* Batch Selection */}
+                                            <td className="px-2 py-3">
+                                                <select 
+                                                    value={product.isNewBatch ? 'NEW_BATCH' : product.batchCode} 
+                                                    onChange={(e) => updateBatchCode(index, e.target.value)} 
+                                                    className="select select-bordered select-xs w-full"
+                                                >
+                                                    {(batchCodes[product.id] || []).map((batch) => (
+                                                        <option key={batch.batchCode} value={batch.batchCode}>{batch.batchCode}</option>
+                                                    ))}
+                                                    <option value="NEW_BATCH">+ New Batch</option>
                                                 </select>
                                             </td>
-                                            <td className="text-xs md:text-sm px-2"><input type="date" value={product.expirationDate || ''} onChange={(e) => updateProductField(index, 'expirationDate', e.target.value)} className="input input-bordered input-sm w-full max-w-xs"/></td>
-                                            <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.sellPrice} onChange={(e) => updateProductField(index, 'sellPrice', parseFloat(e.target.value) || '')}/></td>
-                                            
-                                            <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.wholeSalePrice} onChange={(e) => updateProductField(index, 'wholeSalePrice', parseFloat(e.target.value) || '')}/></td>
-                                            <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.retailPrice} onChange={(e) => updateProductField(index, 'retailPrice', parseFloat(e.target.value) || '')}/></td>
-                                            <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.purchasePrice} onChange={(e) => updateProductField(index, 'purchasePrice', parseFloat(e.target.value) || '')}/></td>
-                                            <td className="text-xs md:text-sm px-2"><input type="number" className="input input-bordered input-sm w-20" value={product.quantity} onChange={(e) => updateProductField(index, 'quantity', parseInt(e.target.value, 10) || 0)}/></td>
-                                            <td className="text-blue-600 font-bold text-xs md:text-sm px-2">₨ {product.total.toFixed(2)}</td>
-                                            <td className="px-2"><button className="btn btn-error btn-xs md:btn-sm" onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== index))}>❌</button></td>
-                                        </tr>))) : (<tr><td colSpan="11" className="text-center text-gray-500 py-4">No products added yet.</td></tr>)}
+
+                                            {/* Unit Mode Selection */}
+                                            <td className="px-2 py-3">
+                                                {product.hasSecondary ? (
+                                                    <select 
+                                                        value={product.unitMode} 
+                                                        onChange={(e) => handleUnitModeChange(index, e.target.value)}
+                                                        className="select select-bordered select-xs w-full font-bold text-blue-700"
+                                                    >
+                                                        <option value="base">{product.baseUnitName}</option>
+                                                        <option value="secondary">{product.secUnitName}</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className="text-xs font-bold pl-2">{product.baseUnitName}</span>
+                                                )}
+                                            </td>
+
+                                            {/* Quantity Input */}
+                                            <td className="px-2 py-3">
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    className="input input-bordered input-sm w-full font-bold" 
+                                                    value={product.enteredQty} 
+                                                    onChange={(e) => updateField(index, 'enteredQty', e.target.value)}
+                                                />
+                                                <div className="text-[10px] text-gray-400 text-center mt-1">
+                                                    = {product.unitMode === 'secondary' ? (product.enteredQty * product.conversionRate) : product.enteredQty} Pcs
+                                                </div>
+                                            </td>
+
+                                            {/* Purchase Price Input */}
+                                            <td className="px-2 py-3">
+                                                <input 
+                                                    type="number" 
+                                                    className="input input-bordered input-sm w-full" 
+                                                    value={product.enteredPurchasePrice} 
+                                                    onChange={(e) => updateField(index, 'enteredPurchasePrice', e.target.value)}
+                                                />
+                                                {product.unitMode === 'secondary' && (
+                                                    <div className="text-[10px] text-gray-400 text-center mt-1">
+                                                        {Math.round(product.enteredPurchasePrice / product.conversionRate)} / Pc
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            {/* Total */}
+                                            <td className="px-2 py-3">
+                                                <div className="text-blue-700 font-bold text-sm pt-1">
+                                                    ₨ {product.total.toFixed(0)}
+                                                </div>
+                                            </td>
+
+                                            {/* Sale Price */}
+                                            <td className="px-2 py-3">
+                                                <input type="number" className="input input-bordered input-sm w-full" value={product.sellPrice} onChange={(e) => updateField(index, 'sellPrice', parseFloat(e.target.value) || 0)}/>
+                                            </td>
+
+                                            {/* Wholesale Price */}
+                                            <td className="px-2 py-3">
+                                                <input type="number" className="input input-bordered input-sm w-full" value={product.wholeSalePrice} onChange={(e) => updateField(index, 'wholeSalePrice', parseFloat(e.target.value) || 0)}/>
+                                            </td>
+
+                                            {/* Expiry */}
+                                            <td className="px-2 py-3">
+                                                <input type="date" value={product.expirationDate || ''} onChange={(e) => updateField(index, 'expirationDate', e.target.value)} className="input input-bordered input-sm w-full"/>
+                                            </td>
+
+                                            {/* Action */}
+                                            <td className="px-2 py-3 text-center">
+                                                <button className="btn btn-ghost btn-xs text-red-500" onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== index))}>
+                                                    <FaTrash />
+                                                </button>
+                                            </td>
+                                        </tr>))) : (<tr><td colSpan="10" className="text-center text-gray-500 py-8">No products added. Search above to add.</td></tr>)}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                {/* RIGHT SIDE: Payment Details */}
                 <div className="lg:w-1/4 lg:min-w-[300px] w-full">
                     <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
-                        <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
-                        <div className="mb-6"><label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label><select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors"><option value="Cash">Cash</option><option value="Bank">Bank</option></select></div>
-                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-6 shadow-md"><label className="text-white text-sm font-semibold block mb-1">Total Bill:</label><div className="text-3xl font-bold text-white">₨ {calculateTotalBill().toFixed(2)}</div></div>
-                        <div className="mb-6"><label className="text-sm font-semibold text-gray-600 mb-2 block">Amount Paid:</label><input type="number" value={totalPayment === 0 ? '' : totalPayment} onChange={handleTotalPaymentChange} className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold"/></div>
-                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-8 shadow-md"><label className="text-white text-sm font-semibold block mb-1">Credit Amount:</label><div className="text-3xl font-bold text-white">₨ {credit.toFixed(2)}</div></div>
-                        <button onClick={handleAddPurchase} className="btn btn-primary w-full mb-3 text-lg font-bold hover:scale-105 transition-transform">Save Purchase</button>
+                        <h3 className="text-2xl font-bold mb-6 text-blue-800">Summary</h3>
+                        
+                        <div className="mb-4">
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label>
+                            <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="select select-bordered w-full bg-white">
+                                <option value="Cash">Cash</option>
+                                <option value="Bank">Bank</option>
+                            </select>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-4 shadow-md">
+                            <label className="text-white text-sm font-semibold block mb-1">Total Bill:</label>
+                            <div className="text-3xl font-bold text-white">₨ {calculateTotalBill().toFixed(2)}</div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">Amount Paid:</label>
+                            <input type="number" value={totalPayment === 0 ? '' : totalPayment} onChange={handleTotalPaymentChange} className="input input-bordered w-full bg-white text-lg font-bold"/>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-6 shadow-md">
+                            <label className="text-white text-sm font-semibold block mb-1">Credit (Udhaar):</label>
+                            <div className="text-3xl font-bold text-white">₨ {credit.toFixed(2)}</div>
+                        </div>
+
+                        <button onClick={handleAddPurchase} className="btn btn-primary w-full mb-3 text-lg font-bold shadow-lg">
+                            Save Purchase
+                        </button>
                     </div>
                 </div>
             </div>

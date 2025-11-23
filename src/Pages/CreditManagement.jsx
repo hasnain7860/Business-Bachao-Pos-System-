@@ -1,45 +1,46 @@
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "../Appfullcontext.jsx";
-import { FaPlus, FaTimes, FaEdit, FaTrash } from "react-icons/fa";
-import { Link } from "react-router-dom";
-import PaymentDetails from "../components/element/PaymentDetails.jsx";
-import languageData from "../assets/languageData.json";
+import { FaPlus, FaTimes, FaEdit, FaTrash, FaArrowLeft, FaPrint } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from "uuid";
+import languageData from "../assets/languageData.json";
+
 const CreditManagement = () => {
   const context = useAppContext();
   const { language } = context;
   const navigate = useNavigate();
-  const peoples = context.peopleContext.people;
- const purchaseReturnsData = context.purchaseReturnContext?.purchaseReturns || [];
-  const salesData = context.SaleContext.Sales;
   const t = languageData[language];
+
+  // --- Context Data ---
+  const peoples = context.peopleContext.people;
+  const salesData = context.SaleContext.Sales || [];
+  const purchasesData = context.purchaseContext.purchases || [];
+  const sellReturns = context.SellReturnContext.sellReturns || [];
+  const purchaseReturns = context.purchaseReturnContext?.purchaseReturns || [];
+  
+  // --- Manual Records Actions ---
   const submittedRecords = context.creditManagementContext.submittedRecords;
   const addRecords = context.creditManagementContext.add;
   const editRecords = context.creditManagementContext.edit;
   const deleteRecords = context.creditManagementContext.delete;
-  
-  const purchasesData = context.purchaseContext.purchases;
+
+  // --- States ---
   const [searchTerm, setSearchTerm] = useState("");
-  const sellReturns = context.SellReturnContext.sellReturns
-
-const [editingRecordId, setEditingRecordId] = useState(null);
-
-  const [selectedPeople, setSelectedPeople] = useState(null)
+  const [selectedPeople, setSelectedPeople] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
-  const [formType, setFormType] = useState("");
+  const [formType, setFormType] = useState(""); // 'credit' or 'payment'
+  const [editingRecordId, setEditingRecordId] = useState(null);
+  
   const [formData, setFormData] = useState({
-    id: uuidv4(),
+    id: "",
     date: new Date().toISOString().substring(0, 10),
     amount: "",
     note: "",
   });
-  const [dropdownOpen, setDropdownOpen] = useState(null);
-  const filteredPeoples = useMemo(
-    () =>
-      peoples.filter((c) =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase())
-      ),
+
+  // --- Search Filter ---
+  const filteredPeoples = useMemo(() => 
+    peoples.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase())),
     [searchTerm, peoples]
   );
 
@@ -48,598 +49,462 @@ const [editingRecordId, setEditingRecordId] = useState(null);
     setSearchTerm("");
   };
 
-// YEH TEEN NAYE FUNCTIONS ADD KAREIN
+  // --- CRUD Handlers ---
 
-const handleClosePopup = () => {
+  const handleClosePopup = () => {
     setShowPopup(false);
-    setEditingRecordId(null); // Edit mode reset karein
+    setEditingRecordId(null);
     setFormData({
+      id: "",
       date: new Date().toISOString().substring(0, 10),
       amount: "",
       note: "",
     });
-};
+  };
 
-// Edit ke liye function
-const handleEdit = (record) => {
-  console.log(record.id)
+  const handleEdit = (record) => {
     setEditingRecordId(record.id);
     setFormType(record.type);
-    setFormData({ ...record }); // Form ko record ke data se bhar dein
+    setFormData({ ...record });
     setShowPopup(true);
-};
+  };
 
-// Delete ke liye function
-const handleDelete = (recordId) => {
-    if (window.confirm("Are you sure you want to delete this record?")) {
-      deleteRecords(recordId); // Aapka delete function use kiya
+  const handleDelete = (recordId) => {
+    if (window.confirm("Are you sure you want to delete this record? This will affect the balance.")) {
+      deleteRecords(recordId);
     }
-};
+  };
 
-  // PURANE handleSubmit KO IS NAYE WALE SE REPLACE KAR DEIN
+  const handleSubmit = () => {
+    if (!formData.amount) return alert("Amount is required");
 
-const handleSubmit = () => {
-    if (!formData.amount) return;
+    const recordData = {
+      id: editingRecordId || uuidv4(),
+      personId: selectedPeople.id,
+      type: formType,
+      amount: parseFloat(formData.amount),
+      date: formData.date,
+      note: formData.note,
+    };
 
     if (editingRecordId) {
-      // --- UPDATE LOGIC ---
-      
-      const updatedRecord = {
-        id: editingRecordId,
-        personId: selectedPeople.id,
-        type: formType,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        note: formData.note,
-      };
-      editRecords(updatedRecord.id ,updatedRecord); // Aapka edit function use kiya
+      editRecords(recordData.id, recordData);
     } else {
-      // --- ADD LOGIC ---
-      const newRecord = {
-        id: uuidv4(),
-        personId: selectedPeople.id,
-        type: formType,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        note: formData.note,
-      };
-      addRecords(newRecord); // Aapka add function use kiya
+      addRecords(recordData);
     }
     
-    handleClosePopup(); // Popup band karein aur state reset karein
-};
+    handleClosePopup();
+  };
 
-
-
-
-
-
-
-
-
-    
-    const totalRecordsPayment = submittedRecords
-  .filter(
-    (record) =>
-      record.type === "payment" && record.personId === selectedPeople?.id
-  )
-  .reduce((acc, record) => acc + record.amount, 0);
-    
-
-  const totalSalesPayment = salesData
-    .filter((sale) => sale.personId === selectedPeople?.id)
-    .reduce((acc, sale) => acc + Number(sale.amountPaid), 0);
-
- 
-
-  const totalPayment =
-    Number(totalRecordsPayment) +
-    Number(totalSalesPayment)
-
-  const totalExistRecordCredit = submittedRecords
-    .filter(
-      (record) =>
-        record.type === "credit" && record.personId === selectedPeople?.id
-    )
-    .reduce((acc, record) => acc + record.amount, 0);
-
-  const totalSalesCredit = salesData
-    .filter((sale) => sale.personId === selectedPeople?.id)
-    .reduce((acc, sale) => acc + sale.credit, 0);
-
-  const grandCredit = Number(totalSalesCredit) + Number(totalExistRecordCredit);
-
-
-// Sell Returns Total
-const totalSellReturns = useMemo(() => {
-  return sellReturns
-    .filter(returnItem => returnItem.people === selectedPeople?.id)
-    .reduce((acc, returnItem) => {
-      return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
-    }, 0);
-}, [sellReturns, selectedPeople]);
-// Purchase Returns Total
-const totalPurchaseReturns = useMemo(() => {
-  return (
-    context.purchaseReturnContext?.purchaseReturns
-      ?.filter(returnItem => returnItem.people === selectedPeople?.id)
-      ?.reduce((acc, returnItem) => {
-        return acc + (returnItem.paymentDetails?.creditAdjustment || 0);
-      }, 0) || 0
-  );
-}, [context.purchaseReturnContext?.purchaseReturns, selectedPeople]);
-
-
-// Updated Remaining Credit Calculation
-const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Number(totalSellReturns) - Number(totalPurchaseReturns);
+  // --- CALCULATIONS ---
   
+  // 1. SALES SIDE
+  const salesSummary = useMemo(() => {
+     if(!selectedPeople) return { totalBill: 0, paid: 0, credit: 0 };
+     const personSales = salesData.filter(s => s.personId === selectedPeople.id);
+     return {
+        totalBill: personSales.reduce((acc, s) => acc + Number(s.totalBill), 0),
+        paid: personSales.reduce((acc, s) => acc + Number(s.amountPaid), 0),
+        credit: personSales.reduce((acc, s) => acc + Number(s.credit), 0)
+     };
+  }, [salesData, selectedPeople]);
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+  // 2. PURCHASE SIDE
+  const purchaseSummary = useMemo(() => {
+     if(!selectedPeople) return { totalBill: 0, paid: 0, credit: 0 };
+     const personPurchases = purchasesData.filter(p => p.personId === selectedPeople.id);
+     return {
+        totalBill: personPurchases.reduce((acc, p) => acc + Number(p.totalBill), 0),
+        paid: personPurchases.reduce((acc, p) => acc + Number(p.totalPayment), 0),
+        credit: personPurchases.reduce((acc, p) => acc + Number(p.credit), 0)
+     };
+  }, [purchasesData, selectedPeople]);
+
+  // 3. RETURNS (FIXED: Using peopleId instead of people)
+  const returnSummary = useMemo(() => {
+     if(!selectedPeople) return { salesReturnAdj: 0, purchaseReturnAdj: 0 };
+     
+     // Sales Return (Receivable -)
+     const salesRet = sellReturns
+        .filter(r => r.peopleId === selectedPeople.id)
+        .reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
+     
+     // Purchase Return (Payable -) -> FIX: used 'peopleId' consistent with AddPurchaseReturn logic
+     const purchRet = purchaseReturns
+        .filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id) // Handling both possible key names for safety
+        .reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
+
+     return { salesReturnAdj: salesRet, purchaseReturnAdj: purchRet };
+  }, [sellReturns, purchaseReturns, selectedPeople]);
+
+  // 4. MANUAL RECORDS
+  const manualSummary = useMemo(() => {
+    if(!selectedPeople) return { credit: 0, payment: 0 };
+    const records = submittedRecords.filter(r => r.personId === selectedPeople.id);
+    return {
+        credit: records.filter(r => r.type === 'credit').reduce((acc, r) => acc + Number(r.amount), 0),
+        payment: records.filter(r => r.type === 'payment').reduce((acc, r) => acc + Number(r.amount), 0)
+    };
+  }, [submittedRecords, selectedPeople]);
 
 
+  // --- NET BALANCE ---
+  const totalReceivablePlus = salesSummary.credit + manualSummary.credit + returnSummary.purchaseReturnAdj;
+  const totalPayableMinus = purchaseSummary.credit + manualSummary.payment + returnSummary.salesReturnAdj;
+  const netBalance = totalReceivablePlus - totalPayableMinus;
 
-
-
-
-
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-  
+  const isDebtor = netBalance >= 0;
 
   return (
-    <div className="p-4 bg-gray-50">
-      <div className={`mt-4 ${language === 'ur' ? "text-right" : "text-left"}`}>
-        <button
-          className="bg-gray-300 text-black px-4 py-2 rounded"
-          onClick={() => navigate(-1)}
-        >
-          {languageData[language].back}
+    <div className="p-4 bg-gray-50 min-h-screen">
+      
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+        <button onClick={() => navigate(-1)} className="btn btn-sm btn-ghost gap-2">
+            <FaArrowLeft /> {languageData[language].back}
         </button>
+        <h1 className="text-xl font-bold text-blue-700 uppercase tracking-wide">{t.creditManagement}</h1>
       </div>
 
-      <h1 className="text-lg font-bold mb-4 text-blue-600">
-        {t.creditManagement}
-      </h1>
+      {/* SEARCH OR DETAILS */}
       {!selectedPeople ? (
-        <div className="relative mb-4">
-          <input
-            type="text"
-            placeholder={t.searchCustomer}
-            className="input input-bordered w-full border-gray-300"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {filteredPeoples.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow-md w-full mt-1 max-h-40 overflow-y-auto">
-              {filteredPeoples.map((people) => (
-                <div
-                  key={people.id}
-                  className="p-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handlePeopleSelect(people)}
-                >
-                  {people.name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="border p-4 rounded-lg bg-white shadow">
-          <h2 className="text-lg font-semibold text-blue-500">
-            {selectedPeople.name}
-          </h2>
-          <button
-            className="text-red-500 float-right"
-            onClick={() => setSelectedPeople(null)}
-          >
-            <FaTimes />
-          </button>
-          {salesData.filter((sale) => sale.personId === selectedPeople.id)
-            .length > 0 ? (
-            <>
-              <div className="mt-4 max-h-64 overflow-y-auto">
-                <h3 className="text-md font-bold mt-4">{t.salesData}</h3>
-                <table className="min-w-full bg-white border border-gray-200 mt-2">
-                  <thead>
-                    <tr>
-                      <th className="border px-4 py-2">{t.saleRefNo}</th>
-                      <th className="border px-4 py-2">{t.totalPayment}</th>
-                      <th className="border px-4 py-2">{t.amountPaid}</th>
-                      <th className="border px-4 py-2">{t.credit}</th>
-                      <th className="border px-4 py-2">{t.date}</th>
-
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salesData
-                      .filter((sale) => sale.personId === selectedPeople.id)
-                      .map((sale) => {
-
-                        return (
-                          <>
-                            <tr
-                              className={`${sale.credit === 0 ? "bg-red-200" : "bg-white"
-                                } border-b`}
-                            >
-                              <td className="border px-4 py-2">{sale.salesRefNo}</td>
-                              <td className="border px-4 py-2">{sale.totalBill}</td>
-                              <td className="border px-4 py-2">{sale.amountPaid}</td>
-                              <td className="border px-4 py-2">{sale.credit}</td>
-                              <td className="border px-4 py-2">{new Date(sale.dateTime).toLocaleDateString()}</td>
-
-                            </tr>
-
-                          </>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            ""
-          )}
-         
-
-
-         {selectedPeople && purchasesData.filter((purchase) => purchase.personId === selectedPeople.id).length > 0 && (
-  <div className="mt-4 max-h-64 overflow-y-auto">
-    <h3 className="text-md font-bold mt-4">{t.purchaseData}</h3>
-    <table className="min-w-full bg-white border border-gray-200 mt-2">
-      <thead>
-        <tr>
-          <th className="border px-4 py-2">{t.date}</th>
-          <th className="border px-4 py-2">{t.totalBill}</th>
-          <th className="border px-4 py-2">{t.totalPayment}</th>
-          <th className="border px-4 py-2">{t.credit}</th>
-          <th className="border px-4 py-2">{t.products}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {purchasesData
-          .filter((purchase) => purchase.personId === selectedPeople.id)
-          .map((purchase) => (
-            <tr key={purchase.id} className={`${purchase.credit === 0 ? "bg-red-200" : "bg-white"} border-b`}>
-              <td className="border px-4 py-2">{new Date(purchase.date).toLocaleDateString()}</td>
-              <td className="border px-4 py-2">{purchase.totalBill}</td>
-              <td className="border px-4 py-2">{purchase.totalPayment}</td>
-              <td className="border px-4 py-2">{purchase.credit}</td>
-              <td className="border px-4 py-2">
-                {purchase.products.map(p => `${p.name} (${p.quantity})`).join(', ')}
-              </td>
-            </tr>
-          ))}
-      </tbody>
-    </table>
-  </div>
-)}
-
-
-
-
-
-
-
-
-
-
-          {selectedPeople && salesData.some(sale => 
-  sale.personId === selectedPeople.id && sale.returns?.length > 0
-) && (
-  <div className="mt-4 max-h-64 overflow-y-auto">
-    <h3 className="text-lg font-semibold">{t.returnRecords}</h3>
-    <table className="min-w-full bg-white border border-gray-300 mt-2">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="border px-4 py-2">{t.saleRefNo}</th>
-          <th className="border px-4 py-2">{t.returnDate}</th>
-          <th className="border px-4 py-2">{t.returnAmount}</th>
-          <th className="border px-4 py-2">{t.returnedProducts}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {salesData
-          .filter(sale => sale.personId === selectedPeople.id && sale.returns?.length > 0)
-          .map(sale => (
-            sale.returns.map((ret, index) => (
-              <tr key={`${sale.id}-${index}`} className="border-b">
-                <td className="border px-4 py-2">{sale.salesRefNo}</td>
-                <td className="border px-4 py-2">
-                  {new Date(ret.dateTime).toLocaleDateString()}
-                </td>
-                <td className="border px-4 py-2">{ret.returnPrice}</td>
-                <td className="border px-4 py-2">
-                  {ret.returnedProducts.map(p => 
-                    `${p.name} (${p.returnQuantity})`
-                  ).join(', ')}
-                </td>
-              </tr>
-            ))
-          ))}
-      </tbody>
-    </table>
-  </div>
-)}
-{selectedPeople &&
-  purchaseReturnsData.some(
-    (ret) => ret.people === selectedPeople.id
-  ) && (
-    <div className="mt-4 max-h-64 overflow-y-auto">
-      <h3 className="text-lg font-semibold">{t.purchaseReturnRecords}</h3>
-      <table className="min-w-full bg-white border border-gray-300 mt-2">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="border px-4 py-2">{t.returnRefNo}</th>
-            <th className="border px-4 py-2">{t.purchaseRefNo}</th>
-            <th className="border px-4 py-2">{t.returnAmount}</th>
-            <th className="border px-4 py-2">{t.cashReturn}</th>
-            <th className="border px-4 py-2">{t.creditAdjustment}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {context.purchaseReturnContext?.purchaseReturns
-            .filter((ret) => ret.people === selectedPeople.id)
-            .map((ret) => (
-              <tr key={ret.id} className="border-b">
-                <td className="border px-4 py-2">{ret.returnRefNo}</td>
-                <td className="border px-4 py-2">{ret.purchaseRef || '-'}</td>
-                <td className="border px-4 py-2">{ret.totalAmount}</td>
-                <td className="border px-4 py-2">
-                  {ret.paymentDetails?.cashReturn || 0}
-                </td>
-                <td className="border px-4 py-2">
-                  {ret.paymentDetails?.creditAdjustment || 0}
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-          {selectedPeople && sellReturns.some(ret => ret.peopleId === selectedPeople.id) && (
-  <div className="mt-4 max-h-64 overflow-y-auto">
-    <h3 className="text-lg font-semibold">{t.salesReturnRecords}</h3>
-    <table className="min-w-full bg-white border border-gray-300 mt-2">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="border px-4 py-2">{t.returnRefNo}</th>
-          <th className="border px-4 py-2">{t.saleRefNo}</th>
-          <th className="border px-4 py-2">{t.returnAmount}</th>
-          <th className="border px-4 py-2">{t.cashReturn}</th>
-          <th className="border px-4 py-2">{t.creditAdjustment}</th>
-      
-        </tr>
-      </thead>
-      <tbody>
-        {sellReturns
-          .filter(ret => ret.peopleId === selectedPeople.id)
-          .map((ret) => (
-            <tr key={ret.id} className="border-b">
-              <td className="border px-4 py-2">{ret.returnRefNo}</td>
-              <td className="border px-4 py-2">{ret.salesRef || '-'}</td>
-              <td className="border px-4 py-2">{ret.totalAmount}</td>
-              <td className="border px-4 py-2">
-                {ret.paymentDetails?.cashReturn || 0}
-              </td>
-              <td className="border px-4 py-2">
-                {ret.paymentDetails?.creditAdjustment || 0}
-              </td>
-              
-            </tr>
-          ))}
-      </tbody>
-    </table>
-  </div>
-)}
-          {selectedPeople &&
-            submittedRecords.filter(
-              (record) => record.personId === selectedPeople.id
-            ).length > 0 && (
-              <div className="mt-4 max-h-64 overflow-y-auto">
-                <h3 className="text-lg font-semibold">{t.existingRecords}</h3>
-                <table className="min-w-full bg-white border border-gray-300 mt-2">
-<thead className="bg-gray-200">
-    <tr>
-        <th className="border px-4 py-2">{t.type}</th>
-        <th className="border px-4 py-2">{t.amount}</th>
-        <th className="border px-4 py-2">{t.date}</th>
-        <th className="border px-4 py-2">{t.notes}</th>
-        {/* YEH NAYI HEADER LINE ADD KAREIN */}
-        <th className="border px-4 py-2">Actions</th>
-    </tr>
-</thead>
-
-                  <tbody>
-                    {submittedRecords
-                      .filter(
-                        (record) => record.personId === selectedPeople.id
-                      )
-                      .map((record) => (
-                        <tr key={record.id} className="border-b">
-                          <td className="border px-4 py-2">{record.type}</td>
-                          <td className="border px-4 py-2">{record.amount}</td>
-                          <td className="border px-4 py-2">
-                            {new Date(record.date).toLocaleDateString()}
-                          </td>
-                          <td className="border px-4 py-2">{record.note}</td>
-
-<td className="border px-4 py-2 flex items-center justify-center space-x-2">
-    <button onClick={() => handleEdit(record)} className="text-blue-500 hover:text-blue-700 p-1">
-        <FaEdit />
-    </button>
-    <button onClick={() => handleDelete(record.id)} className="text-red-500 hover:text-red-700 p-1">
-        <FaTrash />
-    </button>
-</td>
-
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+        <div className="max-w-md mx-auto mt-10">
+          <label className="label text-gray-600 font-semibold">{t.searchCustomer}</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Start typing name..."
+              className="input input-bordered w-full shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
+            />
+            {filteredPeoples.length > 0 && (
+              <div className="absolute z-10 bg-white border rounded shadow-xl w-full mt-1 max-h-60 overflow-y-auto">
+                {filteredPeoples.map((people) => (
+                  <div
+                    key={people.id}
+                    className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                    onClick={() => handlePeopleSelect(people)}
+                  >
+                    <span className="font-bold">{people.name}</span>
+                    <span className="text-xs text-gray-500 block">{people.phone}</span>
+                  </div>
+                ))}
               </div>
             )}
-
-
-<div className="mt-8 bg-gray-100 p-4 rounded-lg">
-  <h2 className="text-xl font-bold mb-4 border-b pb-2">Credit Summary</h2>
-  
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <h3 className="text-md font-bold text-gray-700">Sales Credits</h3>
-      <ul className="list-disc pl-4 space-y-2">
-        <li>Total Sales Amount: {salesData
-          .filter((sale) => sale.personId === selectedPeople?.id)
-          .reduce((acc, sale) => acc + Number(sale.totalBill), 0)}</li>
-        <li>Sales Payments: {totalSalesPayment}</li>
-        <li>Sales Credit: {totalSalesCredit}</li>
-      </ul>
-    </div>
-
-    <div>
-      <h3 className="text-md font-bold text-gray-700">Purchase Credits</h3>
-      <ul className="list-disc pl-4 space-y-2">
-        <li>Total Purchase Amount: {purchasesData
-          .filter((purchase) => purchase.personId === selectedPeople?.id)
-          .reduce((acc, purchase) => acc + Number(purchase.totalBill), 0)}</li>
-        <li>Purchase Payments: {purchasesData
-          .filter((purchase) => purchase.personId === selectedPeople?.id)
-          .reduce((acc, purchase) => acc + Number(purchase.totalPayment), 0)}</li>
-        <li>Purchase Credit: {purchasesData
-          .filter((purchase) => purchase.personId === selectedPeople?.id)
-          .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
-      </ul>
-    </div>
-
-
-    <div>
-    <h3 className="text-md font-bold text-gray-700">Existing Records</h3>
-    <ul className="list-disc pl-4 space-y-2">
-      <li>Total Existing payment: {totalRecordsPayment}</li>
-      <li>Total Existing Credit: {totalExistRecordCredit}</li>
-    </ul>
-  </div>
-
-
-  </div>
-
-  <div className="mt-4 border-t pt-4">
-    <h3 className="text-lg font-bold text-gray-800">Final Summary</h3>
-    <ul className="list-disc pl-4 space-y-2">
-      <li>Total Sales Credit: {grandCredit}</li>
-      <li>Total Purchase Credit: {purchasesData
-        .filter((purchase) => purchase.personId === selectedPeople?.id)
-        .reduce((acc, purchase) => acc + Number(purchase.credit), 0)}</li>
-      <li>Total Customer Payments Made: {totalPayment}</li>
-      <li>Total Sales Returns: {totalSellReturns}</li>
-{(() => {
-  const totalCredit = purchasesData
-    .filter(purchase => purchase.personId === selectedPeople?.id)
-    .reduce((acc, purchase) => acc + Number(purchase.credit), 0);
-
-  const netBalance = remainingCredit - totalCredit;
-
-  return (
-    <li className="text-xl font-bold text-blue-600">
-      {netBalance >= 0
-        ? `Net Credit Balance: ${netBalance}`
-        : `Net Payable: ${Math.abs(netBalance)}`}
-    </li>
-  );
-})()}
-    
-
-    </ul>
-  </div>
-</div>
-          <div className="mt-4 flex space-x-2">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
-              onClick={() => {
-                setShowPopup(true);
-                setFormType("payment");
-              }}
-            >
-              {t.addPayment}
-            </button>
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-              onClick={() => {
-                setShowPopup(true);
-                setFormType("credit");
-              }}
-            >
-              {t.addCredit}
-            </button>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            
+            {/* PROFILE HEADER */}
+            <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
+                <h2 className="text-2xl font-bold">{selectedPeople.name}</h2>
+                <button className="btn btn-sm btn-circle btn-ghost bg-white/20 hover:bg-white/40 border-0" onClick={() => setSelectedPeople(null)}>
+                    <FaTimes />
+                </button>
+            </div>
+
+            <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* LEFT COL: HISTORY TABLES */}
+                <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                    
+                    {/* 1. SALES HISTORY */}
+                    {salesSummary.totalBill > 0 && (
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between">
+                                <span>{t.salesData}</span>
+                                <span className="text-blue-600">Total Credit: {salesSummary.credit}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="table table-compact w-full min-w-[300px]">
+                                    <thead>
+                                        <tr>
+                                            <th>Ref</th>
+                                            <th>Credit</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {salesData.filter(s => s.personId === selectedPeople.id).map(s => (
+                                            <tr key={s.id} className={s.credit > 0 ? "bg-red-50" : ""}>
+                                                <td>{s.salesRefNo}</td>
+                                                <td className="font-bold text-red-600">{s.credit}</td>
+                                                <td>{new Date(s.dateTime).toLocaleDateString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 2. PURCHASE HISTORY */}
+                    {purchaseSummary.totalBill > 0 && (
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between">
+                                <span>{t.purchaseData}</span>
+                                <span className="text-orange-600">Total Payable: {purchaseSummary.credit}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="table table-compact w-full min-w-[300px]">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Credit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {purchasesData.filter(p => p.personId === selectedPeople.id).map(p => (
+                                            <tr key={p.id} className={p.credit > 0 ? "bg-orange-50" : ""}>
+                                                <td>{new Date(p.date).toLocaleDateString()}</td>
+                                                <td className="font-bold text-orange-600">{p.credit}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3. SALES RETURNS HISTORY */}
+                    {sellReturns.filter(r => r.peopleId === selectedPeople.id).length > 0 && (
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-red-50 p-2 font-bold text-red-800 border-b border-red-100">
+                                Sales Returns (Customer Wapsi)
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="table table-compact w-full min-w-[300px]">
+                                    <thead>
+                                        <tr>
+                                            <th>Ref</th>
+                                            <th>Amount</th>
+                                            <th>Credit Adj</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sellReturns.filter(r => r.peopleId === selectedPeople.id).map(ret => (
+                                            <tr key={ret.id}>
+                                                <td>{ret.returnRefNo}</td>
+                                                <td>{ret.totalAmount}</td>
+                                                <td className="font-bold text-green-600">-{ret.paymentDetails?.creditAdjustment}</td>
+                                                <td>{new Date(ret.returnDate).toLocaleDateString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. PURCHASE RETURNS HISTORY (UPDATED LOGIC) */}
+                    {purchaseReturns.filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id).length > 0 && (
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-blue-50 p-2 font-bold text-blue-800 border-b border-blue-100">
+                                Purchase Returns (Hamari Wapsi)
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="table table-compact w-full min-w-[300px]">
+                                    <thead>
+                                        <tr>
+                                            <th>Ref</th>
+                                            <th>Amount</th>
+                                            <th>Liability Less</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {purchaseReturns
+                                            .filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id)
+                                            .map(ret => (
+                                            <tr key={ret.id}>
+                                                <td>{ret.returnRefNo}</td>
+                                                <td>{ret.totalAmount}</td>
+                                                <td className="font-bold text-blue-600">+{ret.paymentDetails?.creditAdjustment}</td>
+                                                <td>{new Date(ret.returnDate).toLocaleDateString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 5. MANUAL RECORDS (Fixed Mobile Scrolling) */}
+                    <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between items-center">
+                            <span>Manual Records (Cash/Old)</span>
+                            <button onClick={() => { setFormType('credit'); setShowPopup(true); }} className="btn btn-xs btn-outline btn-primary">+ Add</button>
+                        </div>
+                        {/* Added overflow-x-auto so it scrolls on mobile */}
+                        <div className="overflow-x-auto">
+                            <table className="table table-compact w-full min-w-[400px]">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th className="w-16">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {submittedRecords.filter(r => r.personId === selectedPeople.id).map(r => (
+                                        <tr key={r.id}>
+                                            <td>
+                                                <span className={`badge ${r.type === 'credit' ? 'badge-error' : 'badge-success'} badge-sm`}>
+                                                    {r.type === 'credit' ? 'Credit' : 'Pay'}
+                                                </span>
+                                            </td>
+                                            <td className="font-bold">{r.amount}</td>
+                                            <td>{new Date(r.date).toLocaleDateString()}</td>
+                                            <td>
+                                                <div className="flex gap-3">
+                                                    <button onClick={() => handleEdit(r)} className="text-blue-500 hover:text-blue-700">
+                                                        <FaEdit size={16} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(r.id)} className="text-red-500 hover:text-red-700">
+                                                        <FaTrash size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {submittedRecords.filter(r => r.personId === selectedPeople.id).length === 0 && (
+                                        <tr><td colSpan="4" className="text-center text-gray-400">No manual records found.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT COL: FINAL SUMMARY */}
+                <div className="bg-gray-50 rounded-xl p-6 h-fit border border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Financial Summary</h3>
+                    
+                    <div className="space-y-3 text-sm">
+                        
+                        {/* Receivables (Plus) */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-gray-600">
+                                <span>Sales Pending Credit:</span>
+                                <span>{salesSummary.credit.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Manual Credit (Old/Loan):</span>
+                                <span>{manualSummary.credit.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Purchase Returns (Wapsi):</span>
+                                <span>{returnSummary.purchaseReturnAdj.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-blue-700 border-t pt-1">
+                                <span>Total Receivable (+):</span>
+                                <span>{totalReceivablePlus.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div className="divider my-2"></div>
+
+                        {/* Payables (Minus) */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-gray-600">
+                                <span>Purchase Pending Credit:</span>
+                                <span>{purchaseSummary.credit.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Manual Payments (Received):</span>
+                                <span>{manualSummary.payment.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Sales Returns (Wapsi):</span>
+                                <span>{returnSummary.salesReturnAdj.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-red-700 border-t pt-1">
+                                <span>Total Deductions (-):</span>
+                                <span>{totalPayableMinus.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* NET BALANCE CARD */}
+                    <div className={`mt-6 p-4 rounded-lg text-center shadow-md ${isDebtor ? 'bg-green-100 border-green-300 text-green-800' : 'bg-red-100 border-red-300 text-red-800'} border`}>
+                        <h4 className="text-sm font-bold uppercase mb-1">Net Balance Status</h4>
+                        <div className="text-3xl font-extrabold">{Math.abs(netBalance).toFixed(2)}</div>
+                        <p className="text-sm font-semibold mt-1">
+                            {isDebtor ? "You have to Receive (Lene Hain)" : "You have to Pay (Dene Hain)"}
+                        </p>
+                    </div>
+
+                    {/* ACTION BUTTONS */}
+                    <div className="grid grid-cols-2 gap-3 mt-6">
+                        <button
+                            className="btn btn-success text-white border-0 shadow"
+                            onClick={() => { setFormType("payment"); setShowPopup(true); }}
+                        >
+                            Receive Cash (Payment)
+                        </button>
+                        <button
+                            className="btn btn-error text-white border-0 shadow"
+                            onClick={() => { setFormType("credit"); setShowPopup(true); }}
+                        >
+                            Give Udhaar (Credit)
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
 
+      {/* POPUP MODAL */}
       {showPopup && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-4 rounded shadow-lg w-80">
-// Is line ko update karein
-<h3 className="text-lg font-bold capitalize">{editingRecordId ? 'Edit' : 'Add'} {formType}</h3>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50 animate-fadeIn">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm transform transition-all scale-100">
+            <h3 className="text-xl font-bold mb-4 text-center border-b pb-2">
+                {editingRecordId ? 'Edit Record' : `Add ${formType === 'credit' ? 'Credit (+)' : 'Payment (-)'}`}
+            </h3>
+            
+            <div className="form-control mb-3">
+                <label className="label-text font-bold mb-1">Date</label>
+                <input
+                type="date"
+                className="input input-bordered w-full"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                />
+            </div>
 
-            <input
-              type="date"
-              className="w-full p-2 border rounded mt-2"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-            />
-            <input
-              type="number"
-              placeholder={t.amount}
-              className="w-full p-2 border rounded mt-2"
-              value={formData.amount}
-              onChange={(e) =>
-                setFormData({ ...formData, amount: e.target.value })
-              }
-            />
-            <input
-              type="text"
-              placeholder={t.note}
-              className="w-full p-2 border rounded mt-2"
-              value={formData.note}
-              onChange={(e) =>
-                setFormData({ ...formData, note: e.target.value })
-              }
-            />
-            <div className="mt-4 flex space-x-2">
-<button
-    className="bg-green-500 text-white px-4 py-2 rounded"
-    onClick={handleSubmit}
->
-    {editingRecordId ? 'Update' : 'Add'}
-</button>
+            <div className="form-control mb-3">
+                <label className="label-text font-bold mb-1">Amount</label>
+                <input
+                type="number"
+                placeholder="Enter Amount"
+                className="input input-bordered w-full text-lg font-bold"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                autoFocus
+                />
+            </div>
 
-<button
-    className="bg-red-500 text-white px-4 py-2 rounded"
-    onClick={handleClosePopup} // Yahan handleClosePopup use karein
->
-    {t.cancel}
-</button>
+            <div className="form-control mb-6">
+                <label className="label-text font-bold mb-1">Note (Optional)</label>
+                <input
+                type="text"
+                placeholder="Details..."
+                className="input input-bordered w-full"
+                value={formData.note}
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                />
+            </div>
 
+            <div className="flex gap-3">
+                <button className="btn btn-outline flex-1" onClick={handleClosePopup}>Cancel</button>
+                <button className={`btn flex-1 text-white border-0 ${formType === 'credit' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`} onClick={handleSubmit}>
+                    {editingRecordId ? 'Update' : 'Save'}
+                </button>
             </div>
           </div>
         </div>
@@ -649,3 +514,4 @@ const remainingCredit = Number(grandCredit) - Number(totalRecordsPayment) - Numb
 };
 
 export default CreditManagement;
+

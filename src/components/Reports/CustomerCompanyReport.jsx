@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { useAppContext } from '../../Appfullcontext'; // Path update karein
+import { useAppContext } from '../../Appfullcontext';
 import { FaPrint, FaFilter } from 'react-icons/fa';
-import languageData from '../../assets/languageData.json'; // Path update karein
+import languageData from '../../assets/languageData.json';
 
 const CustomerCompanyReport = () => {
     const context = useAppContext();
@@ -11,8 +11,6 @@ const CustomerCompanyReport = () => {
     const allSales = context.SaleContext.Sales || [];
     const allPeoples = context.peopleContext.people || [];
     const allProducts = context.productContext.products || [];
-    
-    // --- FIX: companyContext ko import karein ---
     const allCompanies = context.companyContext.companies || []; 
 
     const userAndBusinessDetail = context.settingContext.settings;
@@ -21,41 +19,38 @@ const CustomerCompanyReport = () => {
 
     // --- Filters State ---
     const [selectedCustomer, setSelectedCustomer] = useState('all');
-    const [selectedCompany, setSelectedCompany] = useState('all'); // Yeh ab ID hogi
+    const [selectedCompany, setSelectedCompany] = useState('all'); // Stores Company ID now
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
     
     const [reportData, setReportData] = useState(null);
     const [showFilters, setShowFilters] = useState(true);
 
-    // --- FIX: Customers ki list ko sahi filter karein ---
+    // --- Memos ---
     const customers = useMemo(() => {
-        // Sirf 'customer' ya 'Both' type ke log return karein
         return allPeoples.sort((a,b) => a.name.localeCompare(b.name));
     }, [allPeoples]);
 
-    // --- FIX: Companies ki unique list (ab ID aur Naam use karegi) ---
+    // Unique Companies (ID & Name)
     const uniqueCompanies = useMemo(() => {
-        // allProducts se unique 'companyId' nikalen
         const companyIds = new Set(allProducts.map(p => p.companyId).filter(Boolean));
         
-        // Un IDs ko 'allCompanies' se match kar ke {id, name} ka array banayein
         return Array.from(companyIds).map(id => {
             const company = allCompanies.find(c => c.id === id);
             return company ? { id: company.id, name: company.name } : null;
         })
-        .filter(Boolean) // Null values (agar company na mile) ko remove karein
-        .sort((a,b) => a.name.localeCompare(b.name)); // Naam se sort karein
+        .filter(Boolean)
+        .sort((a,b) => a.name.localeCompare(b.name));
 
     }, [allProducts, allCompanies]);
 
-    // --- FIX: Company ka naam ID se hasil karein ---
+    // Helper: Get Company Name by ID
     const getCompanyName = (companyId) => {
         const company = allCompanies.find(c => c.id === companyId);
         return company ? company.name : (languageData[language].not_assigned || 'N/A');
     };
 
-    // Report generate karne ka function
+    // --- Report Generation ---
     const handleGenerateReport = () => {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
@@ -77,33 +72,45 @@ const CustomerCompanyReport = () => {
             const customer = allPeoples.find(p => p.id === sale.personId);
             const customerName = customer ? customer.name : (languageData[language].walking_customer || 'Walking Customer');
             
-            // Sale ke har product ke liye
+            // Process each product in sale
             sale.products.forEach(productInSale => {
                 
-                // --- FIX: Asal product ko 'allProducts' se dhoondein taake 'companyId' mil sake ---
+                // Find original product to get company ID
                 const mainProduct = allProducts.find(p => p.id === productInSale.id);
                 const productCompanyId = mainProduct ? mainProduct.companyId : 'N/A';
                 
-                // Ab 'selectedCompany' (jo ke ek ID hai) ko 'productCompanyId' se match karein
+                // Match Filter
                 if (selectedCompany === 'all' || productCompanyId === selectedCompany) {
                     
-                    const quantity = parseInt(productInSale.SellQuantity, 10) || 0;
-                    const salePrice = parseFloat(productInSale.newSellPrice || productInSale.sellPrice) || 0;
-                    // 'purchasePrice' sale ke product se lein
-                    const purchasePrice = parseFloat(productInSale.purchasePrice) || 0; 
+                    // Logic for Quantity & Cost
+                    // Note: 'SellQuantity' is Base Units in new system
+                    const quantity = parseFloat(productInSale.SellQuantity) || 0;
+                    
+                    // Calculate Revenue (Line Total)
+                    let totalSale = 0;
+                    if (productInSale.enteredQty && productInSale.newSellPrice) {
+                         // New System: Display Qty * Unit Price
+                         totalSale = parseFloat(productInSale.enteredQty) * parseFloat(productInSale.newSellPrice);
+                    } else {
+                         // Old System Fallback
+                         const salePrice = parseFloat(productInSale.newSellPrice || productInSale.sellPrice) || 0;
+                         totalSale = quantity * salePrice;
+                    }
 
-                    const totalSale = salePrice * quantity;
-                    const totalCost = purchasePrice * quantity;
+                    // Calculate Cost (Base Qty * Base Cost)
+                    const purchasePrice = parseFloat(productInSale.purchasePrice) || 0; 
+                    const totalCost = quantity * purchasePrice;
+                    
                     const totalProfit = totalSale - totalCost;
 
                     finalProductList.push({
                         id: productInSale.id,
                         name: productInSale.name,
-                        companyId: productCompanyId, // ID store karein
-                        companyName: getCompanyName(productCompanyId), // Naam store karein
+                        companyId: productCompanyId,
+                        companyName: getCompanyName(productCompanyId),
                         customerName: customerName,
                         saleDate: new Date(sale.dateTime).toLocaleDateString(),
-                        quantity,
+                        quantity: quantity, // Showing Base Quantity (Pieces)
                         totalSale,
                         totalProfit,
                     });
@@ -124,13 +131,12 @@ const CustomerCompanyReport = () => {
     
     const handlePrint = () => window.print();
 
-    // Filter UI ke liye naam
     const customerName = selectedCustomer === 'all' ? (languageData[language].all_customers || 'All Customers') : customers.find(c => c.id === selectedCustomer)?.name;
     const companyName = selectedCompany === 'all' ? (languageData[language].all_companies || 'All Companies') : allCompanies.find(c => c.id === selectedCompany)?.name;
 
     return (
         <div>
-            {/* --- Filters (No Print) --- */}
+            {/* --- Filters (Hidden on Print) --- */}
             <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].customer_company_report || 'Customer/Company Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
@@ -147,7 +153,6 @@ const CustomerCompanyReport = () => {
                         </select>
                     </div>
 
-                    {/* --- FIX: Dropdown ab 'company.id' ko value ke tor par use karega --- */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">{languageData[language].company_brand || 'Company (Brand)'}</label>
                         <select
@@ -156,7 +161,6 @@ const CustomerCompanyReport = () => {
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                         >
                             <option value="all">{languageData[language].all_companies || 'All Companies'}</option>
-                            {/* 'uniqueCompanies' ab {id, name} objects hain */}
                             {uniqueCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
@@ -179,7 +183,7 @@ const CustomerCompanyReport = () => {
                 </div>
             </div>
 
-            {/* --- Report Data --- */}
+            {/* --- Report Display --- */}
             {reportData && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
@@ -195,7 +199,7 @@ const CustomerCompanyReport = () => {
                         <h2>{businessName}</h2>
                         <h3>{languageData[language].customer_company_report || 'Customer/Company Report'}</h3>
                         <p>{languageData[language].customer || 'Customer'}: {customerName}</p>
-                        <p>{languageData[language].company_brand || 'Company'}: {companyName}</p> {/* <-- Fixed */}
+                        <p>{languageData[language].company_brand || 'Company'}: {companyName}</p>
                         <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
@@ -219,7 +223,7 @@ const CustomerCompanyReport = () => {
                                             <td className="py-2 px-3">{item.saleDate}</td>
                                             <td className="py-2 px-3">{item.customerName}</td>
                                             <td className="py-2 px-3 font-medium">{item.name}</td>
-                                            <td className="py-2 px-3">{item.companyName}</td> {/* <-- Fixed */}
+                                            <td className="py-2 px-3">{item.companyName}</td>
                                             <td className="py-2 px-3 text-right font-bold">{item.quantity}</td>
                                             <td className="py-2 px-3 text-right font-semibold">{currency} {item.totalSale.toFixed(2)}</td>
                                             <td className={`py-2 px-3 text-right font-bold ${item.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -251,6 +255,8 @@ const CustomerCompanyReport = () => {
                     </div>
                 </div>
             )}
+            
+            {/* Show helper if no data and filters hidden */}
             {reportData && reportData.data.length === 0 && !showFilters && (
                  <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
                     <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
@@ -264,5 +270,4 @@ const CustomerCompanyReport = () => {
 };
 
 export default CustomerCompanyReport;
-
 

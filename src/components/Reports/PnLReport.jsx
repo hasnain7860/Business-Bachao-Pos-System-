@@ -4,9 +4,13 @@ import languageData from '../../assets/languageData.json';
 import { FaPrint, FaFilter } from 'react-icons/fa';
 
 const PnLReport = () => {
-    const { language, SaleContext, costContext, settingContext } = useAppContext();
+    const { language, SaleContext, costContext, settingContext, damageContext } = useAppContext();
+    
+    // --- Data Sources ---
     const allSales = SaleContext.Sales || [];
     const allCosts = costContext.costData || [];
+    const allDamages = damageContext?.damages || []; // New: Get Damages
+
     const userAndBusinessDetail = settingContext.settings;
     const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
@@ -22,24 +26,55 @@ const PnLReport = () => {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
+        // 1. SALES CALCULATION
         const salesInRange = allSales.filter(sale => new Date(sale.dateTime) >= start && new Date(sale.dateTime) <= end);
         
         const pnlSummary = salesInRange.reduce((acc, sale) => {
             acc.totalRevenue += parseFloat(sale.totalBill || 0);
             acc.totalDiscounts += parseFloat(sale.discount || 0);
             if(sale.products) {
-                acc.totalCOGS += sale.products.reduce((pAcc, p) => pAcc + (parseFloat(p.purchasePrice) || 0) * (parseInt(p.SellQuantity) || 0), 0);
+                // COGS = Purchase Price * Sold Qty
+                acc.totalCOGS += sale.products.reduce((pAcc, p) => {
+                    return pAcc + (parseFloat(p.purchasePrice) || 0) * (parseFloat(p.SellQuantity) || 0);
+                }, 0);
             }
             return acc;
         }, { totalRevenue: 0, totalDiscounts: 0, totalCOGS: 0 });
 
-        const otherExpenses = allCosts.filter(cost => new Date(cost.date) >= start && new Date(cost.date) <= end)
-                                      .reduce((acc, cost) => acc + (parseFloat(cost.cost) || 0), 0);
+        // 2. EXPENSES CALCULATION
+        const otherExpenses = allCosts
+            .filter(cost => new Date(cost.date) >= start && new Date(cost.date) <= end)
+            .reduce((acc, cost) => acc + (parseFloat(cost.cost) || 0), 0);
         
+        // 3. DAMAGE CALCULATION (The Missing Piece)
+        const damageLoss = allDamages
+            .filter(dmg => {
+                const dDate = new Date(dmg.date);
+                return dDate >= start && dDate <= end;
+            })
+            .reduce((acc, dmg) => {
+                // Logic: If Resolved as Refund/Replace -> No financial loss for PnL
+                if (dmg.resolution === 'refund' || dmg.resolution === 'replace') return acc;
+                
+                // Loss = Cost Price * Qty
+                const cost = (parseFloat(dmg.purchasePrice) || 0) * (parseFloat(dmg.quantity) || 0);
+                return acc + cost;
+            }, 0);
+
+        // 4. FINAL FORMULAS
         const grossProfit = pnlSummary.totalRevenue - pnlSummary.totalCOGS;
-        const netProfit = grossProfit - otherExpenses;
+        const netProfit = grossProfit - otherExpenses - damageLoss; // Subtract Damage
         
-        setReportData({ type: 'pnl', data: { ...pnlSummary, grossProfit, otherExpenses, netProfit } });
+        setReportData({ 
+            type: 'pnl', 
+            data: { 
+                ...pnlSummary, 
+                grossProfit, 
+                otherExpenses, 
+                damageLoss, 
+                netProfit 
+            } 
+        });
         setShowFilters(false);
     };
 
@@ -48,20 +83,34 @@ const PnLReport = () => {
 
     return (
         <div>
-            <div className={`no-print ${showFilters ? '' : 'hidden'}`}>
+            {/* FILTERS */}
+            <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].pnl_report || 'Profit & Loss Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div><label htmlFor="startDate" className="block text-sm font-medium text-gray-700">{languageData[language].start_date || 'Start Date'}</label><input type="date" id="startDate" value={startDate} onChange={e=>setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/></div>
-                    <div><label htmlFor="endDate" className="block text-sm font-medium text-gray-700">{languageData[language].end_date || 'End Date'}</label><input type="date" id="endDate" value={endDate} onChange={e=>setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/></div>
-                    <button onClick={handleGenerateReport} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold">{languageData[language].generate || 'Generate'}</button>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language].start_date || 'Start Date'}</label>
+                        <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language].end_date || 'End Date'}</label>
+                        <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/>
+                    </div>
+                    <button onClick={handleGenerateReport} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10">
+                        {languageData[language].generate || 'Generate'}
+                    </button>
                 </div>
             </div>
 
+            {/* REPORT CONTENT */}
             {pnl && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
-                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600"><FaFilter /> {languageData[language].change_filters || 'Change Filters'}</button>
-                        <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><FaPrint /> {languageData[language].print || 'Print'}</button>
+                        <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600 hover:underline">
+                            <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
+                        </button>
+                        <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                            <FaPrint /> {languageData[language].print || 'Print'}
+                        </button>
                     </div>
 
                     <div className="print-header">
@@ -70,17 +119,62 @@ const PnLReport = () => {
                         <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
-                    <div className="max-w-2xl mx-auto">
-                        <div className="space-y-3 text-sm md:text-base">
-                            <div className="flex justify-between border-b pb-2"><span>{languageData[language].total_sale || 'Total Sale'}</span><span className="font-bold">{currency} {pnl.totalRevenue.toFixed(2)}</span></div>
-                            <div className="flex justify-between border-b pb-2"><span>{languageData[language].less_discounts || 'Less: Discounts'}</span><span className="text-amber-600">({currency} {pnl.totalDiscounts.toFixed(2)})</span></div>
-                            <div className="flex justify-between border-b pb-2"><span>{languageData[language].less_cogs || 'Less: Cost of Goods Sold'}</span><span className="text-red-600">({currency} {pnl.totalCOGS.toFixed(2)})</span></div>
-                            <div className="flex justify-between border-b-2 border-gray-800 pb-2 text-base md:text-lg"><span className="font-bold">{languageData[language].gross_profit || 'Gross Profit'}</span><span className={`font-bold ${pnl.grossProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{currency} {pnl.grossProfit.toFixed(2)}</span></div>
-                            <div className="flex justify-between pt-2 border-b pb-2"><span>{languageData[language].less_other_expenses || 'Less: Other Expenses'}</span><span className="text-red-600">({currency} {pnl.otherExpenses.toFixed(2)})</span></div>
-                            <div className="flex justify-between pt-3 mt-2 border-t-4 border-double border-black text-lg md:text-xl"><span className="font-extrabold">{languageData[language].net_profit_loss || 'Net Profit / Loss'}</span><span className={`font-extrabold ${pnl.netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>{currency} {pnl.netProfit.toFixed(2)}</span></div>
+                    <div className="max-w-3xl mx-auto border border-gray-300 p-6 bg-white shadow-sm rounded-lg print:border-0 print:shadow-none">
+                        <div className="space-y-4 text-sm md:text-base">
+                            
+                            {/* Revenue Section */}
+                            <div className="flex justify-between border-b border-gray-200 pb-2">
+                                <span className="font-medium text-gray-700">{languageData[language].total_sale || 'Total Sales Revenue'}</span>
+                                <span className="font-bold text-gray-900">{currency} {pnl.totalRevenue.toFixed(2)}</span>
+                            </div>
+                            
+                            <div className="pl-4 space-y-2 text-gray-600">
+                                <div className="flex justify-between">
+                                    <span>{languageData[language].less_discounts || 'Less: Discounts given'}</span>
+                                    <span className="text-red-500">({currency} {pnl.totalDiscounts.toFixed(2)})</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>{languageData[language].less_cogs || 'Less: Cost of Goods Sold (Product Cost)'}</span>
+                                    <span className="text-red-500">({currency} {pnl.totalCOGS.toFixed(2)})</span>
+                                </div>
+                            </div>
+
+                            {/* Gross Profit */}
+                            <div className="flex justify-between border-t-2 border-black pt-2 pb-4 text-lg">
+                                <span className="font-bold text-gray-800">{languageData[language].gross_profit || 'Gross Profit'}</span>
+                                <span className={`font-bold ${pnl.grossProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                    {currency} {pnl.grossProfit.toFixed(2)}
+                                </span>
+                            </div>
+
+                            {/* Operating Expenses Section */}
+                            <div className="pl-4 space-y-2 text-gray-600 border-t border-gray-200 pt-4">
+                                <div className="flex justify-between">
+                                    <span>{languageData[language].less_other_expenses || 'Less: Operating Expenses'}</span>
+                                    <span className="text-red-500">({currency} {pnl.otherExpenses.toFixed(2)})</span>
+                                </div>
+                                
+                                {/* NEW LINE ITEM FOR DAMAGE */}
+                                <div className="flex justify-between">
+                                    <span className="flex items-center gap-2">
+                                        {languageData[language].less_damage || 'Less: Damaged Stock Loss'} 
+                                        {pnl.damageLoss > 0 && <span className="text-xs bg-red-100 text-red-700 px-1 rounded print:hidden">Impact</span>}
+                                    </span>
+                                    <span className="text-red-500 font-medium">({currency} {pnl.damageLoss.toFixed(2)})</span>
+                                </div>
+                            </div>
+
+                            {/* Net Profit */}
+                            <div className="flex justify-between pt-4 mt-4 border-t-4 border-double border-black text-xl bg-gray-50 p-2 rounded print:bg-transparent">
+                                <span className="font-extrabold text-gray-900 uppercase">{languageData[language].net_profit_loss || 'Net Profit / Loss'}</span>
+                                <span className={`font-extrabold ${pnl.netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                                    {currency} {pnl.netProfit.toFixed(2)}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div className="print-footer">
+                    
+                    <div className="print-footer text-center mt-8 text-gray-500 text-sm">
                         {languageData[language].net_profit_loss || 'Net Profit / Loss'}: {currency} {pnl.netProfit.toFixed(2)}
                     </div>
                 </div>

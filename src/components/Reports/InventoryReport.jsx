@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../Appfullcontext.jsx';
-import { FaPrint, FaFilter } from 'react-icons/fa'; // Use lucide-react if prefered: import { Printer, Filter } from 'lucide-react';
+import { FaPrint, FaFilter } from 'react-icons/fa'; 
 import languageData from '../../assets/languageData.json';
 import { useNavigate } from "react-router-dom";
 
@@ -18,7 +18,6 @@ const InventoryReport = () => {
     const allPurchases = context.purchaseContext.purchases || [];
     const sellReturns = context.SellReturnContext.sellReturns || [];
     const purchaseReturns = context.purchaseReturnContext.purchaseReturns || [];
-    // NEW: Get Damages Data
     const allDamages = context.damageContext?.damages || [];
     
     const userAndBusinessDetail = context.settingContext.settings;
@@ -61,10 +60,10 @@ const InventoryReport = () => {
                     let saleQty = 0;
                     let saleReturnQty = 0;
                     let purReturnQty = 0;
-                    let damageQty = 0; // Calculated dynamically now
+                    let damageQty = 0; 
 
                     if (isInitialized) {
-                        // A. Calculate Purchases
+                        // A. Purchases (+)
                         allPurchases.forEach(pur => {
                             const compareDate = pur.updatedAt || pur.date; 
                             if (isAfterOpening(compareDate, openingDateStr) && pur.products) {
@@ -76,7 +75,7 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // B. Calculate Sales
+                        // B. Sales (-)
                         allSales.forEach(sale => {
                             const compareDate = sale.dateTime || sale.date;
                             if (isAfterOpening(compareDate, openingDateStr) && sale.products) {
@@ -88,7 +87,7 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // C. Calculate Sales Returns
+                        // C. Sales Returns (+)
                         sellReturns.forEach(ret => {
                             const compareDate = ret.updatedAt || ret.returnDate;
                             if (isAfterOpening(compareDate, openingDateStr) && ret.items) {
@@ -100,7 +99,7 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // D. Calculate Purchase Returns
+                        // D. Purchase Returns (-)
                         purchaseReturns.forEach(ret => {
                             const compareDate = ret.updatedAt || ret.returnDate;
                             if (isAfterOpening(compareDate, openingDateStr) && ret.items) {
@@ -112,12 +111,15 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // E. Calculate Damages (NEW LOGIC)
+                        // E. Damages (-) (UPDATED LOGIC)
                         allDamages.forEach(dmg => {
-                            // Priority: updatedAt > date
                             const compareDate = dmg.updatedAt || dmg.date;
                             
                             if (isAfterOpening(compareDate, openingDateStr)) {
+                                // CRITICAL CHECK: 
+                                // If resolution is 'replace', we got stock back, so DO NOT count as inventory deduction.
+                                if (dmg.resolution === 'replace') return;
+
                                 // Match Product ID and Batch Code
                                 if (dmg.productId === product.id && dmg.batchCode === batch.batchCode) {
                                     damageQty += Number(dmg.quantity || 0);
@@ -219,7 +221,7 @@ const InventoryReport = () => {
                             <th className="border border-gray-300 p-1 bg-red-50 w-16">Pur Ret</th>
                             <th className="border border-gray-300 p-1 bg-red-50 w-16">Damage</th>
                             <th className="border border-gray-300 p-1 font-bold bg-yellow-50 w-20">Balance</th>
-                            <th className="border border-gray-300 p-1 w-20">Price</th>
+                            <th className="border border-gray-300 p-1 w-20">Cost</th>
                             <th className="border border-gray-300 p-1 text-right w-24">Value</th>
                         </tr>
                     </thead>
@@ -238,9 +240,9 @@ const InventoryReport = () => {
                                     <td className="border border-gray-300 p-1 bg-green-50 font-semibold text-green-700">{row.saleReturn}</td>
                                     <td className="border border-gray-300 p-1 bg-red-50">{row.sale}</td>
                                     <td className="border border-gray-300 p-1 bg-red-50">{row.purReturn}</td>
-                                    <td className="border border-gray-300 p-1 bg-red-50">{row.damage}</td>
-                                    <td className="border border-gray-300 p-1 font-bold bg-yellow-50">{row.balance}</td>
-                                    <td className="border border-gray-300 p-1">{row.price.toFixed(2)}</td>
+                                    <td className="border border-gray-300 p-1 bg-red-50 text-red-600 font-bold">{row.damage}</td>
+                                    <td className="border border-gray-300 p-1 font-bold bg-yellow-50 text-lg">{row.balance}</td>
+                                    <td className="border border-gray-300 p-1">{row.price.toFixed(0)}</td>
                                     <td className="border border-gray-300 p-1 text-right font-medium">{row.totalValue.toLocaleString()}</td>
                                 </tr>
                             ))
@@ -285,3 +287,4 @@ const InventoryReport = () => {
 };
 
 export default InventoryReport;
+

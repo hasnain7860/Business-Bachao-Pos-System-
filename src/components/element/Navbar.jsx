@@ -230,7 +230,7 @@ localStorage.removeItem('userSession')
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 8.3.0
+                        version 9.0.0
                     </div>
                 </div>
             </div>

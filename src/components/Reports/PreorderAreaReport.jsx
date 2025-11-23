@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { useAppContext } from '../../Appfullcontext'; // Path update karein
+import { useAppContext } from '../../Appfullcontext'; 
 import { FaPrint, FaFilter } from 'react-icons/fa';
-import languageData from '../../assets/languageData.json'; // Path update karein
+import languageData from '../../assets/languageData.json';
 
 const PreorderAreaReport = () => {
     const context = useAppContext();
@@ -9,14 +9,14 @@ const PreorderAreaReport = () => {
 
     // --- Data from context ---
     const allPreorders = context.preordersContext.preorders || [];
-    // --- FIX: allPeoples ki yahan zaroorat nahi hai ---
-    // const allPeoples = context.peopleContext.people || []; 
+    const allProducts = context.productContext.products || []; // Needed for Unit Conversion
     const { areas } = context.areasContext;
+    const { units } = context.unitContext; // Needed for Unit Names (Ctn/Pcs)
     
     const userAndBusinessDetail = context.settingContext.settings;
     const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
 
-    // --- Filters State (No Change) ---
+    // --- Filters State ---
     const [selectedArea, setSelectedArea] = useState('all');
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -24,49 +24,77 @@ const PreorderAreaReport = () => {
     const [reportData, setReportData] = useState(null);
     const [showFilters, setShowFilters] = useState(true);
 
-    // Area ki list Dropdown ke liye (No Change)
     const uniqueAreas = useMemo(() => {
         return areas.sort((a, b) => a.name.localeCompare(b.name));
     }, [areas]);
 
-    // Report generate karne ka function
+    // --- HELPER: Format Quantity (Smart Unit Display) ---
+    const formatQuantity = (productId, totalBaseQty) => {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) return totalBaseQty;
+
+        const qty = Number(totalBaseQty);
+        const hasSecondary = product.secondaryUnitId && product.conversionRate > 1;
+
+        if (hasSecondary) {
+            const rate = Number(product.conversionRate);
+            const cartons = Math.floor(qty / rate);
+            const loose = qty % rate;
+
+            const secName = units.find(u => u.id === product.secondaryUnitId)?.name || 'Ctn';
+            const baseName = units.find(u => u.id === product.unitId)?.name || 'Pcs';
+
+            if (cartons > 0 && loose > 0) return `${cartons} ${secName}, ${loose} ${baseName}`;
+            if (cartons > 0) return `${cartons} ${secName}`;
+            return `${qty} ${baseName}`;
+        }
+
+        // Single Unit Case
+        const baseName = units.find(u => u.id === product.unitId)?.name || '';
+        return `${qty} ${baseName}`;
+    };
+
+    // --- Generate Report ---
     const handleGenerateReport = () => {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        // --- FIX #1: Date filter ab 'order.preorderDate' use kar raha hai ---
+        // 1. Filter Date
         const preordersInRange = allPreorders.filter(order => {
-            const orderDate = new Date(order.preorderDate); // Ghalat 'order.date' ki jagah
+            const orderDate = new Date(order.preorderDate);
             return orderDate >= start && orderDate <= end;
         });
 
-        // --- FIX #2: Area filter ab direct 'order.areaId' use kar raha hai ---
+        // 2. Filter Area
         let filteredPreorders = preordersInRange;
         if (selectedArea !== 'all') {
-            // Poora 'people' logic hata diya gaya hai. Yeh tez aur durust hai.
             filteredPreorders = preordersInRange.filter(order => order.areaId === selectedArea);
         }
 
-        // 3. Products ko aggregate karein
+        // 3. Aggregate Products
         const productSummary = new Map();
+        
         filteredPreorders.forEach(order => {
-            // Agar products array nahi hai to skip karein
             if (!Array.isArray(order.products)) return; 
 
             order.products.forEach(product => {
-                const existing = productSummary.get(product.id) || { id: product.id, name: product.name, totalQuantity: 0 };
+                const existing = productSummary.get(product.id) || { 
+                    id: product.id, 
+                    name: product.name, 
+                    totalBaseQuantity: 0 
+                };
                 
-                // --- FIX #3: Quantity ab 'product.SellQuantity' se li ja rahi hai ---
-                existing.totalQuantity += (parseInt(product.SellQuantity, 10) || 0); // Ghalat 'product.quantity' ki jagah
+                // Always sum up the BASE QUANTITY (SellQuantity is always in Pieces now)
+                existing.totalBaseQuantity += (parseFloat(product.SellQuantity) || 0);
                 
                 productSummary.set(product.id, existing);
             });
         });
 
         const finalData = Array.from(productSummary.values())
-            .sort((a, b) => b.totalQuantity - a.totalQuantity);
+            .sort((a, b) => b.totalBaseQuantity - a.totalBaseQuantity);
         
         setReportData(finalData);
         setShowFilters(false);
@@ -78,7 +106,7 @@ const PreorderAreaReport = () => {
 
     return (
         <div>
-            {/* --- Filters (UI Improved) --- */}
+            {/* --- Filters --- */}
             <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language].preorder_area_report || 'Area-wise Preorder Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -113,7 +141,7 @@ const PreorderAreaReport = () => {
                 </div>
             </div>
 
-            {/* --- Report Data --- */}
+            {/* --- Report Output --- */}
             {reportData && (
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
@@ -127,27 +155,31 @@ const PreorderAreaReport = () => {
 
                     <div className="print-header">
                         <h2>{businessName}</h2>
-                        <h3>{languageData[language].preorder_area_report || 'Area-wise Preorder Report'}</h3>
+                        <h3>{languageData[language].preorder_area_report || 'Area-wise Loading Sheet'}</h3>
                         <p>{languageData[language].area || 'Area'}: {selectedAreaName}</p>
                         <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
                     {reportData.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full">
+                            <table className="min-w-full border-collapse border border-gray-300">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="py-2 px-3 text-center">S.No.</th>
-                                        <th className="py-2 px-3 text-left">{languageData[language].product_name || 'Product Name'}</th>
-                                        <th className="py-2 px-3 text-right">{languageData[language].total_ordered_qty || 'Total Ordered Qty'}</th>
+                                        <th className="py-2 px-3 text-center border border-gray-300 w-16">S.No.</th>
+                                        <th className="py-2 px-3 text-left border border-gray-300">{languageData[language].product_name || 'Product Name'}</th>
+                                        <th className="py-2 px-3 text-right border border-gray-300 font-bold">{languageData[language].total_ordered_qty || 'Total Load Qty'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {reportData.map((item, index) => (
                                         <tr key={item.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-2 px-3 text-center">{index + 1}</td>
-                                            <td className="py-2 px-3 font-medium">{item.name}</td>
-                                            <td className="py-2 px-3 text-right font-bold">{item.totalQuantity}</td>
+                                            <td className="py-2 px-3 text-center border border-gray-300">{index + 1}</td>
+                                            <td className="py-2 px-3 font-medium border border-gray-300">{item.name}</td>
+                                            
+                                            {/* Smart Quantity Display (e.g., 5 Ctn, 2 Pcs) */}
+                                            <td className="py-2 px-3 text-right border border-gray-300 font-bold text-blue-800">
+                                                {formatQuantity(item.id, item.totalBaseQuantity)}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -161,7 +193,7 @@ const PreorderAreaReport = () => {
                 </div>
             )}
             
-             {/* 'No Data' message agar report generate ho chuki hai aur data 0 hai */}
+             {/* No Data Helper */}
              {reportData && reportData.length === 0 && !showFilters && (
                  <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
                     <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
@@ -170,10 +202,22 @@ const PreorderAreaReport = () => {
                     </button>
                  </div>
             )}
+            
+            <style>{`
+                @media print {
+                    .no-print { display: none !important; }
+                    body { font-size: 12px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-header h2 { font-size: 24px; font-weight: bold; margin: 0; }
+                    .print-header h3 { font-size: 18px; margin: 5px 0; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #000 !important; padding: 5px; }
+                    thead { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; }
+                }
+            `}</style>
         </div>
     );
 };
 
 export default PreorderAreaReport;
-
 

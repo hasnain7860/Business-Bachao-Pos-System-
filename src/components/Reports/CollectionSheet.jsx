@@ -43,17 +43,27 @@ const CollectionSheet = () => {
 
     const calculateBalances = () => {
         return allPeoples.map(person => {
-            // ... (Balance calculation logic - same as yours) ...
+            // 1. SALES (Receivable +)
             const totalSalesCredit = allSales.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
+            
+            // 2. MANUAL RECORDS
             const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
-            const totalReceivable = totalSalesCredit + manualCredit;
             const manualPayments = submittedRecords.filter(r => r.personId === person.id && r.type === 'payment').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+            
+            // 3. RETURNS
             const sellReturnAdjustments = sellReturns.filter(r => r.peopleId === person.id || r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
+            const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
+
+            // 4. PURCHASES (Payable -)
+            const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
+
+            // --- FORMULA ---
+            const totalReceivable = totalSalesCredit + manualCredit;
             const totalReductions = manualPayments + sellReturnAdjustments;
             const netReceivable = totalReceivable - totalReductions;
-            const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
-            const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
+            
             const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
+            
             const finalBalance = netReceivable - netPayable;
             
             // --- UPDATED: Combine name and code without 'P-' prefix ---

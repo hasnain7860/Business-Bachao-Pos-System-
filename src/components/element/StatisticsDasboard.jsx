@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../Appfullcontext";
-import { FaShoppingCart, FaMoneyBillWave, FaCreditCard, FaMoneyCheckAlt, FaFileInvoice, FaUsers, FaTag } from "react-icons/fa";
-import { MdReport, MdError } from "react-icons/md";
+import { 
+    FaShoppingCart, FaMoneyBillWave, FaCreditCard, FaMoneyCheckAlt, 
+    FaFileInvoice, FaTag, FaExclamationTriangle 
+} from "react-icons/fa";
+import { MdReport } from "react-icons/md";
 import languageData from "../../assets/languageData.json";
 
 const StatisticsDasboard = () => {
     const context = useAppContext();
-    const products = context.productContext.products;
-    const userAndBusinessDetail = context.settingContext.settings;
     const { language } = context;
-    const [filter, setFilter] = useState(languageData[language].daily);
-    const sales = context.SaleContext.Sales;
-    const creditRecord = context.creditManagementContext.submittedRecords;
-    const costData = context.costContext.costData;
-    const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$';
+    const currency = context.settingContext.settings?.[0]?.business?.currency ?? '$';
 
-    function generateSalesData(sales, costData, creditRecord) {
+    // Data Sources
+    const products = context.productContext.products;
+    const sales = context.SaleContext.Sales || [];
+    const sellReturns = context.SellReturnContext.sellReturns || [];
+    const creditRecord = context.creditManagementContext.submittedRecords || [];
+    const costData = context.costContext.costData || [];
+    
+    // --- GET DAMAGES ---
+    const damages = context.damageContext?.damages || []; 
+
+    const [filter, setFilter] = useState(languageData[language].daily);
+
+    function generateSalesData(sales, sellReturns, costData, creditRecord, products, damages) {
         const initialData = {
             sales: 0,
             profit: 0,
@@ -24,10 +33,11 @@ const StatisticsDasboard = () => {
             payment: 0,
             issuedSales: 0,
             cost: 0,
-            discount: 0 // Added discount field
+            discount: 0,
+            damage: 0 // New Field for Damage Loss
         };
 
-        const salesData = {
+        const stats = {
             [languageData[language].daily]: { ...initialData },
             [languageData[language].weekly]: { ...initialData },
             [languageData[language].monthly]: { ...initialData },
@@ -44,142 +54,149 @@ const StatisticsDasboard = () => {
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         oneMonthAgo.setHours(0, 0, 0, 0);
 
-        // Calculate costs for each period
-        const dailyCost = costData.reduce((acc, cost) => {
-            const costDate = new Date(cost.date);
-            costDate.setHours(0, 0, 0, 0);
-            return costDate.getTime() === today.getTime() ? acc + parseFloat(cost.cost || 0) : acc;
-        }, 0);
+        // Helper to add data to correct periods
+        const addToStats = (dateStr, key, value) => {
+            const d = new Date(dateStr);
+            d.setHours(0,0,0,0);
+            const val = parseFloat(value) || 0;
 
-        const weeklyCost = costData.reduce((acc, cost) => {
-            const costDate = new Date(cost.date);
-            costDate.setHours(0, 0, 0, 0);
-            return costDate >= oneWeekAgo ? acc + parseFloat(cost.cost || 0) : acc;
-        }, 0);
+            if (d.getTime() === today.getTime()) {
+                stats[languageData[language].daily][key] += val;
+            }
+            if (d >= oneWeekAgo) {
+                stats[languageData[language].weekly][key] += val;
+            }
+            if (d >= oneMonthAgo) {
+                stats[languageData[language].monthly][key] += val;
+            }
+        };
 
-        const monthlyCost = costData.reduce((acc, cost) => {
-            const costDate = new Date(cost.date);
-            costDate.setHours(0, 0, 0, 0);
-            return costDate >= oneMonthAgo ? acc + parseFloat(cost.cost || 0) : acc;
-        }, 0);
-        
-        salesData[languageData[language].daily].cost = dailyCost;
-        salesData[languageData[language].weekly].cost = weeklyCost;
-        salesData[languageData[language].monthly].cost = monthlyCost;
-
-
+        // 1. SALES PROCESSING
         sales.forEach((sale) => {
-            const saleDate = new Date(sale.dateTime);
-            saleDate.setHours(0, 0, 0, 0);
-            
             const totalBill = parseFloat(sale.totalBill) || 0;
-            // Safely access discount, default to 0 if not present
             const discount = parseFloat(sale.discount) || 0;
+            
+            // Calculate COGS (Cost of Goods Sold)
+            const purchaseCost = sale.products.reduce((acc, product) => {
+                const costPrice = parseFloat(product.purchasePrice) || 0;
+                const qty = parseFloat(product.SellQuantity) || 0; // Base Unit Qty
+                return acc + (costPrice * qty);
+            }, 0);
 
-            const purchaseCost = sale.products.reduce(
-                (acc, product) =>
-                acc +
-                (parseFloat(product.purchasePrice) || 0) *
-                (parseInt(product.SellQuantity) || 0),
-                0
-            );
-
-            // Profit is calculated from the final totalBill, which already accounts for the discount.
-            let profit = totalBill - purchaseCost;
-
-            let totalCredit = parseFloat(sale.credit) || 0;
-            let totalPayment = parseFloat(sale.amountPaid) || 0;
+            const profit = totalBill - purchaseCost;
+            const saleCredit = parseFloat(sale.credit) || 0;
+            let salePayment = parseFloat(sale.amountPaid) || 0;
 
             if (Array.isArray(sale.addPayment)) {
-                totalPayment += sale.addPayment.reduce(
-                    (acc, payment) => acc + (parseFloat(payment.amount) || 0),
-                    0
-                );
+                salePayment += sale.addPayment.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
             }
+
+            addToStats(sale.dateTime, 'sales', totalBill);
+            addToStats(sale.dateTime, 'profit', profit);
+            addToStats(sale.dateTime, 'credit', saleCredit);
+            addToStats(sale.dateTime, 'payment', salePayment);
+            addToStats(sale.dateTime, 'discount', discount);
             
-            // This part for separate credit records might need review based on your app logic
-            // It's adding credit/payment from other records based on date, which might lead to double counting.
-            // For now, keeping it as is from your original code.
-            creditRecord.forEach((record) => {
-                const recordDate = new Date(record.date);
-                recordDate.setHours(0,0,0,0);
-                if (recordDate.getTime() === saleDate.getTime()) {
-                    if (record.type === "credit") {
-                        totalCredit += parseFloat(record.amount) || 0;
-                    } else if (record.type === "payment") {
-                        totalPayment += parseFloat(record.amount) || 0;
+            const d = new Date(sale.dateTime);
+            d.setHours(0,0,0,0);
+            if(d.getTime() === today.getTime()) stats[languageData[language].daily].issuedSales++;
+            if(d >= oneWeekAgo) stats[languageData[language].weekly].issuedSales++;
+            if(d >= oneMonthAgo) stats[languageData[language].monthly].issuedSales++;
+        });
+
+        // 2. SALES RETURNS PROCESSING
+        sellReturns.forEach((ret) => {
+            const returnTotal = parseFloat(ret.totalAmount) || 0;
+            let returnCOGS = 0;
+            if(ret.items && Array.isArray(ret.items)){
+                ret.items.forEach(item => {
+                    // Fallback cost lookup if needed, but new returns should ideally have cost info
+                    // Using product context as fallback
+                    const product = products.find(p => p.id === item.id);
+                    let costPrice = 0;
+                    if(product){
+                         const batch = product.batchCode ? product.batchCode.find(b => b.batchCode === item.batchCode) : null;
+                         costPrice = batch ? parseFloat(batch.purchasePrice) : parseFloat(product.purchasePrice || 0);
                     }
+                    returnCOGS += (parseFloat(item.quantity) * costPrice);
+                });
+            }
+
+            const profitReversal = returnTotal - returnCOGS;
+            const cashRefund = parseFloat(ret.paymentDetails?.cashReturn) || 0;
+            const creditAdj = parseFloat(ret.paymentDetails?.creditAdjustment) || 0;
+
+            addToStats(ret.returnDate, 'sales', -returnTotal);
+            addToStats(ret.returnDate, 'profit', -profitReversal);
+            addToStats(ret.returnDate, 'payment', -cashRefund);
+            addToStats(ret.returnDate, 'credit', -creditAdj);
+        });
+
+        // 3. OPERATIONAL EXPENSES
+        costData.forEach((cost) => {
+            addToStats(cost.date, 'cost', cost.cost);
+        });
+
+        // 4. MANUAL LEDGER RECORDS
+        creditRecord.forEach((record) => {
+            if (record.type === "credit") {
+                addToStats(record.date, 'credit', record.amount);
+            } else if (record.type === "payment") {
+                addToStats(record.date, 'payment', record.amount);
+            }
+        });
+
+        // 5. --- DAMAGES LOGIC (SMART) ---
+        damages.forEach((dmg) => {
+            // Logic: If we got a Refund or Replacement, it is NOT a financial loss for Profit calculation.
+            // Only 'Pending' (Stock gone, no money yet) or 'Loss' (Written off) counts as Expense.
+            
+            if (dmg.resolution === 'refund' || dmg.resolution === 'replace') {
+                return; // Skip, cost recovered
+            }
+
+            // Use the saved purchase price directly (As you mentioned)
+            const costPrice = parseFloat(dmg.purchasePrice) || 0;
+            const qty = parseFloat(dmg.quantity) || 0; // This is stored as Base Unit Qty in AddDamage
+            const dmgCost = costPrice * qty;
+
+            addToStats(dmg.date, 'damage', dmgCost);
+        });
+
+        // 6. FINAL NET PROFIT CALCULATION
+        Object.keys(stats).forEach((period) => {
+            const data = stats[period];
+            
+            // Net Profit = Gross Profit - Expenses - Actual Damage Loss
+            data.profit = data.profit - data.cost - data.damage;
+
+            // If Profit drops below zero, show as Loss
+            if (data.profit < 0) {
+                data.loss = Math.abs(data.profit);
+                data.profit = 0;
+            }
+
+            // Rounding
+            Object.keys(data).forEach((key) => {
+                if (key !== "issuedSales") {
+                    data[key] = parseFloat(data[key]).toFixed(2);
                 }
             });
-
-            // Update data for each period
-            if (saleDate.getTime() === today.getTime()) {
-                const periodData = salesData[languageData[language].daily];
-                periodData.sales += totalBill;
-                periodData.profit += profit;
-                periodData.credit += totalCredit;
-                periodData.payment += totalPayment;
-                periodData.discount += discount;
-                if (totalBill > 0) periodData.issuedSales++;
-            }
-
-            if (saleDate >= oneWeekAgo) {
-                const periodData = salesData[languageData[language].weekly];
-                periodData.sales += totalBill;
-                periodData.profit += profit;
-                periodData.credit += totalCredit;
-                periodData.payment += totalPayment;
-                periodData.discount += discount;
-                if (totalBill > 0) periodData.issuedSales++;
-            }
-
-            if (saleDate >= oneMonthAgo) {
-                const periodData = salesData[languageData[language].monthly];
-                periodData.sales += totalBill;
-                periodData.profit += profit;
-                periodData.credit += totalCredit;
-                periodData.payment += totalPayment;
-                periodData.discount += discount;
-                if (totalBill > 0) periodData.issuedSales++;
-            }
-        });
-        
-        // Final processing (Profit/Loss calculation and rounding)
-        Object.keys(salesData).forEach((period) => {
-            const periodData = salesData[period];
-            // Adjust profit by period cost
-            periodData.profit -= periodData.cost;
-
-            // If profit is negative, it's a loss
-            if (periodData.profit < 0) {
-                periodData.loss = Math.abs(periodData.profit);
-                periodData.profit = 0;
-            }
-
-            // Round all values to 2 decimal places, except for issuedSales
-            Object.keys(periodData).forEach((key) => {
-                periodData[key] =
-                    key === "issuedSales" ?
-                    periodData[key] :
-                    parseFloat(periodData[key]).toFixed(2);
-            });
         });
 
-        return salesData;
+        return stats;
     }
 
-
-    const [salesData, setSalesData] = useState(generateSalesData(sales, costData, creditRecord));
+    const [salesData, setSalesData] = useState(generateSalesData(sales, sellReturns, costData, creditRecord, products, damages));
 
     useEffect(() => {
-        const updatedSalesData = generateSalesData(sales, costData, creditRecord);
-        setFilter(languageData[language].daily)
+        const updatedSalesData = generateSalesData(sales, sellReturns, costData, creditRecord, products, damages);
         setSalesData(updatedSalesData);
-    }, [language, sales, costData, creditRecord]);
+    }, [language, sales, sellReturns, costData, creditRecord, products, damages]);
 
     return ( 
     <>
-        { /* Filter Buttons */ } 
+        { /* Filter Buttons */ }
         <div className = "flex justify-end mb-4" >
             <button className = { `px-4 py-2 mx-2 rounded ${filter === languageData[language].daily ? "bg-blue-500 text-white" : "bg-gray-200"}` }
                 onClick = {() => setFilter(languageData[language].daily) } >
@@ -195,9 +212,9 @@ const StatisticsDasboard = () => {
             </button> 
         </div>
 
-        { /* Statistics Cards */ } 
-        <div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-6" >
-            { /* Sales Card */ } 
+        { /* Cards Grid */ }
+        <div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6" >
+            
             <div className = "card bg-blue-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaShoppingCart />
@@ -206,16 +223,14 @@ const StatisticsDasboard = () => {
                 <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].sales } </p> 
             </div>
 
-            { /* Profit Card */ } 
             <div className = "card bg-green-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaMoneyBillWave />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].profit } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Net { languageData[language].profit } </span> 
                 </h2> 
                 <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].profit } </p> 
             </div>
 
-            { /* Loss Card */ } 
             <div className = "card bg-red-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <MdReport />
@@ -224,7 +239,15 @@ const StatisticsDasboard = () => {
                 <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].loss } </p> 
             </div>
 
-            { /* Discount Card */ } 
+            {/* --- DAMAGE CARD --- */}
+            <div className = "card bg-rose-600 text-white p-4 shadow-lg rounded-lg" >
+                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
+                    <FaExclamationTriangle />
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Damaged Value </span> 
+                </h2> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].damage } </p> 
+            </div>
+
             <div className = "card bg-orange-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaTag />
@@ -233,7 +256,22 @@ const StatisticsDasboard = () => {
                 <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].discount } </p> 
             </div>
 
-            { /* Credit Card */ } 
+            <div className = "card bg-gray-500 text-white p-4 shadow-lg rounded-lg" >
+                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
+                    <FaMoneyBillWave />
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Expenses </span> 
+                </h2> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].cost } </p> 
+            </div>
+
+            <div className = "card bg-indigo-500 text-white p-4 shadow-lg rounded-lg" >
+                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
+                    <FaFileInvoice />
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].issue_sales } </span> 
+                </h2> 
+                <p className = "text-2xl font-bold mt-2" > { salesData[filter].issuedSales } Sales </p> 
+            </div>
+            
             <div className = "card bg-yellow-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaCreditCard />
@@ -242,38 +280,11 @@ const StatisticsDasboard = () => {
                 <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].credit } </p> 
             </div>
 
-            { /* Payment Card */ } 
-            <div className = "card bg-purple-500 text-white p-4 shadow-lg rounded-lg" >
-                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
-                    <FaMoneyCheckAlt />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].payment } </span> 
-                </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].payment } </p> 
-            </div>
-
-            { /* Cost Card */ } 
-            <div className = "card bg-gray-500 text-white p-4 shadow-lg rounded-lg" >
-                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
-                    <FaMoneyBillWave />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].cost } </span> 
-                </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].cost } </p> 
-            </div>
-
-            { /* Issue Sale Card */ } 
-            <div className = "card bg-indigo-500 text-white p-4 shadow-lg rounded-lg" >
-                <h2 className = "text-lg font-semibold flex items-center space-x-2" >
-                    <FaFileInvoice />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].issue_sales } </span> 
-                </h2> 
-                <p className = "text-2xl font-bold mt-2" > { salesData[filter].issuedSales }
-                    Sales 
-                </p> 
-            </div>
         </div> 
     </>
     );
 };
 
 export default StatisticsDasboard;
+
 

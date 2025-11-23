@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
+import { FaBroom } from "react-icons/fa"; 
 
-// Setting key for storing the next available people code
 const PEOPLE_CODE_KEY = "nextPeopleCode"; 
 
 const People = () => {
-  // 1. Get contexts
   const context = useAppContext();
-  const { peopleContext, areasContext, language, settingContext } = context;
+  const { peopleContext, areasContext, language, settingContext, creditManagementContext } = context;
+  
   const { people } = peopleContext;
   const { add: addPerson, edit: editPerson, delete: deletePerson } = peopleContext;
+  
+  // Context for Cleaning Up Records
+  const { submittedRecords, delete: deleteCreditRecord } = creditManagementContext;
+
   const { areas } = areasContext;
   const { selectedSetting, saveSetting } = settingContext; 
 
@@ -25,9 +29,7 @@ const People = () => {
   const [isContactPickerSupported, setIsContactPickerSupported] = useState(false);
   const [codeMessage, setCodeMessage] = useState(""); 
   
-  // Check if the global code system is active
   const isCodeSystemActive = selectedSetting.peopleAllcode === true;
-  // Get the next code number, starting from 1000 if not set
   const nextCode = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
 
   useEffect(() => {
@@ -56,7 +58,7 @@ const People = () => {
     address: "",
     image: null,
     areaId: "", 
-    code: null, // Stores raw number (e.g., 1000) or null
+    code: null, 
   });
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -70,13 +72,10 @@ const People = () => {
   const handleImageSelection = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
     const reader = new FileReader();
-  
     reader.onloadend = () => {
       setFormData({ ...formData, image: reader.result });
     };
-  
     reader.readAsDataURL(file);
   };
   
@@ -87,20 +86,17 @@ const People = () => {
     } else {
       let personData = { ...formData, id: uuidv4() };
 
-      // NEW FEATURE: Assign auto-incrementing code if the system is active
       if (isCodeSystemActive) {
-        const newCode = nextCode; // Use the code number from settings
-        // --- UPDATED: Saving raw number only ---
+        const newCode = nextCode; 
         personData.code = newCode; 
 
-        // 1. Update the next code in settings (nextCode + 1)
         const updatedCodeSetting = {
             ...selectedSetting,
             [PEOPLE_CODE_KEY]: newCode + 1,
         };
         await saveSetting(updatedCodeSetting);
       } else {
-        personData.code = null; // Ensure code is null if system is inactive
+        personData.code = null; 
       }
 
       await addPerson(personData);
@@ -112,16 +108,62 @@ const People = () => {
     setFormData({
         ...person,
         areaId: person.areaId || "", 
-        code: person.code || null, // Ensure raw number code is loaded
+        code: person.code || null, 
     });
     setIsEditingMode(true);
     setIsModalVisible(true);
   };
 
-  const removePerson = (id) => {
-    // NOTE: In a real app, check for linked sales/preorders before deleting.
-    deletePerson(id);
+  // --- SINGLE DELETE (Updated Logic) ---
+  const removePerson = async (id) => {
+    if(!window.confirm("Are you sure? This will delete the person AND all their manual credit/payment records.")) {
+        return;
+    }
+    // 1. Find associated records
+    const associatedRecords = submittedRecords.filter(record => record.personId === id);
+    
+    // 2. Delete records first
+    if (associatedRecords.length > 0) {
+        const deletePromises = associatedRecords.map(record => deleteCreditRecord(record.id));
+        await Promise.all(deletePromises);
+    }
+
+    // 3. Delete Person
+    await deletePerson(id);
+    alert("Person and associated financial records deleted.");
   };
+
+  // ======================================================
+  // --- NEW: CLEANUP ORPHANED/GHOST RECORDS ---
+  // ======================================================
+  const handleCleanupGhosts = async () => {
+      // 1. Get list of all valid People IDs
+      const validPersonIds = new Set(people.map(p => p.id));
+
+      // 2. Find records where personId is NOT in the valid list
+      const ghostRecords = submittedRecords.filter(record => !validPersonIds.has(record.personId));
+
+      if (ghostRecords.length === 0) {
+          setCodeMessage("No ghost records found. Database is clean.");
+          setTimeout(() => setCodeMessage(""), 3000);
+          return;
+      }
+
+      if (!window.confirm(`Found ${ghostRecords.length} records belonging to deleted people. Delete them?`)) {
+          return;
+      }
+
+      setCodeMessage(`Cleaning up ${ghostRecords.length} ghost records...`);
+
+      // 3. Delete them one by one
+      for (const record of ghostRecords) {
+          await deleteCreditRecord(record.id);
+      }
+
+      setCodeMessage(`Successfully deleted ${ghostRecords.length} orphaned records.`);
+      setTimeout(() => setCodeMessage(""), 5000);
+  };
+  // ======================================================
 
   const openModal = () => {
     setFormData({
@@ -132,7 +174,7 @@ const People = () => {
       address: "",
       image: null,
       areaId: "", 
-      code: null, // Reset code
+      code: null, 
     });
     setIsEditingMode(false);
     setIsModalVisible(true);
@@ -142,43 +184,34 @@ const People = () => {
     setIsModalVisible(false);
   };
 
-  // --- NEW FEATURE: Generate Codes for Existing People ---
   const handleGenerateCodes = async () => {
     setCodeMessage("Generating codes, please wait...");
     let startingCode = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
     
     let codesAssigned = 0;
     
-    // 1. Loop through all people who do not have a code
     for (const person of people) {
       if (!person.code) {
         const newCodeNumber = startingCode;
-        
-        // 2. Update the person's code field with the raw number
         await editPerson(person.id, { ...person, code: newCodeNumber });
-        
-        startingCode++; // Increment the code number for the next person
+        startingCode++; 
         codesAssigned++;
       }
     }
     
-    // 3. Mark the system as active and save the next code increment
     const updatedSettings = {
         ...selectedSetting,
-        peopleAllcode: true, // Mark system as active
-        [PEOPLE_CODE_KEY]: startingCode, // Save the next code number
+        peopleAllcode: true, 
+        [PEOPLE_CODE_KEY]: startingCode, 
     };
     await saveSetting(updatedSettings);
 
-    setCodeMessage(`Successfully assigned codes to ${codesAssigned} people. Auto-incrementing system is now active.`);
-    // Message will clear on next render or refresh if not handled, which is okay for simplicity.
+    setCodeMessage(`Successfully assigned codes to ${codesAssigned} people.`);
   };
 
-  // VCF File Upload Handler 
   const handleVcfFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      console.log(`File selected: ${file.name}.`);
       const reader = new FileReader();
       reader.onload = (event) => {
         const vcfContent = event.target.result;
@@ -190,14 +223,12 @@ const People = () => {
           let personData = { ...person, id: uuidv4() };
 
           if (isCodeSystemActive) {
-            // --- UPDATED: Store raw number ---
             personData.code = currentNextCode;
             currentNextCode++;
           }
           await addPerson(personData);
         });
 
-        // If codes were assigned during import, update the setting
         if (isCodeSystemActive && currentNextCode > nextCode) {
              const updatedCodeSetting = {
                 ...selectedSetting,
@@ -210,7 +241,6 @@ const People = () => {
     }
   };
 
-  // ... (decodeQuotedPrintable and extractPeopleFromVcf functions remain the same) ...
   const decodeQuotedPrintable = (input) => {
     input = input.replace(/=\r?\n/g, "");
     return input.replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {
@@ -250,9 +280,7 @@ const People = () => {
 
     return people;
   };
-  // ... (End of VCF functions) ...
 
-  // Handler for importing from phone contacts
   const handleImportFromPhone = async () => {
     if (!isContactPickerSupported) {
       console.error("Contact Picker API is not supported.");
@@ -286,7 +314,6 @@ const People = () => {
           };
           
           if (isCodeSystemActive) {
-            // --- UPDATED: Store raw number ---
             personData.code = currentNextCode;
             currentNextCode++;
           }
@@ -295,7 +322,6 @@ const People = () => {
         }
       }
       
-      // Update the code setting if new codes were assigned
       if (isCodeSystemActive && currentNextCode > nextCode) {
            const updatedCodeSetting = {
               ...selectedSetting,
@@ -311,10 +337,9 @@ const People = () => {
     }
   };
 
-
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1); // Reset to first page on search
+    setCurrentPage(1); 
   };
 
   const filteredPeople = people.filter((person) =>
@@ -322,10 +347,9 @@ const People = () => {
     (person.email && person.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
     person.phone.includes(searchQuery) ||
     (person.address && person.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (person.code && `P-${person.code}`.toLowerCase().includes(searchQuery.toLowerCase())) // Search by Code (P-1000 format)
+    (person.code && `P-${person.code}`.toLowerCase().includes(searchQuery.toLowerCase())) 
   );
 
-  // Pagination Logic
   const indexOfLastPerson = currentPage * peoplePerPage;
   const indexOfFirstPerson = indexOfLastPerson - peoplePerPage;
   const currentPeople = filteredPeople.slice(indexOfFirstPerson, indexOfLastPerson);
@@ -334,17 +358,14 @@ const People = () => {
 
   const totalPages = Math.ceil(filteredPeople.length / peoplePerPage);
   
-  // Helper function to get area name from ID
   const getAreaName = (areaId) => {
     if (!areaId) return "N/A";
     const area = areas.find(a => a.id === areaId);
     return area ? area.name : "Unknown Area";
   };
 
-
   return (
     <div className="p-4">
-      {/* Back Button */}
       <div className={`mb-4 flex ${language === "ur" ? "justify-end" : "justify-start"}`}>
         <button
           onClick={() => navigate(-1)}
@@ -360,26 +381,32 @@ const People = () => {
         {languageData[language].people_management}
       </h1>
       
-      {/* Code Generation Status Message */}
       {codeMessage && (
         <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded-lg font-medium">
             {codeMessage}
         </div>
       )}
 
-      {/* Control Row: Count, Add Button, Code Button */}
-      <div className={`mb-4 flex justify-between items-center ${language === "ur" ? "flex-row-reverse" : ""}`}>
+      <div className={`mb-4 flex flex-wrap justify-between items-center gap-3 ${language === "ur" ? "flex-row-reverse" : ""}`}>
         <span className="text-lg font-medium">
           {languageData[language].total} {languageData[language].people} : {people.length}
         </span>
        
-        {/* Conditional Button for Generating Codes (Only shows if peopleAllcode is NOT true) */}
+        {/* CLEANUP GHOST RECORDS BUTTON */}
+        <button
+            onClick={handleCleanupGhosts}
+            className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded flex items-center gap-2 hover:bg-red-200 transition-colors"
+            title="Delete financial records of people who have been deleted"
+        >
+            <FaBroom /> Cleanup Ghost Records
+        </button>
+
         {selectedSetting.peopleAllcode !== true && (
              <button
                 onClick={handleGenerateCodes}
-                className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors mr-4"
+                className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
             >
-                Generate People Codes (Start: 1000)
+                Generate Codes
             </button>
         )}
 
@@ -401,9 +428,7 @@ const People = () => {
         />
       </div>
       
-      {/* Import/Upload Buttons */}
       <div className={`mb-4 flex flex-wrap items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
-        {/* VCF Upload */}
         <label className="inline-flex items-center">
           <input
             type="file"
@@ -417,7 +442,6 @@ const People = () => {
         </label>
         <span className="text-gray-500 text-sm">{languageData[language].upload_vcf}</span>
 
-        {/* Demo Download */}
         <a
           href="/customer.vcf"
           download="customer.vcf"
@@ -426,7 +450,6 @@ const People = () => {
           {languageData[language].download_demo}
         </a>
 
-        {/* Phone Import */}
         <button
           onClick={handleImportFromPhone}
           disabled={!isContactPickerSupported}
@@ -440,7 +463,6 @@ const People = () => {
           {languageData[language].import_phone || "Import from Phone"}
         </button>
         
-        {/* Display next code information */}
         {isCodeSystemActive && (
              <span className="text-sm font-semibold text-gray-700 ml-4 p-2 bg-gray-200 rounded">
                 Next Code: P-{nextCode}
@@ -448,8 +470,6 @@ const People = () => {
         )}
       </div>
 
-
-      {/* People List Display */}
       <div
         className={`grid gap-4 w-full ${language === "ur" ? "text-right" : "text-left"}`}
         style={{
@@ -470,13 +490,11 @@ const People = () => {
               />
             )}
             <h3 className="text-lg font-bold">{person.name}</h3>
-            {/* Display the Code with P- prefix */}
             {person.code && (
                 <p className="text-sm font-semibold text-blue-600 mb-2">Code: P-{person.code}</p>
             )}
             <p>{languageData[language].phone}: {person.phone}</p>
             <p>{languageData[language].address}: {person.address}</p>
-            {/* Display the Area Name */}
             <p>{languageData[language].area}: {getAreaName(person.areaId)}</p>
             
             <div className={`flex space-x-2 mt-4 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
@@ -497,7 +515,6 @@ const People = () => {
         ))}
       </div>
 
-      {/* Pagination Controls */}
       <div className="flex justify-center mt-4">
         <nav>
           <ul className={`pagination flex space-x-2 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
@@ -510,7 +527,6 @@ const People = () => {
                 {languageData[language].previous || "Previous"}
               </button>
             </li>
-            {/* Simple page number display */}
             <li className="page-item">
                 <span className="page-link px-3 py-1">
                     {currentPage} / {totalPages}
@@ -529,7 +545,6 @@ const People = () => {
         </nav>
       </div>
 
-      {/* Modal for Adding and Editing People */}
       {isModalVisible && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
           <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`}>
@@ -539,13 +554,11 @@ const People = () => {
             <form onSubmit={handleFormSubmission}>
               <div className="grid grid-cols-1 gap-4">
                 
-                {/* Display Code in Edit Mode (Shows P- prefix) */}
                 {isEditingMode && formData.code && (
                     <div className="p-3 bg-gray-100 rounded-lg">
                         <label className="block font-bold">People Code:</label>
                         <input
                             type="text"
-                            // Display as P-Code, but formData.code is just the number
                             value={`P-${formData.code}`}
                             readOnly
                             className="w-full p-2 border rounded bg-gray-50 font-mono"
@@ -595,7 +608,6 @@ const People = () => {
                   />
                 </div>
                 
-                {/* Add Area Select Dropdown */}
                 <div>
                   <label className="block font-bold">{languageData[language].area}</label>
                   <select
@@ -647,4 +659,5 @@ const People = () => {
 };
 
 export default People;
+
 

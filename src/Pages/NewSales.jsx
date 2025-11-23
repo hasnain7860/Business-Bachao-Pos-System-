@@ -10,7 +10,7 @@ import { CalculateUserCredit } from "../Utils/CalculateUserCredit";
 
 const NewSales = () => {
     const navigate = useNavigate();
-    const location = useLocation(); // Get location object
+    const location = useLocation(); 
     const context = useAppContext();
 
     const people = context.peopleContext.people;
@@ -37,7 +37,6 @@ const NewSales = () => {
     const [userCreditData, setUserCreditData] = useState(null);
     const [sourcePreorderId, setSourcePreorderId] = useState(null);
 
-    // NEW FEATURE: Global state for price mode ('sell' or 'wholesale')
     const [globalPriceMode, setGlobalPriceMode] = useState('sell');
 
     useEffect(() => {
@@ -46,7 +45,7 @@ const NewSales = () => {
         }
     }, [selectedPerson]);
 
-    // Effect to load data from Preorder
+    // Preorder Loading Logic (unchanged mostly, but be careful with units here later)
     useEffect(() => {
         if (location.state && location.state.preorderData) {
             const { preorderData } = location.state;
@@ -62,7 +61,7 @@ const NewSales = () => {
                 const realBatch = realProduct?.batchCode.find(b => b.batchCode === p.batchCode);
                 const currentStock = realBatch ? realBatch.quantity : 0;
 
-                let finalQuantity = p.SellQuantity;
+                let finalQuantity = p.SellQuantity; // This is in Pieces
                 
                 if (p.SellQuantity > currentStock) {
                     finalQuantity = currentStock; 
@@ -72,6 +71,8 @@ const NewSales = () => {
                 return {
                     ...p, 
                     SellQuantity: finalQuantity,
+                    enteredQty: finalQuantity, // Default to Pieces if coming from preorder for now
+                    unitMode: 'base',
                     batchQuantity: currentStock 
                 };
             }).filter(p => p.SellQuantity > 0); 
@@ -84,13 +85,11 @@ const NewSales = () => {
                 setMessage("Preorder loaded successfully. Review and save.");
             }
 
-            // Clear the location state to prevent re-loading on refresh
             navigate(location.pathname, { replace: true, state: {} });
         }
     }, [location.state, products, navigate]); 
 
     useEffect(() => {
-        // Only generate a new ref no if we are NOT loading from a preorder
         if (!sourcePreorderId) {
             generateSalesRefNo();
         }
@@ -104,43 +103,82 @@ const NewSales = () => {
         handleCalculateCredit();
     }, [selectedProducts, amountPaid, discount]);
 
-    const handleAddProduct = (product, batch, quantity, chosenPrice, priceType) => {
+    // --- CORE ADD PRODUCT LOGIC ---
+    const handleAddProduct = (product, batch, userEnteredQty, basePrice, priceType, unitMode, conversionRate, unitName) => {
         setSelectedProducts(currentProducts => {
+            // Calculate total pieces for DB
+            const totalPieces = unitMode === 'secondary' 
+                ? Number(userEnteredQty) * Number(conversionRate)
+                : Number(userEnteredQty);
+
+            // Calculate Display Price (Carton Price or Piece Price)
+            const displayPrice = unitMode === 'secondary'
+                ? Number(basePrice) * Number(conversionRate)
+                : Number(basePrice);
+
             const existingProduct = currentProducts.find(
                 p => p.id === product.id && p.batchCode === batch.batchCode
             );
+
             if (existingProduct) {
-                return currentProducts; // Product already exists
+                alert("Product already in list. Please remove to change unit/quantity.");
+                return currentProducts;
             }
+
             if (batch.quantity > 0) {
                 return [
                     ...currentProducts,
                     {
                         ...product,
                         batchCode: batch.batchCode,
-                        SellQuantity: quantity,
-                        discount: 0,
-                        sellPrice: batch.sellPrice, 
-                        wholeSalePrice: batch.wholeSalePrice,
-                        newSellPrice: chosenPrice, 
-                        priceUsedType: priceType,
+                        
+                        // DATA FOR DATABASE (MATHS)
+                        SellQuantity: totalPieces, // Always in Base Unit (Pieces)
                         purchasePrice: batch.purchasePrice,
+                        
+                        // DATA FOR UI (DISPLAY)
+                        enteredQty: userEnteredQty, 
+                        unitMode: unitMode || 'base',
+                        unitName: unitName || 'Pcs',
+                        conversionRate: conversionRate || 1,
+                        newSellPrice: displayPrice, // This is user editable price
+                        
+                        discount: 0,
+                        priceUsedType: priceType,
                         batchQuantity: batch.quantity
                     }
                 ];
             }
-            return currentProducts; // Batch has no quantity
+            return currentProducts; 
         });
     };
 
+    // --- HANDLE QUANTITY CHANGE IN TABLE ---
     const handleProductChange = (id, batchCode, field, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    if (field === "SellQuantity") {
-                        const maxQty = p.batchQuantity || 0;
-                        const newQty = Math.max(0, Math.min(Number(value), maxQty));
-                        return { ...p, [field]: newQty };
+                    
+                    if (field === "enteredQty") { 
+                        // User is changing the number of Cartons (or Pieces)
+                        const val = Number(value);
+                        const conv = p.conversionRate || 1;
+                        const totalStock = p.batchQuantity; // In Pieces
+                        
+                        // Calculate required pieces
+                        const requiredPieces = val * conv;
+
+                        if (requiredPieces > totalStock) {
+                             // Don't block typing, but visual error shows in table.
+                             // Or we can clamp it:
+                             // return p; 
+                        }
+
+                        return { 
+                            ...p, 
+                            enteredQty: val,
+                            SellQuantity: requiredPieces // Auto update backend quantity
+                        };
                     }
                     return { ...p, [field]: value };
                 }
@@ -149,41 +187,45 @@ const NewSales = () => {
         });
     };
     
-
+    // --- HANDLE PRICE CHANGE ---
     const handleSellingPriceChange = (id, batchCode, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    const newSellPrice = value;
-                    // Use the price type that was set when the product was added to calculate discount base
-                    const basePrice = p.priceUsedType === 'wholesale' 
-                                    ? p.wholeSalePrice 
-                                    : p.sellPrice;
-                    let discountPercent = 100 - (Number(newSellPrice) * 100) / Number(basePrice);
-                    discountPercent = Math.max(0, discountPercent);
-                    return { ...p, newSellPrice: newSellPrice, discount: discountPercent.toFixed(2) };
+                    // User is updating the UNIT PRICE (e.g. Carton Price)
+                    const newPrice = value;
+                    
+                    // Recalculate discount % for display
+                    // We need 'Base Display Price' (Original Carton Price)
+                    // This is tricky if we didn't store original display price, 
+                    // but for now simple update is enough.
+                    return { ...p, newSellPrice: newPrice }; 
                 }
                 return p;
             });
         });
     };
 
-    // Pass the global price mode to the modal
     const handleOpenAddModal = (product, batch) => {
         setSelectedModalProduct(product);
         setSelectedBatch(batch);
         setShowAddModal(true);
     };
 
+    // Validation checks if Selling Price < Purchase Price
+    // MUST Account for Conversion Rate!
     const validateSellingPrice = product => {
-        return Number(product.newSellPrice) < Number(product.purchasePrice);
+        const totalPurchasePrice = Number(product.purchasePrice) * (product.conversionRate || 1);
+        // If selling 1 Carton (newSellPrice = 600), Purchase Price of 12 Pcs (50*12 = 600).
+        // If 600 < 600 (False). If 590 < 600 (True - Error).
+        return Number(product.newSellPrice) < totalPurchasePrice;
     };
 
-    // Calculate subtotal
+    // Subtotal = Entered Qty * Display Price
+    // 1 Carton * 600 = 600
     const calculateSubtotal = () => {
         return selectedProducts.reduce((total, product) => {
-            const productTotal =
-                Number(product.newSellPrice) * Number(product.SellQuantity);
+            const productTotal = Number(product.newSellPrice) * Number(product.enteredQty);
             return Number(total) + Number(productTotal);
         }, 0);
     };
@@ -210,20 +252,21 @@ const NewSales = () => {
             return;
         }
         if (selectedProducts.length === 0) {
-            setMessage("Please add at least one product to the sale.");
+            setMessage("Please add at least one product.");
             return;
         }
+        
+        // Check Stock Limit before saving
+        for (let p of selectedProducts) {
+            if(p.SellQuantity > p.batchQuantity) {
+                setMessage(`Stock Insufficient for ${p.name}. Need ${p.SellQuantity}, Have ${p.batchQuantity}.`);
+                return;
+            }
+        }
+
         if (amountPaidcheck > calculateTotalPayment()) {
             setMessage("Amount paid cannot be greater than total bill.");
             return;
-        }
-        if (discount > calculateSubtotal()) {
-            setMessage("Discount cannot be greater than the subtotal.");
-            return;
-        }
-
-        if (amountPaid === "") {
-            setAmountPaid("0");
         }
 
         const uniqueId = uuidv4();
@@ -231,7 +274,7 @@ const NewSales = () => {
             id: uniqueId,
             salesRefNo,
             personId: selectedPerson,
-            products: selectedProducts,
+            products: selectedProducts, // Contains both enteredQty and SellQuantity
             paymentMode,
             subtotal: calculateSubtotal().toFixed(2),
             discount: discount,
@@ -242,7 +285,7 @@ const NewSales = () => {
             sourcePreorderId: sourcePreorderId 
         };
 
-        // Stock deduction loop 
+        // Deduct Stock (Uses SellQuantity - Base Unit)
         for (let product of selectedProducts) {
             const originalProduct = products.find(p => p.id === product.id);
             if (originalProduct) {
@@ -251,7 +294,7 @@ const NewSales = () => {
                         if (batch.batchCode === product.batchCode) {
                             return {
                                 ...batch,
-                                quantity: batch.quantity - product.SellQuantity
+                                quantity: batch.quantity - product.SellQuantity // Deduct Pieces
                             };
                         }
                         return batch;
@@ -265,10 +308,8 @@ const NewSales = () => {
             }
         }
 
-        // Save the new sale
         await context.SaleContext.add(salesData);
 
-        // Update Preorder Status 
         if (sourcePreorderId) {
             const originalPreorder = preordersContext.preorders.find(p => p.id === sourcePreorderId);
             if (originalPreorder) {
@@ -279,15 +320,10 @@ const NewSales = () => {
             }
         }
         
-        // Use a better UI notification instead of alert()
-        // Here, we just navigate/reset
-        console.log("Sales saved successfully!"); 
-        
         if (isPrint.current) {
             return salesData;
         }
 
-        // Reset form
         setSelectedPerson("");
         setSearchPerson("");
         setSelectedProducts([]);
@@ -296,7 +332,7 @@ const NewSales = () => {
         setDiscount(0);
         setCredit(0);
         setSourcePreorderId(null); 
-        setGlobalPriceMode('sell'); // NEW: Reset price mode
+        setGlobalPriceMode('sell');
         generateSalesRefNo();
         setMessage("");
     };
@@ -322,187 +358,65 @@ const NewSales = () => {
     return (
         <div className="container mx-auto p-4">
             <h2 className="text-2xl font-bold text-primary mb-6">New Sales</h2>
-            {/* Show a clear message if loaded from preorder */}
             {message && (
-                <div className={`mb-4 p-4 rounded-lg ${message.includes('Warning') ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                <div className={`mb-4 p-4 rounded-lg ${message.includes('Warning') || message.includes('Insufficient') ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
                     {message}
                 </div>
             )}
 
-
             <div className="flex flex-col lg:flex-row gap-4">
-                {/* Left Content Area */}
                 <div className="flex-1 space-y-4">
-                    {/* Top Row with responsive grid */}
                     <div className="grid md:grid-cols-3 gap-4">
-                        {/* Sales Reference */}
+                        {/* Ref No */}
                         <div className="bg-white rounded-lg p-4 shadow">
-                            <label className="text-sm font-semibold text-gray-600">
-                                Sales Reference:
-                            </label>
-                            <input
-                                type="text"
-                                value={salesRefNo}
-                                readOnly
-                                className="input input-bordered w-full bg-gray-50"
-                            />
+                            <label className="text-sm font-semibold text-gray-600">Sales Reference:</label>
+                            <input type="text" value={salesRefNo} readOnly className="input input-bordered w-full bg-gray-50"/>
                         </div>
 
-                        {/* NEW: Global Price Mode Selector */}
+                        {/* Price Mode */}
                         <div className="bg-white rounded-lg p-4 shadow flex flex-col justify-between">
-                            <label className="text-sm font-semibold text-gray-600 mb-2">
-                                Global Price Mode:
-                            </label>
+                            <label className="text-sm font-semibold text-gray-600 mb-2">Global Price Mode:</label>
                             <div className="flex bg-gray-200 rounded-lg p-1">
-                                <button
-                                    onClick={() => setGlobalPriceMode('sell')}
-                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                                        globalPriceMode === 'sell' 
-                                            ? 'bg-blue-600 text-white shadow-md' 
-                                            : 'text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    Retailer (Sell Price)
-                                </button>
-                                <button
-                                    onClick={() => setGlobalPriceMode('wholesale')}
-                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                                        globalPriceMode === 'wholesale' 
-                                            ? 'bg-blue-600 text-white shadow-md' 
-                                            : 'text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    Wholesaler (Wholesale Price)
-                                </button>
+                                <button onClick={() => setGlobalPriceMode('sell')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${globalPriceMode === 'sell' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-300'}`}>Retailer</button>
+                                <button onClick={() => setGlobalPriceMode('wholesale')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${globalPriceMode === 'wholesale' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-300'}`}>Wholesaler</button>
                             </div>
                         </div>
 
-
-                        {/* Person selection is now disabled if loaded from preorder */}
+                        {/* Person Select */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <div className="flex gap-2">
                                 <div className="flex-1">
-                                    <label className="text-sm font-semibold text-gray-600">
-                                        Person:
-                                    </label>
+                                    <label className="text-sm font-semibold text-gray-600">Person:</label>
                                     <div className="flex flex-col gap-2">
-                                        {/* Selected Customer Display */}
-                                        {selectedPerson && (
-                                            <select
-                                                className="select select-bordered w-full"
-                                                value={selectedPerson}
-                                                onChange={e =>
-                                                    setSelectedPerson(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                // Disable if it's from a preorder
-                                                disabled={!!sourcePreorderId} 
-                                            >
-                                                <option value={selectedPerson}>
-                                                    {people.find(
-                                                        p =>
-                                                            p.id ===
-                                                            selectedPerson
-                                                    )?.name ||
-                                                        "Selected Person"}
-                                                </option>
+                                        {selectedPerson ? (
+                                            <select className="select select-bordered w-full" value={selectedPerson} onChange={e => setSelectedPerson(e.target.value)} disabled={!!sourcePreorderId}>
+                                                <option value={selectedPerson}>{people.find(p => p.id === selectedPerson)?.name || "Selected Person"}</option>
                                             </select>
-                                        )}
-
-                                        {/* Search Input (Will be hidden if person is selected) */}
-                                        {!selectedPerson && (
+                                        ) : (
                                             <div className="relative w-full">
-                                                <input
-                                                    type="text"
-                                                    value={searchPerson}
-                                                    onChange={e =>
-                                                        setSearchPerson(
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    placeholder="Search people"
-                                                    className="input input-bordered w-full"
-                                                    // Also disable here for safety
-                                                    disabled={!!sourcePreorderId} 
-                                                />
+                                                <input type="text" value={searchPerson} onChange={e => setSearchPerson(e.target.value)} placeholder="Search people" className="input input-bordered w-full" disabled={!!sourcePreorderId} />
                                                 {searchPerson && (
                                                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                        {people
-                                                            .filter(person =>
-                                                                person.name
-                                                                    .toLowerCase()
-                                                                    .includes(
-                                                                        searchPerson.toLowerCase()
-                                                                    )
-                                                            )
-                                                            .map(person => (
-                                                                <div
-                                                                    key={
-                                                                        person.id
-                                                                    }
-                                                                    className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                                                                    onClick={() => {
-                                                                        setSelectedPerson(
-                                                                            person.id
-                                                                        );
-                                                                        setSearchPerson(
-                                                                            ""
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    <span>
-                                                                        {
-                                                                            person.name
-                                                                        }
-                                                                    </span>
-                                                                </div>
-                                                            ))}
+                                                        {people.filter(person => person.name.toLowerCase().includes(searchPerson.toLowerCase())).map(person => (
+                                                            <div key={person.id} className="p-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setSelectedPerson(person.id); setSearchPerson(""); }}>{person.name}</div>
+                                                        ))}
                                                     </div>
                                                 )}
-                                                {/* ... search results ... */}
                                             </div>
                                         )}
-
-                                        {/* Clear Selection Button */}
                                         {selectedPerson && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedPerson("");
-                                                    setSearchPerson("");
-                                                }}
-                                                className="btn btn-sm btn-ghost text-red-500"
-                                                // Disable if it's from a preorder
-                                                disabled={!!sourcePreorderId} 
-                                            >
-                                                Change Person
-                                            </button>
+                                            <button type="button" onClick={() => { setSelectedPerson(""); setSearchPerson(""); }} className="btn btn-sm btn-ghost text-red-500" disabled={!!sourcePreorderId}>Change Person</button>
                                         )}
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary btn-sm h-10"
-                                    onClick={() => navigate("/people")}
-                                    // Disable if it's from a preorder
-                                    disabled={!!sourcePreorderId}
-                                >
-                                    + New
-                                </button>
+                                <button type="button" className="btn btn-primary btn-sm h-10" onClick={() => navigate("/people")} disabled={!!sourcePreorderId}>+ New</button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Product Search */}
-                    <ProductSearch
-                        searchProduct={searchProduct}
-                        setSearchProduct={setSearchProduct}
-                        products={products}
-                        handleOpenAddModal={handleOpenAddModal}
-                    />
+                    <ProductSearch searchProduct={searchProduct} setSearchProduct={setSearchProduct} products={products} handleOpenAddModal={handleOpenAddModal} />
 
-                    {/* Products Table */}
+                    {/* --- TABLE --- */}
                     <SelectedProductsTable
                         selectedProducts={selectedProducts}
                         handleProductChange={handleProductChange}
@@ -512,22 +426,13 @@ const NewSales = () => {
                     />
                 </div>
 
-                {/* Right Sidebar - Payment Details */}
+                {/* Right Sidebar */}
                 <div className="lg:w-1/4 lg:min-w-[300px] w-full">
                     <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
-                        <h3 className="text-2xl font-bold mb-6 text-blue-800">
-                            Payment Details
-                        </h3>
-
+                        <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
                         <div className="mb-4">
-                            <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                                Payment Mode:
-                            </label>
-                            <select
-                                value={paymentMode}
-                                onChange={e => setPaymentMode(e.target.value)}
-                                className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors"
-                            >
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label>
+                            <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)} className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors">
                                 <option value="">Select Payment Mode</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -535,86 +440,36 @@ const NewSales = () => {
                                 <option value="cheque">Cheque</option>
                             </select>
                         </div>
-
                         <div className="space-y-2 mb-4 text-gray-700">
                             <div className="flex justify-between items-center">
                                 <span className="font-semibold">Subtotal:</span>
-                                <span className="font-bold">
-                                    Rs. {calculateSubtotal().toFixed(2)}
-                                </span>
+                                <span className="font-bold">Rs. {calculateSubtotal().toFixed(2)}</span>
                             </div>
                         </div>
-
-                        {/* Discount Input Field */}
                         <div className="mb-4">
-                            <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                                Discount (Rs.):
-                            </label>
-                            <input
-                                type="number"
-                                value={discount}
-                                onChange={e =>
-                                    setDiscount(
-                                        Math.max(0, Number(e.target.value) || 0)
-                                    )
-                                }
-                                className="input input-bordered w-full bg-white shadow-sm hover:border-yellow-400 transition-colors text-lg font-semibold"
-                                placeholder="0"
-                            />
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">Discount (Rs.):</label>
+                            <input type="number" value={discount} onChange={e => setDiscount(Math.max(0, Number(e.target.value) || 0))} className="input input-bordered w-full bg-white shadow-sm hover:border-yellow-400 transition-colors text-lg font-semibold" placeholder="0" />
                         </div>
-
                         <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-4 shadow-md">
-                            <label className="text-white text-sm font-semibold block mb-1">
-                                Total Bill:
-                            </label>
-                            <div className="text-3xl font-bold text-white">
-                                Rs. {calculateTotalPayment()}
-                            </div>
+                            <label className="text-white text-sm font-semibold block mb-1">Total Bill:</label>
+                            <div className="text-3xl font-bold text-white">Rs. {calculateTotalPayment()}</div>
                         </div>
-
                         <div className="mb-4">
-                            <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                                Amount Paid:
-                            </label>
-                            <input
-                                type="number"
-                                value={amountPaid}
-                                onChange={handleAmountPaidChange}
-                                className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold"
-                                placeholder="0"
-                            />
+                            <label className="text-sm font-semibold text-gray-600 mb-2 block">Amount Paid:</label>
+                            <input type="number" value={amountPaid} onChange={handleAmountPaidChange} className="input input-bordered w-full bg-white shadow-sm hover:border-green-400 transition-colors text-lg font-semibold" placeholder="0" />
                         </div>
-
                         <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-lg mb-6 shadow-md">
-                            <label className="text-white text-sm font-semibold block mb-1">
-                                Credit (Due):
-                            </label>
-                            <div className="text-3xl font-bold text-white">
-                                Rs. {credit.toFixed(2)}
-                            </div>
+                            <label className="text-white text-sm font-semibold block mb-1">Credit (Due):</label>
+                            <div className="text-3xl font-bold text-white">Rs. {credit.toFixed(2)}</div>
                         </div>
-
                         <div className="flex flex-col gap-3">
-                            <button
-                                type="button"
-                                onClick={handleSaveSales}
-                                className="btn btn-primary w-full"
-                            >
-                                {sourcePreorderId ? "Confirm & Save Sale" : "Save Sale"}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSaveAndPrintSales}
-                                className="btn btn-secondary w-full"
-                            >
-                                {sourcePreorderId ? "Confirm, Save & Print" : "Save & Print"}
-                            </button>
+                            <button type="button" onClick={handleSaveSales} className="btn btn-primary w-full">{sourcePreorderId ? "Confirm & Save Sale" : "Save Sale"}</button>
+                            <button type="button" onClick={handleSaveAndPrintSales} className="btn btn-secondary w-full">{sourcePreorderId ? "Confirm, Save & Print" : "Save & Print"}</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Add Product Modal */}
             {showAddModal && (
                 <AddProductModal
                     product={selectedModalProduct}
