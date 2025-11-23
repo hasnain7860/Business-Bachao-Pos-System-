@@ -38,11 +38,19 @@ const CreditManagement = () => {
     note: "",
   });
 
-  // --- Search Filter ---
-  const filteredPeoples = useMemo(() => 
-    peoples.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    [searchTerm, peoples]
-  );
+  // --- UPDATED: Search Filter (Supports Name & Code) ---
+  const filteredPeoples = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return peoples.filter((person) => {
+      const nameMatch = person.name.toLowerCase().includes(term);
+      // Check Code Match (Raw number OR "P-Number" format)
+      const codeMatch = person.code 
+        ? person.code.toString().includes(term) || `p-${person.code}`.includes(term)
+        : false;
+      
+      return nameMatch || codeMatch;
+    });
+  }, [searchTerm, peoples]);
 
   const handlePeopleSelect = (people) => {
     setSelectedPeople(people);
@@ -120,18 +128,16 @@ const CreditManagement = () => {
      };
   }, [purchasesData, selectedPeople]);
 
-  // 3. RETURNS (FIXED: Using peopleId instead of people)
+  // 3. RETURNS
   const returnSummary = useMemo(() => {
      if(!selectedPeople) return { salesReturnAdj: 0, purchaseReturnAdj: 0 };
      
-     // Sales Return (Receivable -)
      const salesRet = sellReturns
         .filter(r => r.peopleId === selectedPeople.id)
         .reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
      
-     // Purchase Return (Payable -) -> FIX: used 'peopleId' consistent with AddPurchaseReturn logic
      const purchRet = purchaseReturns
-        .filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id) // Handling both possible key names for safety
+        .filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id)
         .reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
 
      return { salesReturnAdj: salesRet, purchaseReturnAdj: purchRet };
@@ -171,9 +177,10 @@ const CreditManagement = () => {
         <div className="max-w-md mx-auto mt-10">
           <label className="label text-gray-600 font-semibold">{t.searchCustomer}</label>
           <div className="relative">
+            {/* Search Input updated placeholder */}
             <input
               type="text"
-              placeholder="Start typing name..."
+              placeholder={`${t.searchCustomer} / Code (e.g. 1001)...`}
               className="input input-bordered w-full shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -187,8 +194,12 @@ const CreditManagement = () => {
                     className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                     onClick={() => handlePeopleSelect(people)}
                   >
-                    <span className="font-bold">{people.name}</span>
-                    <span className="text-xs text-gray-500 block">{people.phone}</span>
+                    <div className="flex justify-between items-center">
+                        <span className="font-bold text-gray-800">{people.name}</span>
+                        {/* Display Code in Dropdown */}
+                        {people.code && <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded">P-{people.code}</span>}
+                    </div>
+                    <span className="text-xs text-gray-500 block mt-1">{people.phone}</span>
                   </div>
                 ))}
               </div>
@@ -200,7 +211,10 @@ const CreditManagement = () => {
             
             {/* PROFILE HEADER */}
             <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{selectedPeople.name}</h2>
+                <div>
+                    <h2 className="text-2xl font-bold">{selectedPeople.name}</h2>
+                    {selectedPeople.code && <span className="text-sm opacity-80 font-mono">ID: P-{selectedPeople.code}</span>}
+                </div>
                 <button className="btn btn-sm btn-circle btn-ghost bg-white/20 hover:bg-white/40 border-0" onClick={() => setSelectedPeople(null)}>
                     <FaTimes />
                 </button>
@@ -300,7 +314,7 @@ const CreditManagement = () => {
                         </div>
                     )}
 
-                    {/* 4. PURCHASE RETURNS HISTORY (UPDATED LOGIC) */}
+                    {/* 4. PURCHASE RETURNS HISTORY */}
                     {purchaseReturns.filter(r => r.peopleId === selectedPeople.id || r.people === selectedPeople.id).length > 0 && (
                         <div className="border rounded-lg overflow-hidden">
                             <div className="bg-blue-50 p-2 font-bold text-blue-800 border-b border-blue-100">
@@ -333,13 +347,12 @@ const CreditManagement = () => {
                         </div>
                     )}
 
-                    {/* 5. MANUAL RECORDS (Fixed Mobile Scrolling) */}
+                    {/* 5. MANUAL RECORDS */}
                     <div className="border rounded-lg overflow-hidden">
                         <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between items-center">
                             <span>Manual Records (Cash/Old)</span>
                             <button onClick={() => { setFormType('credit'); setShowPopup(true); }} className="btn btn-xs btn-outline btn-primary">+ Add</button>
                         </div>
-                        {/* Added overflow-x-auto so it scrolls on mobile */}
                         <div className="overflow-x-auto">
                             <table className="table table-compact w-full min-w-[400px]">
                                 <thead>
@@ -514,4 +527,3 @@ const CreditManagement = () => {
 };
 
 export default CreditManagement;
-
