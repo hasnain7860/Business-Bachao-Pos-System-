@@ -147,7 +147,9 @@ const NewPreorder = () => {
                     
                     discount: 0,
                     priceUsedType: priceType,
-                    batchQuantity: batch.quantity // Stored for reference, but Preorder allows exceeding
+                    batchQuantity: batch.quantity, // Stored for reference
+                    sellPrice: batch.sellPrice,         // Store Original Sell Price
+                    wholeSalePrice: batch.wholeSalePrice // Store Original Wholesale Price
                 }
             ];
         });
@@ -181,13 +183,39 @@ const NewPreorder = () => {
         });
     };
     
-    // 3. Handle Price Change (Logic from NewSales)
+    // 3. Handle Price Change (FIXED LOGIC)
     const handleSellingPriceChange = (id, batchCode, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    // User is updating the UNIT PRICE (e.g. Carton Price)
-                    return { ...p, newSellPrice: value }; 
+                    const newSellPrice = Number(value);
+                    
+                    // 1. Determine Base Price (Piece Price)
+                    const type = p.priceUsedType || 'sell';
+                    let baseStandardPrice = type === 'wholesale' ? Number(p.wholeSalePrice) : Number(p.sellPrice);
+                    
+                    // 2. Calculate Unit Standard Price (Carton or Piece)
+                    let standardDisplayPrice = p.unitMode === 'secondary' 
+                        ? baseStandardPrice * (Number(p.conversionRate) || 1)
+                        : baseStandardPrice;
+
+                    // 3. Calculate Discount Percentage
+                    // Formula: (Standard - New) / Standard * 100
+                    let discountPercent = 0;
+                    if (standardDisplayPrice > 0) {
+                        discountPercent = ((standardDisplayPrice - newSellPrice) / standardDisplayPrice) * 100;
+                    }
+                    
+                    // Fix: Clamp Discount to 0 if negative (Price Increased)
+                    if (discountPercent < 0) {
+                        discountPercent = 0;
+                    }
+
+                    return { 
+                        ...p, 
+                        newSellPrice: newSellPrice,
+                        discount: discountPercent.toFixed(2) 
+                    }; 
                 }
                 return p;
             });
@@ -200,10 +228,18 @@ const NewPreorder = () => {
         setShowAddModal(true);
     };
 
+    // --- VALIDATION FIX: COST vs SELL ---
     const validateSellingPrice = product => {
-        // Validate: Unit Sell Price < (Unit Purchase Price)
-        const totalPurchasePrice = Number(product.purchasePrice) * (product.conversionRate || 1);
-        return Number(product.newSellPrice) < totalPurchasePrice;
+        // 1. Get Cost Price per Piece
+        const costPerPiece = Number(product.purchasePrice);
+
+        // 2. Calculate Total Cost for the UNIT being sold (e.g. Cost of 1 Carton)
+        const totalCostForUnit = product.unitMode === 'secondary' 
+            ? costPerPiece * (product.conversionRate || 1) 
+            : costPerPiece;
+
+        // 3. Compare: If New Price is LESS than Cost -> RED BORDER
+        return Number(product.newSellPrice) < totalCostForUnit;
     };
 
     const handleCancelProduct = (id, batchCode) => {
@@ -461,4 +497,3 @@ const NewPreorder = () => {
 };
 
 export default NewPreorder;
-
