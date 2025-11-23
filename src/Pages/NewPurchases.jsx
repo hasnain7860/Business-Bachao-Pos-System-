@@ -34,7 +34,7 @@ const NewPurchases = () => {
     };
 
     // --- 1. ADD PRODUCT LOGIC ---
-    const handleAddProductToTable = (product) => {
+    const handleAddProductToTable = (product, selectedBatchFromSearch = null) => {
         const existingProduct = selectedProducts.find((p) => p.id === product.id);
         if (existingProduct) {
             alert('Product is already added to the table!');
@@ -42,7 +42,9 @@ const NewPurchases = () => {
         } 
 
         const batches = product.batchCode || [];
-        const batchInfo = batches.length ? batches[0] : {
+        
+        // Logic: If clicked specific batch in search, use that. Else use first batch. Else default.
+        const batchInfo = selectedBatchFromSearch || (batches.length ? batches[0] : {
             batchCode: `BATCH-${String(1).padStart(3, '0')}`,
             purchasePrice: 0,
             sellPrice: 0,
@@ -50,7 +52,7 @@ const NewPurchases = () => {
             retailPrice: 0,
             expirationDate: '',
             quantity: 0,
-        };
+        });
 
         const hasSecondary = product.secondaryUnitId && product.conversionRate > 1;
         const baseUnitName = units.find(u => u.id === product.unitId)?.name || "Pcs";
@@ -70,13 +72,13 @@ const NewPurchases = () => {
             secUnitName: secUnitName,
             conversionRate: hasSecondary ? Number(product.conversionRate) : 1,
             
-            enteredQty: 0, 
-            enteredPurchasePrice: batchInfo.purchasePrice,
+            enteredQty: 0, // Start empty so user types
+            enteredPurchasePrice: batchInfo.purchasePrice || 0,
 
-            sellPrice: batchInfo.sellPrice,
+            sellPrice: batchInfo.sellPrice || 0,
             wholeSalePrice: batchInfo.wholeSalePrice || 0, 
             retailPrice: batchInfo.retailPrice || 0,
-            purchasePrice: batchInfo.purchasePrice,
+            purchasePrice: batchInfo.purchasePrice || 0,
             expirationDate: batchInfo.expirationDate || '',
             quantity: 0, 
             
@@ -271,11 +273,6 @@ const NewPurchases = () => {
         alert('Purchase added successfully!');
     };
 
-    const filteredProducts = products.filter((product) =>
-        (product.name && product.name.toLowerCase().includes(productSearch.toLowerCase())) ||
-        (product.barcode && product.barcode.includes(productSearch))
-    );
-
     return (
         <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
             <h2 className="text-xl sm:text-2xl font-bold text-primary mb-4 sm:mb-6">New Purchase</h2>
@@ -302,32 +299,32 @@ const NewPurchases = () => {
                         </div>
                     </div>
 
-                    {/* Product Search */}
+                    {/* Product Search with isPurchase={true} */}
                     <ProductSearch 
                          searchProduct={productSearch}
                          setSearchProduct={setProductSearch}
                          products={products}
-                         handleOpenAddModal={(product) => handleAddProductToTable(product)}
+                         isPurchase={true} // CRITICAL PROP
+                         handleOpenAddModal={(product, batch) => handleAddProductToTable(product, batch)}
                     />
 
-                    {/* CUSTOM PURCHASE TABLE */}
+                    {/* CUSTOM PURCHASE TABLE (Fixed Scrolling) */}
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 sm:p-4 shadow-lg">
                         <div className="overflow-x-auto -mx-2 sm:mx-0">
-                            {/* REMOVED max-h and overflow-y constraint here */}
                             <div className="min-w-full inline-block align-middle">
                                 <table className="table w-full table-auto min-w-[1000px]">
-                                    <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+                                    <thead className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
                                         <tr>
-                                            <th className="text-white font-semibold text-xs px-2 w-32">Product</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Batch</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-20">Unit</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-20">Qty</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Cost (Unit)</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Total</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Sale (Pc)</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Wholesale (Pc)</th> 
-                                            <th className="text-white font-semibold text-xs px-2 w-24">Expiry</th>
-                                            <th className="text-white font-semibold text-xs px-2 w-10">Action</th>
+                                            <th className="px-2 py-2 text-left">Product</th>
+                                            <th className="px-2 py-2">Batch</th>
+                                            <th className="px-2 py-2">Unit</th>
+                                            <th className="px-2 py-2">Qty</th>
+                                            <th className="px-2 py-2">Cost (Unit)</th>
+                                            <th className="px-2 py-2">Total</th>
+                                            <th className="px-2 py-2">Sale (Pc)</th>
+                                            <th className="px-2 py-2">Wholesale (Pc)</th> 
+                                            <th className="px-2 py-2">Expiry</th>
+                                            <th className="px-2 py-2">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
@@ -473,4 +470,5 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
+
 
