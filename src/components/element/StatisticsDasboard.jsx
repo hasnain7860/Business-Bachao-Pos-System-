@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useAppContext } from "../../Appfullcontext";
 import { 
-    FaShoppingCart, FaMoneyBillWave, FaCreditCard, FaMoneyCheckAlt, 
+    FaShoppingCart, FaMoneyBillWave, FaCreditCard, 
     FaFileInvoice, FaTag, FaExclamationTriangle 
 } from "react-icons/fa";
 import { MdReport } from "react-icons/md";
@@ -9,40 +9,31 @@ import languageData from "../../assets/languageData.json";
 
 const StatisticsDasboard = () => {
     const context = useAppContext();
-    const { language } = context;
-    const currency = context.settingContext.settings?.[0]?.business?.currency ?? '$';
 
-    // Data Sources
-    const products = context.productContext.products;
-    const sales = context.SaleContext.Sales || [];
-    const sellReturns = context.SellReturnContext.sellReturns || [];
-    const creditRecord = context.creditManagementContext.submittedRecords || [];
-    const costData = context.costContext.costData || [];
+    // --- SAFETY LEVEL 1: Context & Settings ---
+    // Fallback to 'english' and default settings if context is not ready
+    const language = context?.language || "english";
+    const settings = context?.settingContext?.settings || [];
+    const currency = settings?.[0]?.business?.currency ?? '$';
+
+    // --- SAFETY LEVEL 2: Data Sources ---
+    // Ensure these are always arrays. If context is null, these become [].
+    const products = context?.productContext?.products || [];
+    const sales = context?.SaleContext?.Sales || [];
+    const sellReturns = context?.SellReturnContext?.sellReturns || [];
+    const creditRecord = context?.creditManagementContext?.submittedRecords || [];
+    const costData = context?.costContext?.costData || [];
+    const damages = context?.damageContext?.damages || []; 
+
+    // Safe Language Access
+    const currentLangData = languageData[language] || languageData["english"];
     
-    // --- GET DAMAGES ---
-    const damages = context.damageContext?.damages || []; 
+    // Default Filter State
+    const [filter, setFilter] = useState(currentLangData.daily);
 
-    const [filter, setFilter] = useState(languageData[language].daily);
-
-    function generateSalesData(sales, sellReturns, costData, creditRecord, products, damages) {
-        const initialData = {
-            sales: 0,
-            profit: 0,
-            loss: 0,
-            credit: 0,
-            payment: 0,
-            issuedSales: 0,
-            cost: 0,
-            discount: 0,
-            damage: 0 // New Field for Damage Loss
-        };
-
-        const stats = {
-            [languageData[language].daily]: { ...initialData },
-            [languageData[language].weekly]: { ...initialData },
-            [languageData[language].monthly]: { ...initialData },
-        };
-
+    // --- CORE LOGIC (Wrapped in useMemo for performance) ---
+    const salesData = useMemo(() => {
+        // 1. Initialize Dates INSIDE useMemo
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -54,42 +45,61 @@ const StatisticsDasboard = () => {
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         oneMonthAgo.setHours(0, 0, 0, 0);
 
-        // Helper to add data to correct periods
+        // 2. Initialize Data Structure
+        const initialData = {
+            sales: 0, profit: 0, loss: 0, credit: 0, 
+            payment: 0, issuedSales: 0, cost: 0, discount: 0, damage: 0 
+        };
+
+        const stats = {
+            [currentLangData.daily]: { ...initialData },
+            [currentLangData.weekly]: { ...initialData },
+            [currentLangData.monthly]: { ...initialData },
+        };
+
+        // 3. Helper Function to assign values to time periods
         const addToStats = (dateStr, key, value) => {
+            if (!dateStr) return; 
             const d = new Date(dateStr);
             d.setHours(0,0,0,0);
-            const val = parseFloat(value) || 0;
+            
+            const val = parseFloat(value) || 0; // Ensure it's a number
 
             if (d.getTime() === today.getTime()) {
-                stats[languageData[language].daily][key] += val;
+                stats[currentLangData.daily][key] += val;
             }
             if (d >= oneWeekAgo) {
-                stats[languageData[language].weekly][key] += val;
+                stats[currentLangData.weekly][key] += val;
             }
             if (d >= oneMonthAgo) {
-                stats[languageData[language].monthly][key] += val;
+                stats[currentLangData.monthly][key] += val;
             }
         };
 
-        // 1. SALES PROCESSING
+        // 4. PROCESS SALES
         sales.forEach((sale) => {
+            if (!sale) return; // Skip null records
+
             const totalBill = parseFloat(sale.totalBill) || 0;
             const discount = parseFloat(sale.discount) || 0;
             
-            // Calculate COGS (Cost of Goods Sold)
-            const purchaseCost = sale.products.reduce((acc, product) => {
-                const costPrice = parseFloat(product.purchasePrice) || 0;
-                const qty = parseFloat(product.SellQuantity) || 0; // Base Unit Qty
+            // --- CRITICAL FIX 1: Handle undefined products ---
+            // If sale.products is undefined, default to empty array [] so .reduce doesn't crash
+            const safeProducts = Array.isArray(sale.products) ? sale.products : [];
+            
+            const purchaseCost = safeProducts.reduce((acc, product) => {
+                const costPrice = parseFloat(product?.purchasePrice) || 0;
+                const qty = parseFloat(product?.SellQuantity) || 0; 
                 return acc + (costPrice * qty);
             }, 0);
 
             const profit = totalBill - purchaseCost;
             const saleCredit = parseFloat(sale.credit) || 0;
+            
+            // --- CRITICAL FIX 2: Handle undefined addPayment ---
             let salePayment = parseFloat(sale.amountPaid) || 0;
-
-            if (Array.isArray(sale.addPayment)) {
-                salePayment += sale.addPayment.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
-            }
+            const safePayments = Array.isArray(sale.addPayment) ? sale.addPayment : [];
+            salePayment += safePayments.reduce((acc, p) => acc + (parseFloat(p?.amount) || 0), 0);
 
             addToStats(sale.dateTime, 'sales', totalBill);
             addToStats(sale.dateTime, 'profit', profit);
@@ -97,30 +107,35 @@ const StatisticsDasboard = () => {
             addToStats(sale.dateTime, 'payment', salePayment);
             addToStats(sale.dateTime, 'discount', discount);
             
-            const d = new Date(sale.dateTime);
-            d.setHours(0,0,0,0);
-            if(d.getTime() === today.getTime()) stats[languageData[language].daily].issuedSales++;
-            if(d >= oneWeekAgo) stats[languageData[language].weekly].issuedSales++;
-            if(d >= oneMonthAgo) stats[languageData[language].monthly].issuedSales++;
+            if (sale.dateTime) {
+                const d = new Date(sale.dateTime);
+                d.setHours(0,0,0,0);
+                if(d.getTime() === today.getTime()) stats[currentLangData.daily].issuedSales++;
+                if(d >= oneWeekAgo) stats[currentLangData.weekly].issuedSales++;
+                if(d >= oneMonthAgo) stats[currentLangData.monthly].issuedSales++;
+            }
         });
 
-        // 2. SALES RETURNS PROCESSING
+        // 5. PROCESS RETURNS
         sellReturns.forEach((ret) => {
+            if (!ret) return;
+
             const returnTotal = parseFloat(ret.totalAmount) || 0;
             let returnCOGS = 0;
-            if(ret.items && Array.isArray(ret.items)){
-                ret.items.forEach(item => {
-                    // Fallback cost lookup if needed, but new returns should ideally have cost info
-                    // Using product context as fallback
-                    const product = products.find(p => p.id === item.id);
-                    let costPrice = 0;
-                    if(product){
-                         const batch = product.batchCode ? product.batchCode.find(b => b.batchCode === item.batchCode) : null;
-                         costPrice = batch ? parseFloat(batch.purchasePrice) : parseFloat(product.purchasePrice || 0);
-                    }
-                    returnCOGS += (parseFloat(item.quantity) * costPrice);
-                });
-            }
+            
+            const safeItems = Array.isArray(ret.items) ? ret.items : [];
+
+            safeItems.forEach(item => {
+                const product = products.find(p => p.id === item.id);
+                let costPrice = 0;
+                if(product){
+                     // Handle undefined batchCode
+                     const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+                     const batch = safeBatches.find(b => b.batchCode === item.batchCode);
+                     costPrice = batch ? parseFloat(batch.purchasePrice) : parseFloat(product.purchasePrice || 0);
+                }
+                returnCOGS += (parseFloat(item.quantity || 0) * costPrice);
+            });
 
             const profitReversal = returnTotal - returnCOGS;
             const cashRefund = parseFloat(ret.paymentDetails?.cashReturn) || 0;
@@ -132,13 +147,14 @@ const StatisticsDasboard = () => {
             addToStats(ret.returnDate, 'credit', -creditAdj);
         });
 
-        // 3. OPERATIONAL EXPENSES
+        // 6. PROCESS EXPENSES
         costData.forEach((cost) => {
-            addToStats(cost.date, 'cost', cost.cost);
+            if(cost) addToStats(cost.date, 'cost', cost.cost);
         });
 
-        // 4. MANUAL LEDGER RECORDS
+        // 7. PROCESS LEDGER
         creditRecord.forEach((record) => {
+            if (!record) return;
             if (record.type === "credit") {
                 addToStats(record.date, 'credit', record.amount);
             } else if (record.type === "payment") {
@@ -146,31 +162,25 @@ const StatisticsDasboard = () => {
             }
         });
 
-        // 5. --- DAMAGES LOGIC (SMART) ---
+        // 8. PROCESS DAMAGES
         damages.forEach((dmg) => {
-            // Logic: If we got a Refund or Replacement, it is NOT a financial loss for Profit calculation.
-            // Only 'Pending' (Stock gone, no money yet) or 'Loss' (Written off) counts as Expense.
-            
-            if (dmg.resolution === 'refund' || dmg.resolution === 'replace') {
-                return; // Skip, cost recovered
-            }
+            if (!dmg) return;
+            if (dmg.resolution === 'refund' || dmg.resolution === 'replace') return;
 
-            // Use the saved purchase price directly (As you mentioned)
             const costPrice = parseFloat(dmg.purchasePrice) || 0;
-            const qty = parseFloat(dmg.quantity) || 0; // This is stored as Base Unit Qty in AddDamage
+            const qty = parseFloat(dmg.quantity) || 0;
             const dmgCost = costPrice * qty;
 
             addToStats(dmg.date, 'damage', dmgCost);
         });
 
-        // 6. FINAL NET PROFIT CALCULATION
+        // 9. CALCULATE FINALS
         Object.keys(stats).forEach((period) => {
             const data = stats[period];
             
-            // Net Profit = Gross Profit - Expenses - Actual Damage Loss
+            // Net Profit Logic
             data.profit = data.profit - data.cost - data.damage;
 
-            // If Profit drops below zero, show as Loss
             if (data.profit < 0) {
                 data.loss = Math.abs(data.profit);
                 data.profit = 0;
@@ -185,99 +195,100 @@ const StatisticsDasboard = () => {
         });
 
         return stats;
-    }
+    }, [sales, sellReturns, costData, creditRecord, products, damages, currentLangData]); 
+    // ^ Removed 'today' from dependencies to fix ReferenceError
 
-    const [salesData, setSalesData] = useState(generateSalesData(sales, sellReturns, costData, creditRecord, products, damages));
-
-    useEffect(() => {
-        const updatedSalesData = generateSalesData(sales, sellReturns, costData, creditRecord, products, damages);
-        setSalesData(updatedSalesData);
-    }, [language, sales, sellReturns, costData, creditRecord, products, damages]);
+    // --- RENDER SAFEGUARDS ---
+    // If filter doesn't match a key (rare), fallback to daily to prevent UI crash
+    const currentViewData = salesData[filter] || salesData[currentLangData.daily];
 
     return ( 
     <>
         { /* Filter Buttons */ }
-        <div className = "flex justify-end mb-4" >
-            <button className = { `px-4 py-2 mx-2 rounded ${filter === languageData[language].daily ? "bg-blue-500 text-white" : "bg-gray-200"}` }
-                onClick = {() => setFilter(languageData[language].daily) } >
-                { languageData[language].daily } 
-            </button> 
-            <button className = { `px-4 py-2 mx-2 rounded ${filter === languageData[language].weekly ? "bg-blue-500 text-white" : "bg-gray-200"}` }
-                onClick = {() => setFilter(languageData[language].weekly) } >
-                { languageData[language].weekly }
-            </button> 
-            <button className = { `px-4 py-2 mx-2 rounded ${filter === languageData[language].monthly ? "bg-blue-500 text-white" : "bg-gray-200"}` }
-                onClick = {() => setFilter(languageData[language].monthly) } >
-                { languageData[language].monthly }
-            </button> 
+        <div className = "flex justify-end mb-4 gap-2" >
+            {[currentLangData.daily, currentLangData.weekly, currentLangData.monthly].map((period) => (
+                <button 
+                    key={period}
+                    className = { `px-4 py-2 rounded ${filter === period ? "bg-blue-500 text-white" : "bg-gray-200"}` }
+                    onClick = {() => setFilter(period) } >
+                    { period } 
+                </button> 
+            ))}
         </div>
 
         { /* Cards Grid */ }
         <div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6" >
             
+            {/* SALES */}
             <div className = "card bg-blue-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaShoppingCart />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].sales } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { currentLangData.sales } </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].sales } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.sales } </p> 
             </div>
 
+            {/* NET PROFIT */}
             <div className = "card bg-green-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaMoneyBillWave />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Net { languageData[language].profit } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Net { currentLangData.profit } </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].profit } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.profit } </p> 
             </div>
 
+            {/* LOSS */}
             <div className = "card bg-red-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <MdReport />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].loss } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { currentLangData.loss } </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].loss } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.loss } </p> 
             </div>
 
-            {/* --- DAMAGE CARD --- */}
+            {/* DAMAGES */}
             <div className = "card bg-rose-600 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaExclamationTriangle />
                     <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Damaged Value </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].damage } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.damage } </p> 
             </div>
 
+            {/* DISCOUNT */}
             <div className = "card bg-orange-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaTag />
                     <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Discount </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].discount } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.discount } </p> 
             </div>
 
+            {/* EXPENSES */}
             <div className = "card bg-gray-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaMoneyBillWave />
                     <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } Expenses </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].cost } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.cost } </p> 
             </div>
 
+            {/* ISSUED SALES COUNT */}
             <div className = "card bg-indigo-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaFileInvoice />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].issue_sales } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { currentLangData.issue_sales } </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { salesData[filter].issuedSales } Sales </p> 
+                <p className = "text-2xl font-bold mt-2" > { currentViewData.issuedSales } Sales </p> 
             </div>
             
+            {/* CREDIT / UDHAAR */}
             <div className = "card bg-yellow-500 text-white p-4 shadow-lg rounded-lg" >
                 <h2 className = "text-lg font-semibold flex items-center space-x-2" >
                     <FaCreditCard />
-                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { languageData[language].credit } </span> 
+                    <span > { filter.charAt(0).toUpperCase() + filter.slice(1) } { currentLangData.credit } </span> 
                 </h2> 
-                <p className = "text-2xl font-bold mt-2" > { currency } { salesData[filter].credit } </p> 
+                <p className = "text-2xl font-bold mt-2" > { currency } { currentViewData.credit } </p> 
             </div>
 
         </div> 
@@ -286,5 +297,4 @@ const StatisticsDasboard = () => {
 };
 
 export default StatisticsDasboard;
-
 
