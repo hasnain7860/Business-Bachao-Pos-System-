@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaSignOutAlt, FaTrashAlt, FaUpload, FaKey } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
-import languageData from "../assets/languageData.json"; // Ye file aapke paas honi chahiye
+import languageData from "../assets/languageData.json";
 import { useNavigate } from 'react-router-dom';
 
-// --- Naya Component: Change Password Modal ---
+// --- Change Password Modal ---
 const ChangePasswordModal = ({ onClose, language, context }) => {
   const [passwords, setPasswords] = useState({
     oldPassword: '',
@@ -14,7 +14,7 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { authToken } = context; // Context se token lein
+  const { authToken } = context; 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,7 +26,6 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
     setError('');
     setSuccess('');
 
-    // Validations
     if (!passwords.oldPassword || !passwords.newPassword || !passwords.confirmPassword) {
       setError(languageData[language]?.fields_required || 'All fields are required.');
       return;
@@ -47,15 +46,15 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      const apiUrl = import.meta.env.PROD
-        ? "/api/change-password"
-        : `${import.meta.env.VITE_API_BASE_URL}/api/change-password`;
+      // Ensure VITE_API_BASE_URL is defined or handle it
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const apiUrl = `${baseUrl}/api/change-password`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}` // <-- Token yahan bhej rahe hain
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           oldPassword: passwords.oldPassword,
@@ -71,7 +70,7 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
 
       setSuccess(data.message || 'Password changed successfully!');
       setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
-      setTimeout(onClose, 2000); // 2 second baad modal band karein
+      setTimeout(onClose, 2000);
 
     } catch (err) {
       setError(err.message);
@@ -132,16 +131,14 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
     </div>
   );
 };
-// --- End of Change Password Modal ---
 
-// InputField component (Aapke original code se)
 const InputField = ({ label, type, name, value, onChange, disabled, language }) => (
   <div className={`flex flex-col sm:flex-row sm:items-center py-2 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
     <label className="w-full sm:w-1/3 font-semibold mb-1 sm:mb-0">{label}:</label>
     <input
       type={type}
       name={name}
-      value={value}
+      value={value || ''}
       onChange={onChange}
       disabled={disabled}
       className={`input input-bordered w-full sm:w-2/3 ${disabled ? 'bg-gray-100' : 'input-primary'}`}
@@ -149,15 +146,32 @@ const InputField = ({ label, type, name, value, onChange, disabled, language }) 
   </div>
 );
 
-// Settings component (Aapka original code, updated)
 const Settings = () => {
   const context = useAppContext();
-  const { language, logout, email } = context; // <-- Context se logout aur email lein
-  const { selectedSetting, saveSetting } = context.settingContext;
+  const { language, logout, email } = context;
   const navigate = useNavigate();
 
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // The store returns { data, add, edit, remove }. It DOES NOT return selectedSetting/saveSetting.
+  const { data: settingsData, add: addSetting, edit: editSetting } = context.settingContext;
+  
+  // Logic to get the single settings object from data array
+  const selectedSetting = (settingsData && settingsData.length > 0) ? settingsData[0] : {
+    user: { name: '', phoneNo: '', email: '', signature: '' },
+    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '', logo: '' }
+  };
+
+  // Wrapper for save
+  const saveSetting = async (updatedData) => {
+    if (selectedSetting.id) {
+      await editSetting(selectedSetting.id, updatedData);
+    } else {
+      await addSetting(updatedData);
+    }
+  };
+
   const [isEditing, setIsEditing] = useState({ user: false, business: false });
-  const [showPasswordModal, setShowPasswordModal] = useState(false); // <-- Naya state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   
   const [formData, setFormData] = useState({
     user: { name: '', phoneNo: '', email: '', signature: '' },
@@ -166,24 +180,26 @@ const Settings = () => {
 
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Load setting into local state
   useEffect(() => {
-    if (selectedSetting) {
-      setFormData(selectedSetting);
-      // Ensure user email is non-editable and comes from context
-      setFormData(prevData => ({
-        ...prevData,
-        user: { ...prevData.user, email: email || prevData.user.email }
+    if (settingsData && settingsData.length > 0) {
+      const currentData = settingsData[0];
+      setFormData(prev => ({
+        ...prev,
+        ...currentData,
+        // Ensure user structure exists
+        user: { ...prev.user, ...(currentData.user || {}), email: email || currentData.user?.email || '' },
+        business: { ...prev.business, ...(currentData.business || {}) }
       }));
+    } else if (email) {
+       // Init with email if no settings found
+       setFormData(prev => ({ ...prev, user: { ...prev.user, email: email }}));
     }
-  }, [selectedSetting, email]);
+  }, [settingsData, email]);
 
-  // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
     const [type, field] = name.split('.');
     
-    // Email ko edit na hone dein
     if (type === 'user' && field === 'email') return;
 
     setFormData((prevData) => ({
@@ -192,24 +208,26 @@ const Settings = () => {
     }));
   };
 
-  // Toggle Edit Mode
   const toggleEdit = (type) => {
     setIsEditing((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
-  // Save Data
   const saveData = async (type) => {
     await saveSetting(formData);
-    setIsEditing((prev) => ({ ...prev, [type]: false })); // Save ke baad edit mode band karein
+    setIsEditing((prev) => ({ ...prev, [type]: false }));
   };
 
-  // Handle Logout
   const handleLogout = () => {
-    logout(); // Context ka function call karein
-    navigate('/login', { replace: true }); // Login page par bhej dein
+    if (logout) {
+        logout();
+        navigate('/login', { replace: true });
+    } else {
+        // Fallback if logout not in context
+        localStorage.removeItem('userSession');
+        window.location.href = '/login';
+    }
   };
 
-  // Handle File Selection (Aapka original code)
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.size <= 1048576 && file.type.startsWith('image/')) {
@@ -219,35 +237,29 @@ const Settings = () => {
     }
   };
 
-  // Handle File Upload (Aapka original code)
   const handleFileUpload = () => {
     if (selectedFile) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        setFormData((prevData) => {
-          const updatedData = {
-            ...prevData,
-            business: { ...prevData.business, logo: reader.result }
-          };
-          saveSetting(updatedData); // Save the updated formData
-          return updatedData;
-        });
+        const updatedData = {
+          ...formData,
+          business: { ...formData.business, logo: reader.result }
+        };
+        setFormData(updatedData);
+        await saveSetting(updatedData);
+        setSelectedFile(null);
       };
       reader.readAsDataURL(selectedFile);
-      setSelectedFile(null); // File clear karein
     }
   };
 
-  // Handle Delete Logo (Aapka original code)
   const handleDeleteLogo = async () => {
-    setFormData((prevData) => {
-      const updatedData = {
-        ...prevData,
-        business: { ...prevData.business, logo: '' }
-      };
-      saveSetting(updatedData); // Save the updated formData
-      return updatedData;
-    });
+    const updatedData = {
+      ...formData,
+      business: { ...formData.business, logo: '' }
+    };
+    setFormData(updatedData);
+    await saveSetting(updatedData);
   };
 
   return (
@@ -263,9 +275,9 @@ const Settings = () => {
               label={languageData[language]?.[field] || field}
               type={field === 'email' ? 'email' : 'text'}
               name={`user.${field}`}
-              value={formData.user[field]}
+              value={formData.user?.[field]}
               onChange={handleChange}
-              disabled={!isEditing.user || field === 'email'} // Email hamesha disabled
+              disabled={!isEditing.user || field === 'email'}
               language={language}
             />
           ))}
@@ -286,7 +298,7 @@ const Settings = () => {
               label={languageData[language]?.[field] || field}
               type={field === 'email' ? 'email' : 'text'}
               name={`business.${field}`}
-              value={formData.business[field]}
+              value={formData.business?.[field]}
               onChange={handleChange}
               disabled={!isEditing.business}
               language={language}
@@ -308,7 +320,7 @@ const Settings = () => {
             <FaUpload /> {languageData[language]?.upload || "Upload"}
           </button>
         </div>
-        {formData.business.logo && (
+        {formData.business?.logo && (
           <div className="mt-4">
             <img src={formData.business.logo} alt="Business Logo" className="w-32 h-32 object-cover rounded-md border" />
             <button onClick={handleDeleteLogo} className="btn btn-error mt-2">
@@ -318,27 +330,26 @@ const Settings = () => {
         )}
       </div>
 
-      {/* --- NAYA SECTION: Security & Logout --- */}
+      {/* Security & Logout */}
       <div className="bg-white p-4 rounded-lg shadow-md mt-6">
         <h2 className="text-2xl font-bold mb-4">{languageData[language]?.security || 'Security'}</h2>
         <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-          <button onClick={() => setShowPasswordModal(true)} className="btn btn-outline btn-warning w-full sm:w-auto">
-            <FaKey className="mr-2" />
+          <button onClick={() => setShowPasswordModal(true)} className="btn btn-outline btn-warning w-full sm:w-auto flex items-center justify-center gap-2">
+            <FaKey />
             {languageData[language]?.change_password || 'Change Password'}
           </button>
-          <button onClick={handleLogout} className="btn btn-outline btn-error w-full sm:w-auto">
-            <FaSignOutAlt className="mr-2" />
+          <button onClick={handleLogout} className="btn btn-outline btn-error w-full sm:w-auto flex items-center justify-center gap-2">
+            <FaSignOutAlt />
             {languageData[language]?.logout || 'Logout'}
           </button>
         </div>
       </div>
 
-      {/* Modal ko render karein agar showPasswordModal true hai */}
       {showPasswordModal && (
         <ChangePasswordModal
           onClose={() => setShowPasswordModal(false)}
           language={language}
-          context={context} // Modal ko poora context pass karein taake wo token nikaal sake
+          context={context}
         />
       )}
     </div>
@@ -346,5 +357,4 @@ const Settings = () => {
 };
 
 export default Settings;
-
 

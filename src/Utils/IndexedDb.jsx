@@ -1,12 +1,11 @@
 import { openDB } from 'idb';
-import { ref, update, set, get,query , push, remove,onChildChanged,orderByChild,startAt, onChildRemoved, onChildAdded  } from 'firebase/database'; 
+import { ref, update, set, get, query, remove, onChildChanged, orderByChild, startAt, onChildRemoved, onChildAdded } from 'firebase/database'; 
 import { clientDatabase } from './ClientFirebaseDb';
-import refreshData from "./refreshData"
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash.debounce';
 
 const DB_NAME = 'pos-system';
-const DB_VERSION = 17;
+const DB_VERSION = 18;
 
 export const STORE_NAMES = {
   damage:'damage',
@@ -35,55 +34,20 @@ export const LOCAL_STORE = {
   syncTimes: 'syncTimes',
 }
 
-
-// export const addcustomerstoredatatopeople = async () => {  
- 
-//   getItems(STORE_NAMES.customers).then(async(data) => {
-//   console.log('customer data',data)
-//   data.forEach(async (item) => {
-//   await addPendingQuery(STORE_NAMES.people, {
-//     id: item.id,
-//     name: item.name,
-//     phone: item.phone,
-//     email: item.email,
-//     address: item.address,
-//     createdAt: Date.now(),
-//   }, 'add');
-//   })
-// })
-// }
-
-export const creditdataupdate = async () => {
-getItems(STORE_NAMES.creditManagement).then(async(data) => {
-  console.log('credit data',data)
-  data.forEach(async (item) => {
-  await putItem(STORE_NAMES.creditManagement, {
-    id: item.id, 
-amount
-:item.amount,
-personId
-:item.customerId,
-date
-:item.date,
-note
-:
-item.note,
-type
-:
-item.type,
-updatedAt
-:
-Date.now(),
-  });
-  })
-
-})}
+// --- BROADCAST CHANNEL HELPER (The New Logic) ---
+// Context pass karne ki zaroorat nahi. Bas channel pe message bhejo.
+const broadcastUpdate = debounce((storeName) => {
+  const channelName = `${storeName}_sync_channel`;
+  const channel = new BroadcastChannel(channelName);
+  channel.postMessage('update');
+  channel.close();
+  console.log(`📢 Broadcast sent: ${storeName} updated.`);
+}, 500); // 500ms debounce taake 100 items load hone par 100 baar render na ho
 
 
+// --- EXISTING UTILS ---
 
-
-
-let isProcessing = false; // Flag to prevent duplicate calls
+let isProcessing = false;
 
 export const processPendingQueries = async () => {
   if (isProcessing) {
@@ -91,13 +55,11 @@ export const processPendingQueries = async () => {
     return;
   }
 
-  isProcessing = true; // Set flag to prevent duplicate calls
-
+  isProcessing = true;
   const db = await getDB();
   const allPendingQueries = await db.getAll('pendingQuery');
 
   if (allPendingQueries.length === 0) {
-    
     isProcessing = false;
     return;
   }
@@ -116,28 +78,29 @@ export const processPendingQueries = async () => {
 
     try {
       if (action === 'add' || action === 'update') {
-        await set(itemRef, item); // Add or update item in Firebase
+        await set(itemRef, item);
       } else if (action === 'delete') {
         const deleteitem = {
           id: uuidv4(),
           storeName,
-          deletedItemId:item,
-          deletedAt:Date.now(),
+          deletedItemId: item,
+          deletedAt: Date.now(),
         }
-      const deleteItemRef = ref(clientDatabase, `deletedStore/${deleteitem.id}`);  
+        const deleteItemRef = ref(clientDatabase, `deletedStore/${deleteitem.id}`);  
         await set(deleteItemRef, deleteitem);
-        await remove(itemRef); // Delete item from Firebase
+        await remove(itemRef);
       }
 
-      await db.delete('pendingQuery', id); // Remove from IndexedDB after successful upload
-      console.log(`Successfully processed ${action} action for store: ${storeName}, ID: ${action === 'delete' ? item : item.id}`);
+      await db.delete('pendingQuery', id);
+      console.log(`Successfully processed ${action} action for store: ${storeName}`);
     } catch (error) {
-      console.error(`Error processing ${action} for store: ${storeName}, ID: ${action === 'delete' ? item : item.id}`, error);
+      console.error(`Error processing ${action} for store: ${storeName}`, error);
     }
   }
 
-  isProcessing = false; // Reset flag after processing
+  isProcessing = false;
 };
+
 export const getDB = async () => {
   return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
@@ -157,28 +120,20 @@ export const getDB = async () => {
   });
 };
 
-
 export const addItem = async (storeName, item, firebaseEvent = false) => {
   const db = await getDB();
   const existingItem = await db.get(storeName, item.id);
-  const timestamp = Date.now(); // ✅ ٹائم اسٹیمپ حاصل کرو
+  const timestamp = Date.now();
 
   if (!existingItem) {
-    // ✅ `updatedAt` فیلڈ شامل کرو
-    const newItem = { ...item, updatedAt: timestamp,id: String(item.id)  };
-
+    const newItem = { ...item, updatedAt: timestamp, id: String(item.id) };
     await db.add(storeName, newItem);
-    console.log(`Item with ID ${item.id} added in IndexedDB for store ${storeName}.`);
-
+    
     if (!firebaseEvent) {
       await addPendingQuery(storeName, newItem, 'add');
     }
-  } else {
-    console.log(`Item with ID ${item.id} already exists in IndexedDB for store ${storeName}.`);
   }
 };
-
-
 
 export const addPendingQuery = async (storeName, item, action) => {
   const db = await getDB();
@@ -189,7 +144,6 @@ export const addPendingQuery = async (storeName, item, action) => {
     action: action,
   };
   await db.add("pendingQuery", pendingQuery);
-  console.log(`Pending query for ${action} item to pending query store.`);
 };
 
 export const putItem = async (storeName, item , firebaseEvent = false ) => {
@@ -198,43 +152,9 @@ export const putItem = async (storeName, item , firebaseEvent = false ) => {
   const updatedItem = { ...item, updatedAt: timestamp ,id: String(item.id) };
   await db.put(storeName, updatedItem);
   if(!firebaseEvent){
-    await addPendingQuery(storeName,updatedItem,'update')
-  }
-  
-};
-
-export const updateAllStoresWithTimestamp = async () => {
-  const stores = {
-      cost: 'cost',
-      company: 'company',
-      brands: 'brands',
-      products: 'products',
-      purchases: 'purchases',
-      sales: 'sales',
-      units: 'units',
-      suppliers: 'suppliers',
-      customers: 'customers',
-      settings: 'settings',
-      creditManagement: 'creditManagement'
-  };
-
-  for (const storeName of Object.values(stores)) {
-      try {
-          const items = await getItems(storeName);
-          
-          for (const item of items) {
-              item.updatedAt = Date.now(); // ٹائم اسٹیمپ شامل کریں
-              await putItem(storeName, item);
-          }
-
-          console.log(`Updated ${items.length} items in store: ${storeName}`);
-      } catch (error) {
-          console.error(`Error updating store ${storeName}:`, error);
-      }
+    await addPendingQuery(storeName, updatedItem, 'update');
   }
 };
-
-
 
 export const getItems = async (storeName) => {
   const db = await getDB();
@@ -244,11 +164,10 @@ export const getItems = async (storeName) => {
 export const deleteItem = async (storeName, id, firebaseEvent = false ) => { 
   try {
     const db = await getDB();
-
     await db.delete(storeName, String(id));
-      if(!firebaseEvent){
-    await addPendingQuery(storeName,id,'delete')
-  }
+    if(!firebaseEvent){
+      await addPendingQuery(storeName, id, 'delete');
+    }
   } catch (error) {
     console.error(`Error deleting item with ID ${id}:`, error);
   }
@@ -257,12 +176,9 @@ export const deleteItem = async (storeName, id, firebaseEvent = false ) => {
 export const setItems = async (storeName, items) => {
   const db = await getDB();
   const tx = db.transaction(storeName, 'readwrite');
-
   try {
     for (const item of items) {
-      console.log('item', item);
       const fixedItem = { ...item, id: String(item.id) };
-
       await tx.store.put(fixedItem);
     }
     await tx.done;
@@ -273,77 +189,45 @@ export const setItems = async (storeName, items) => {
   }
 };
 
-export const clearOfflineData = async (storeName) => {
-  const db = await getDB();
-  const tx = db.transaction(storeName, 'readwrite');
-  const objectStore = tx.store;
-  await objectStore.clear();
-  await tx.done;
-  return Promise.resolve();
-};
-
-
-const storeDebounceMap = {};
-
-const getDebouncedRefresh = (storeName) => {
-  if (!storeDebounceMap[storeName]) {
-    storeDebounceMap[storeName] = debounce((context, storeName) => {
-      refreshData(context, storeName);
-    }, 500);
-  }
-  return storeDebounceMap[storeName];
-};
-
 export const getLastSyncTime = async (storeName) => {
   const db = await getDB();
   const allSyncTimes = await db.getAll("syncTimes");
-
-  // مطلوبہ اسٹور کے لیے آخری Sync وقت تلاش کرو
   const storeSync = allSyncTimes.find(sync => sync.storeName === storeName);
-  
   return storeSync ? storeSync.timestamp : 0;
 };
 
 export const setLastSyncTime = async (storeName, timestamp) => {
   const db = await getDB();
   const allSyncTimes = await db.getAll("syncTimes");
-
-  // پہلے سے موجود اسٹور تلاش کرو
   const existingSync = allSyncTimes.find(sync => sync.storeName === storeName);
 
   if (existingSync) {
-    // اگر موجود ہے تو بس timestamp اپڈیٹ کرو
     existingSync.timestamp = timestamp;
     await db.put("syncTimes", existingSync);
-   
-    console.log(`Sync time updated for existing store ${storeName}: ${timestamp}`);
   } else {
-    // اگر موجود نہیں تو نیا ایڈ کرو
     const addLastSyncTime = {
       id: uuidv4(),
       storeName: storeName,
       timestamp: timestamp,
     };
     await db.put("syncTimes", addLastSyncTime);
-
-    console.log(`New sync time added for store ${storeName}: ${timestamp}`);
   }
 };
 
-export const listenForChanges = async (storeName, context) => {
+// --- LISTEN FOR CHANGES (Updated) ---
+// Note: Removed 'context' parameter because we use BroadcastChannel now
+export const listenForChanges = async (storeName) => {
   if (!clientDatabase) return;
 
   const itemsRef = ref(clientDatabase, storeName);
-
-  // IndexedDB سے آخری Sync کا وقت حاصل کرو
   const lastSyncTime = await getLastSyncTime(storeName);
 
+  // Initial Sync if empty
   if (lastSyncTime === 0) {
     const snapshot = await get(itemsRef);
     if (snapshot.exists()) {
       const allData = snapshot.val();
       const timestamp = Date.now();
-
       const itemsArray = Object.keys(allData).map(key => ({
         id: key,
         ...allData[key],
@@ -352,100 +236,37 @@ export const listenForChanges = async (storeName, context) => {
 
       await setItems(storeName, itemsArray);
       await setLastSyncTime(storeName, timestamp);
-      getDebouncedRefresh(storeName)(context, storeName);
+      broadcastUpdate(storeName); // Trigger UI Refresh
     }
   }
 
   const lastSyncUpdateTime = await getLastSyncTime(storeName);
-  console.log(`update last sync time and store ${storeName}: ${lastSyncUpdateTime}`);
-
   const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncUpdateTime || 0));
 
-  // ✅ Live Changes: Handle Add, Update, Delete
   onChildAdded(queryRef, async (snapshot) => {
     const addedItem = { id: snapshot.key, ...snapshot.val() };
-    console.log(`New item added in store ${storeName}:`, addedItem);
-if(storeName == 'deletedStore'){
-  await deleteItem(addedItem.storeName, addedItem.deletedItemId, true);
- 
-    getDebouncedRefresh(addedItem.storeName)(context, addedItem.storeName);
-   
-}else{
-  await addItem(storeName, addedItem, true);
-  await setLastSyncTime(storeName, Date.now());
-  getDebouncedRefresh(storeName)(context, storeName);
-}
     
+    if(storeName === 'deletedStore'){
+      await deleteItem(addedItem.storeName, addedItem.deletedItemId, true);
+      broadcastUpdate(addedItem.storeName); // Refresh the store where item was deleted
+    } else {
+      await addItem(storeName, addedItem, true);
+      await setLastSyncTime(storeName, Date.now());
+      broadcastUpdate(storeName); // Refresh UI
+    }
   });
 
   onChildChanged(queryRef, async (snapshot) => {
     const updatedItem = { id: snapshot.key, ...snapshot.val() };
-    console.log(`Item updated in store ${storeName}:`, updatedItem);
-
     await putItem(storeName, updatedItem, true);
     await setLastSyncTime(storeName, Date.now());
-    getDebouncedRefresh(storeName)(context, storeName);
+    broadcastUpdate(storeName); // Refresh UI
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
     const deletedItemId = snapshot.key;
-    console.log(`Item deleted from store ${storeName}: ${deletedItemId}`);
-
     await deleteItem(storeName, deletedItemId, true);
-    getDebouncedRefresh(storeName)(context, storeName);
+    broadcastUpdate(storeName); // Refresh UI
   });
-
 };
 
-
-// export const syncDeletedItemsForAllStores = async (storeName,context) => {
-//   if (!storeName) {
-//     console.error("Error: Store name is missing or invalid.");
-//     return;
-//   }
-
-//   console.log("Device is back online. Checking for missing deletions...");
-
-//   try {
-//     const itemsRef = ref(clientDatabase, storeName);
-
-//     // 🔹 Firebase سے صرف IDs لو
-//     const firebaseSnapshot = await get(itemsRef);
-//     if (!firebaseSnapshot.exists()) {
-//       console.warn(`Warning: No data found in Firebase for store: ${storeName}`);
-//       return;
-//     }
-
-//     const firebaseIds = Object.keys(firebaseSnapshot.val() || {});
-//     console.log('Firebase all IDs:', firebaseIds);
-
-//     // 🔹 IndexedDB سے IDs لو
-//     const indexedDBData = await getItems(storeName);
-//     if (!Array.isArray(indexedDBData)) {
-//       console.error(`Error: Failed to fetch IndexedDB data for store: ${storeName}`);
-//       return;
-//     }
-
-//     const indexedDBIds = indexedDBData.map(item => item.id);
-
-//     // 🔹 وہ IDs نکالو جو IndexedDB میں ہیں لیکن Firebase میں نہیں (یعنی deleted)
-//     const idsToDelete = indexedDBIds.filter(id => !firebaseIds.includes(id));
-
-//     if (idsToDelete.length === 0) {
-//       console.log(`No missing deletions found for store: ${storeName}`);
-//       return;
-//     }
-
-//     // 🔹 ان IDs کو IndexedDB سے delete کرو
-//     for (const id of idsToDelete) {
-//       console.log(`Deleting missing item from IndexedDB in store ${storeName}: ${id}`);
-//       await deleteItem(storeName, id, true);
-//     }
-
-//     getDebouncedRefresh(storeName)(context, storeName);
-//   } catch (error) {
-//     console.error(`Error in syncing deleted items for store ${storeName}:`, error);
-//   }
-// };
-
-// ✅ Ensure the event listener is added only once

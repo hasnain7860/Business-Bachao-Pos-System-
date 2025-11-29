@@ -1,92 +1,86 @@
+import { STORE_NAMES } from './IndexedDb.jsx';
+
+// Updated mapping based on AppFullContext
 const refreshData = async (context, storeName) => {
+  if (!storeName) {
+    // Refresh EVERYTHING logic
+    console.log("♻️ Refreshing ALL contexts...");
+    const promises = [
+      context.peopleContext.refreshData(),
+      context.productContext.refreshData(),
+      context.unitContext.refreshData(),
+      context.costContext.refreshData(),
+      context.purchaseContext.refreshData(),
+      context.SaleContext.refreshData(),
+      context.areasContext.refreshData(),
+      context.preordersContext.refreshData(),
+      context.damageContext.refreshData(),
+      context.purchaseReturnContext.refreshData(),
+      context.SellReturnContext.refreshData(), // Case sensitive check karna AppFullContext se
+      context.supplierCustomerContext.refreshData(),
+      context.creditManagementContext.refreshData(),
+      context.settingContext.refreshData(),
+    ];
+    await Promise.all(promises);
+    return;
+  }
+
+  // Individual Store Refresh
   switch (storeName) {
-    case "cost":
-      await context.costContext.refreshData();
-      console.log("✅ Cost context refreshed!");
-      break;
-      case "company":
-        await context.companyContext.refreshData();
-        console.log("✅ Company context refreshed!");
-        break;
-     case "purchaseReturns":
-      await context.purchaseReturnContext.refreshData();
-      console.log("✅ Company context refreshed!");
-      break; 
-  
-    case "products":
-      await context.productContext.refreshData();
-      console.log("✅ Products context refreshed!");
-      break;
-    case "purchases":
-      await context.purchaseContext.refreshData();
-      console.log("✅ Purchases context refreshed!");
-      break;
-      case "people":
+    case STORE_NAMES.people:
       await context.peopleContext.refreshData();
-      console.log("✅ People context refreshed!");
       break;
-      case "sellReturns": 
-        await context.sellReturnContext.refreshData();
-        console.log("✅ Sales Return context refreshed!");
-        break;
-    case "sales":
-      await context.SaleContext.refreshData();
-      console.log("✅ Sales context refreshed!");
+    case STORE_NAMES.products:
+      await context.productContext.refreshData();
       break;
-    case "units":
+    case STORE_NAMES.units:
       await context.unitContext.refreshData();
-      console.log("✅ Units context refreshed!");
       break;
-    case "suppliers":
-      await context.supplierCustomerContext.refreshData();
-      console.log("✅ Suppliers context refreshed!");
+    case STORE_NAMES.cost:
+      await context.costContext.refreshData();
       break;
-    case "customers":
-      await context.supplierCustomerContext.refreshData();
-      console.log("✅ Customers context refreshed!");
+    case STORE_NAMES.purchases:
+      await context.purchaseContext.refreshData();
       break;
-    case "settings":
-      await context.settingContext.refreshData();
-      console.log("✅ Settings context refreshed!");
+    case STORE_NAMES.sales:
+      await context.SaleContext.refreshData();
       break;
-    case "creditManagement":
-      await context.creditManagementContext.refreshData();
-      console.log("✅ Credit Management context refreshed!");
+    case STORE_NAMES.areas:
+      await context.areasContext.refreshData();
       break;
-    case "damage":
-      await context.damageContext.refreshData();
-      console.log("✅damage context refreshed")
-      break;
-    case "preorders":
+    case STORE_NAMES.preorders:
       await context.preordersContext.refreshData();
-      console.log("✅  preorders Context refreshed!");
       break;
-    // case "notifications":
-    //   await context.notificationContext.refreshData();
-    //   console.log("✅ Notifications context refreshed!");
-    //   break;
-    // case "notificationsDb":
-    //   await context.notificationsDbContext.refreshData();
-    //   console.log("✅ Notifications DB context refreshed!");
-    //   break;
+    case STORE_NAMES.damage:
+      await context.damageContext.refreshData();
+      break;
+    case STORE_NAMES.purchaseReturns:
+      await context.purchaseReturnContext.refreshData();
+      break;
+    case STORE_NAMES.sellReturns:
+      await context.SellReturnContext.refreshData();
+      break;
+    case STORE_NAMES.suppliers:
+    case STORE_NAMES.customers:
+      await context.supplierCustomerContext.refreshData();
+      break;
+    case STORE_NAMES.creditManagement:
+      await context.creditManagementContext.refreshData();
+      break;
+    case STORE_NAMES.settings:
+      await context.settingContext.refreshData();
+      break;
+    
+    // Fallback for company/notifications if needed
+    case STORE_NAMES.company:
+      await context.companyContext.refreshData();
+      break;
+
     default:
-      // Agar storeName undefined ya invalid ho, toh saare refresh ho jayein
-      await Promise.all([
-        context.costContext.refreshData(),
-        context.companyContext.refreshData(),
-        context.productContext.refreshData(),
-        context.purchaseContext.refreshData(),
-        context.SaleContext.refreshData(),
-        context.unitContext.refreshData(),
-        context.supplierCustomerContext.refreshData(),
-        context.settingContext.refreshData(),
-        context.creditManagementContext.refreshData(),
-        // context.notificationContext.refreshData(),
-        // context.notificationsDbContext.refreshData(),
-      ]);
-      console.log("✅ All contexts refreshed successfully!");
+      console.warn(`⚠️ No refresh handler found for store: ${storeName}`);
       break;
   }
 };
 
 export default refreshData;
+

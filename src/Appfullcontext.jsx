@@ -1,165 +1,122 @@
-import React, { createContext, useEffect, useContext, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; // Logout ke baad redirect ke liye
-import useCompanyContext from './Logic/Company.jsx';
-import useUnitsContext from './Logic/Units.jsx';
-import useProductContext from './Logic/Product.jsx';
-import useCostContext from './Logic/Cost.jsx';
-import useSupplierAndCustomerContext from './Logic/SupplierAndCustomer.jsx';
-import usePurchaseContext from './Logic/Purchase.jsx';
-import useSalesContext from './Logic/Sales.jsx';
-import useSettingsContext from './Logic/Settings.jsx';
-import useCreditManagementContext from './Logic/CreditManagement.jsx';
-import useNotificationContext from './Logic/Notifications.jsx';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { STORE_NAMES } from './Utils/IndexedDb.jsx';
+import useUniversalStore from './Logic/useUniversalStore.jsx';
 import { ClientDatabaseInitializer } from './Utils/ClientFirebaseDb.jsx';
-import useSellReturnContext from './Logic/SellReturn.jsx';
-import usePeopleContext from './Logic/People.jsx';
-import useAreasContext from './Logic/useAreasContext.jsx';
-import usePreordersContext from './Logic/usePreordersContext.jsx';
-import usePurchaseReturnContext from './Logic/PurchaseReturn.jsx';
-import useDamageContext from './Logic/useDamageContext.jsx';
+import useNotificationContext from './Logic/Notifications.jsx'; 
 
-
-
-
-// Utility functions (Aapke original code se)
-const updateItem = (items, id, updatedItem) =>
-  items.map((item) => (item.id === id ? { ...item, ...updatedItem } : item));
-const deleteItem = (items, id) => items.filter((item) => item.id !== id);
-
-// Create the context
 const AppContext = createContext();
 
-// Context Provider
 export const AppContextProvider = ({ children }) => {
-  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authToken, setAuthToken] = useState(null); // <-- Naya state token ke liye
-  const [uid, setUid] = useState(null); // <-- Naya state uid ke liye
-  const [email, setEmail] = useState(null); // <-- Naya state email ke liye
+  const [authToken, setAuthToken] = useState(null);
+  const [uid, setUid] = useState(null);
+  const [email, setEmail] = useState(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState('inactive');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
-  
-  // App UI state
   const [language, setLanguage] = useState('en');
   const [isOpen, setIsOpen] = useState(true);
 
-  // Contexts
-  const damageContext = useDamageContext();
-  const companyContext = useCompanyContext();
-  const purchaseReturnContext = usePurchaseReturnContext();
-  const unitContext = useUnitsContext();
-  const productContext = useProductContext();
-  const areasContext = useAreasContext();
-  const preordersContext = usePreordersContext();
-  const peopleContext = usePeopleContext();
-  const supplierCustomerContext = useSupplierAndCustomerContext();
-  const settingContext = useSettingsContext();
-  const costContext = useCostContext();
-  const notificationContext = useNotificationContext()
-  const creditManagementContext = useCreditManagementContext();
-  const purchaseContext = usePurchaseContext();
-  const SaleContext = useSalesContext();
-  const SellReturnContext = useSellReturnContext()
+  // --- UNIVERSAL STORES (Using Correct Keys) ---
+  
+  const peopleStore = useUniversalStore(STORE_NAMES.people);
+  const productStore = useUniversalStore(STORE_NAMES.products);
+  const unitStore = useUniversalStore(STORE_NAMES.units);
+  
+  // ✅ FIX 1: Singular 'cost' use karo
+  const costStore = useUniversalStore(STORE_NAMES.cost); 
+  
+  const purchaseStore = useUniversalStore(STORE_NAMES.purchases);
+  const salesStore = useUniversalStore(STORE_NAMES.sales);
+  const areasContext = useUniversalStore(STORE_NAMES.areas);
+  const preordersContext = useUniversalStore(STORE_NAMES.preorders);
+  const damageContext = useUniversalStore(STORE_NAMES.damage);
+  const purchaseReturnContext = useUniversalStore(STORE_NAMES.purchaseReturns);
+  const sellReturnContext = useUniversalStore(STORE_NAMES.sellReturns);
+  const supplierCustomerStore = useUniversalStore(STORE_NAMES.suppliers);
+  
+  // ✅ FIX 2: 'creditManagement' use karo
+  const creditManagementContext = useUniversalStore(STORE_NAMES.creditManagement);
+  
+  const settingContext = useUniversalStore(STORE_NAMES.settings);
+  const notificationContext = useNotificationContext();
 
-  // Session ko check karne ke liye useEffect
+  // --- COMPANY WRAPPER ---
+  const companyStore = useUniversalStore(STORE_NAMES.company);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+
+  const companyContext = {
+    ...companyStore, 
+    selectedCompany,
+    select: (id) => setSelectedCompany(companyStore.data.find((c) => c.id === id) || null),
+    remove: async (id) => {
+      await companyStore.remove(id);
+      if (selectedCompany?.id === id) setSelectedCompany(null);
+    }
+  };
+
   useEffect(() => {
     const sessionData = localStorage.getItem('userSession');
     if (sessionData) {
       try {
         const parsedData = JSON.parse(sessionData);
         if (parsedData.isAuthenticated && parsedData.token && parsedData.clientDbConfig) {
-          // Sab kuch theek hai, state set karein
           setIsAuthenticated(true);
-          setAuthToken(parsedData.token); // <-- Token set karein
-          setUid(parsedData.uid); // <-- Uid set karein
-          setEmail(parsedData.email); // <-- Email set karein
+          setAuthToken(parsedData.token);
+          setUid(parsedData.uid);
+          setEmail(parsedData.email);
           setSubscriptionStatus(parsedData.subscriptionStatus);
           setSubscriptionEndDate(parsedData.subscriptionEndDate);
-          
-          // Client DB initialize karein
           ClientDatabaseInitializer(JSON.parse(parsedData.clientDbConfig));
         } else {
-          // Session data corrupt hai, clear karein
           localStorage.removeItem('userSession');
         }
       } catch (error) {
-        console.error("Failed to parse user session:", error);
+        console.error("Failed to parse session:", error);
         localStorage.removeItem('userSession');
       }
     }
-  }, []); // Yeh sirf ek baar chalega jab app load hogi
+  }, []);
 
-  // --- Naya Logout Function ---
   const logout = () => {
-    // Clear local storage
     localStorage.removeItem('userSession');
-    
-    // Clear cookies (optional, agar aap set kar rahe hain)
-    Cookies.remove('userName');
-    Cookies.remove('userRole');
-
-    // Clear context state
     setIsAuthenticated(false);
     setAuthToken(null);
     setUid(null);
     setEmail(null);
     setSubscriptionStatus('inactive');
     setSubscriptionEndDate(null);
-
-    // Context ke states ko bhi reset karna chahiye (optional, par achhi practice hai)
-    // companyContext.reset();
-    // productContext.reset();
-    // ...etc
-
-    // User ko login page par bhej dein
-    // Note: Iske liye AppContextProvider ko <Router> ke andar hona chahiye
-    // Agar nahi hai to ye error dega. 
-    // Iska behtar tareeqa ye hai ke App component mein logic likhein
-    // window.location.href = '/login'; // Ye simple tareeqa hai
   };
 
   return (
     <AppContext.Provider
       value={{
-        // App state
-        language,
-        setLanguage,
-        isOpen,
-        setIsOpen,
-        damageContext,
-        // Auth state & functions
-        isAuthenticated,
-        setIsAuthenticated,
-        authToken, // <-- Provide karein
-        setAuthToken,
-        uid, // <-- Provide karein
-        setUid,
-        email, // <-- Provide karein
-        setEmail,
-        logout, // <-- Logout function provide karein
-        
-        // Subscription state
-        subscriptionStatus,
-        setSubscriptionStatus,
-        subscriptionEndDate,
-        setSubscriptionEndDate,
+        language, setLanguage,
+        isOpen, setIsOpen,
+        isAuthenticated, setIsAuthenticated,
+        authToken, setAuthToken,
+        uid, setUid,
+        email, setEmail,
+        subscriptionStatus, setSubscriptionStatus,
+        subscriptionEndDate, setSubscriptionEndDate,
+        logout,
 
-        // Sub-contexts
-        preordersContext,
+        // Data Contexts
+        peopleContext: peopleStore,
+        productContext: productStore,
+        unitContext: unitStore,
+        costContext: costStore,
+        purchaseContext: purchaseStore,
+        SaleContext: salesStore,
         areasContext,
-        notificationContext,
-        companyContext,
-        peopleContext,
+        preordersContext,
+        damageContext,
         purchaseReturnContext,
-        unitContext,
-        productContext,
-        supplierCustomerContext,
-        purchaseContext,
-        costContext,
-        SaleContext,
-        SellReturnContext,
-        settingContext,
+        SellReturnContext: sellReturnContext,
+        supplierCustomerContext: supplierCustomerStore,
         creditManagementContext,
+        settingContext,
+        notificationContext, 
+        companyContext, 
       }}
     >
       {children}
@@ -167,7 +124,6 @@ export const AppContextProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the context
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
@@ -175,4 +131,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
 

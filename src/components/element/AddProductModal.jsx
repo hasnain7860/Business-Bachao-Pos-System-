@@ -3,7 +3,10 @@ import { useAppContext } from "../../Appfullcontext";
 
 const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) => {
   const context = useAppContext();
-  const units = context.unitContext.units; 
+  
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // 'units' does NOT exist on the store. It is 'data'.
+  const units = context.unitContext.data || []; 
   
   // Ref for auto-focus
   const inputRef = useRef(null);
@@ -55,7 +58,7 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
     const numVal = parseInt(val, 10);
     if (isNaN(numVal)) return;
 
-    // 3. Strict Max Limit Enforcement (as requested)
+    // 3. Strict Max Limit Enforcement
     if (numVal > maxQtyAllowed) {
         setQuantity(maxQtyAllowed);
     } else {

@@ -13,17 +13,16 @@ const NewPreorder = () => {
     const { id: preorderId } = useParams(); 
     
     const context = useAppContext();
-    const { 
-        productContext, 
-        preordersContext, 
-        peopleContext, 
-        areasContext
-    } = context;
     
-    const { preorders, add: addPreorder, edit: editPreorder } = preordersContext;
-    const { products } = productContext;
-    const { people } = peopleContext;
-    const { areas } = areasContext;
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. Map .data to the variable names you use
+    const preorders = context.preordersContext.data || [];
+    const products = context.productContext.data || [];
+    const people = context.peopleContext.data || [];
+    const areas = context.areasContext.data || [];
+
+    // 2. Destructure actions
+    const { add: addPreorder, edit: editPreorder } = context.preordersContext;
 
     // --- States ---
     const [preorderRefNo, setPreorderRefNo] = useState("");
@@ -34,7 +33,7 @@ const NewPreorder = () => {
     const [discount, setDiscount] = useState(0);
     const [notes, setNotes] = useState(""); 
     
-    // Global Price Mode (Added to match Sales logic)
+    // Global Price Mode
     const [globalPriceMode, setGlobalPriceMode] = useState('sell');
 
     // Modal & UI States
@@ -46,6 +45,7 @@ const NewPreorder = () => {
 
     // Helper for Area Display
     const selectedPersonObject = useMemo(() => {
+        if (!people) return null;
         return people.find(p => p.id === selectedPerson);
     }, [selectedPerson, people]);
 
@@ -59,44 +59,49 @@ const NewPreorder = () => {
 
     // --- Effects ---
     useEffect(() => {
-        if (preorderId) {
-            // --- EDIT MODE ---
-            const preorderToEdit = preorders.find(p => p.id === preorderId);
-            if (preorderToEdit) {
-                setIsEditing(true);
-                setPreorderRefNo(preorderToEdit.preorderRefNo);
-                setSelectedPerson(preorderToEdit.personId);
-                
-                // IMPORTANT: Map old data to ensure 'enteredQty' exists if it was missing
-                const mappedProducts = preorderToEdit.products.map(p => ({
-                    ...p,
-                    // Backwards compatibility: If enteredQty is missing, assume Base Unit
-                    enteredQty: p.enteredQty || p.SellQuantity,
-                    unitMode: p.unitMode || 'base',
-                    unitName: p.unitName || 'Pcs',
-                    conversionRate: p.conversionRate || 1,
-                    newSellPrice: p.newSellPrice || p.sellPrice // Ensure price exists
-                }));
+        // Only run this logic if preorders have loaded
+        if (preorders.length > 0) {
+            if (preorderId) {
+                // --- EDIT MODE ---
+                const preorderToEdit = preorders.find(p => p.id === preorderId);
+                if (preorderToEdit) {
+                    setIsEditing(true);
+                    setPreorderRefNo(preorderToEdit.preorderRefNo);
+                    setSelectedPerson(preorderToEdit.personId);
+                    
+                    // Map old data to ensure 'enteredQty' exists
+                    const mappedProducts = (preorderToEdit.products || []).map(p => ({
+                        ...p,
+                        enteredQty: p.enteredQty || p.SellQuantity,
+                        unitMode: p.unitMode || 'base',
+                        unitName: p.unitName || 'Pcs',
+                        conversionRate: p.conversionRate || 1,
+                        newSellPrice: p.newSellPrice || p.sellPrice 
+                    }));
 
-                setSelectedProducts(mappedProducts);
-                setNotes(preorderToEdit.notes || "");
-                setDiscount(preorderToEdit.discount || 0);
+                    setSelectedProducts(mappedProducts);
+                    setNotes(preorderToEdit.notes || "");
+                    setDiscount(preorderToEdit.discount || 0);
+                } else {
+                    setMessage("Preorder not found. Redirecting...");
+                    setTimeout(() => navigate('/preorders'), 2000);
+                }
             } else {
-                setMessage("Preorder not found. Redirecting...");
-                setTimeout(() => navigate('/preorders'), 2000);
+                // --- ADD MODE ---
+                setIsEditing(false);
+                generatePreorderRefNo();
+                setSelectedPerson("");
+                setSearchPerson("");
+                setSelectedProducts([]);
+                setSearchProduct("");
+                setDiscount(0);
+                setNotes("");
+                setMessage("");
+                setGlobalPriceMode('sell');
             }
-        } else {
-            // --- ADD MODE ---
-            setIsEditing(false);
-            generatePreorderRefNo();
-            setSelectedPerson("");
-            setSearchPerson("");
-            setSelectedProducts([]);
-            setSearchProduct("");
-            setDiscount(0);
-            setNotes("");
-            setMessage("");
-            setGlobalPriceMode('sell');
+        } else if (!preorderId) {
+             // If adding new, generate ref immediately (don't wait for preorders list)
+             generatePreorderRefNo();
         }
     }, [preorderId, preorders, navigate]);
 
@@ -104,17 +109,15 @@ const NewPreorder = () => {
         setPreorderRefNo(`PRE-${Math.floor(100000 + Math.random() * 900000)}`);
     };
 
-    // --- CORE LOGIC: Handlers aligned with NewSales.js ---
+    // --- CORE LOGIC: Handlers ---
 
-    // 1. Handle Add Product (Matches AddProductModal output)
+    // 1. Handle Add Product
     const handleAddProduct = (product, batch, userEnteredQty, basePrice, priceType, unitMode, conversionRate, unitName) => {
         setSelectedProducts(currentProducts => {
-            // Calculate Total Pieces for Backend
             const totalPieces = unitMode === 'secondary' 
                 ? Number(userEnteredQty) * Number(conversionRate)
                 : Number(userEnteredQty);
 
-            // Calculate Display Price (Carton Price or Piece Price)
             const displayPrice = unitMode === 'secondary'
                 ? Number(basePrice) * Number(conversionRate)
                 : Number(basePrice);
@@ -134,11 +137,11 @@ const NewPreorder = () => {
                     ...product,
                     batchCode: batch.batchCode,
                     
-                    // DATABASE FIELDS (Maths)
-                    SellQuantity: totalPieces, // Always Base Unit
+                    // DATABASE FIELDS
+                    SellQuantity: totalPieces, 
                     purchasePrice: batch.purchasePrice,
 
-                    // UI FIELDS (Display) - This enables the Table to work correctly
+                    // UI FIELDS
                     enteredQty: userEnteredQty,
                     unitMode: unitMode || 'base',
                     unitName: unitName || 'Pcs',
@@ -147,15 +150,15 @@ const NewPreorder = () => {
                     
                     discount: 0,
                     priceUsedType: priceType,
-                    batchQuantity: batch.quantity, // Stored for reference
-                    sellPrice: batch.sellPrice,         // Store Original Sell Price
-                    wholeSalePrice: batch.wholeSalePrice // Store Original Wholesale Price
+                    batchQuantity: batch.quantity, 
+                    sellPrice: batch.sellPrice,         
+                    wholeSalePrice: batch.wholeSalePrice 
                 }
             ];
         });
     };
 
-    // 2. Handle Quantity Change (Logic from NewSales)
+    // 2. Handle Quantity Change
     const handleProductChange = (id, batchCode, field, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
@@ -165,11 +168,8 @@ const NewPreorder = () => {
                         const val = Number(value);
                         const conv = p.conversionRate || 1;
                         
-                        // Calculate new Total Pieces
                         const requiredPieces = val * conv;
 
-                        // Preorder Logic: We usually allow booking more than stock, 
-                        // so we just update values without blocking.
                         return { 
                             ...p, 
                             enteredQty: val,
@@ -183,30 +183,25 @@ const NewPreorder = () => {
         });
     };
     
-    // 3. Handle Price Change (FIXED LOGIC)
+    // 3. Handle Price Change
     const handleSellingPriceChange = (id, batchCode, value) => {
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
                     const newSellPrice = Number(value);
                     
-                    // 1. Determine Base Price (Piece Price)
                     const type = p.priceUsedType || 'sell';
                     let baseStandardPrice = type === 'wholesale' ? Number(p.wholeSalePrice) : Number(p.sellPrice);
                     
-                    // 2. Calculate Unit Standard Price (Carton or Piece)
                     let standardDisplayPrice = p.unitMode === 'secondary' 
                         ? baseStandardPrice * (Number(p.conversionRate) || 1)
                         : baseStandardPrice;
 
-                    // 3. Calculate Discount Percentage
-                    // Formula: (Standard - New) / Standard * 100
                     let discountPercent = 0;
                     if (standardDisplayPrice > 0) {
                         discountPercent = ((standardDisplayPrice - newSellPrice) / standardDisplayPrice) * 100;
                     }
                     
-                    // Fix: Clamp Discount to 0 if negative (Price Increased)
                     if (discountPercent < 0) {
                         discountPercent = 0;
                     }
@@ -228,17 +223,13 @@ const NewPreorder = () => {
         setShowAddModal(true);
     };
 
-    // --- VALIDATION FIX: COST vs SELL ---
+    // Cost Validation
     const validateSellingPrice = product => {
-        // 1. Get Cost Price per Piece
         const costPerPiece = Number(product.purchasePrice);
-
-        // 2. Calculate Total Cost for the UNIT being sold (e.g. Cost of 1 Carton)
         const totalCostForUnit = product.unitMode === 'secondary' 
             ? costPerPiece * (product.conversionRate || 1) 
             : costPerPiece;
 
-        // 3. Compare: If New Price is LESS than Cost -> RED BORDER
         return Number(product.newSellPrice) < totalCostForUnit;
     };
 
@@ -254,15 +245,13 @@ const NewPreorder = () => {
     
     const calculateSubtotal = useMemo(() => {
         return selectedProducts.reduce((total, product) => {
-            // Math: Entered Qty (Cartons) * Sell Price (Per Carton)
             const productTotal = Number(product.newSellPrice) * Number(product.enteredQty);
             return Number(total) + Number(productTotal);
         }, 0);
     }, [selectedProducts]);
 
     const calculateTotalPayment = useMemo(() => {
-        const subtotal = calculateSubtotal;
-        const finalTotal = subtotal - Number(discount);
+        const finalTotal = calculateSubtotal - Number(discount);
         return Math.max(0, finalTotal).toFixed(2);
     }, [calculateSubtotal, discount]);
 
@@ -277,7 +266,7 @@ const NewPreorder = () => {
             setMessage("Please add at least one product.");
             return;
         }
-        if (discount > calculateSubtotal) {
+        if (Number(discount) > calculateSubtotal) {
             setMessage("Discount cannot be greater than the subtotal.");
             return;
         }
@@ -289,23 +278,20 @@ const NewPreorder = () => {
             preorderRefNo,
             personId: selectedPerson,
             areaId: personObject?.areaId || null, 
-            products: selectedProducts, // Saves full object with enteredQty & unitMode
+            products: selectedProducts, 
             notes: notes,
             subtotal: calculateSubtotal.toFixed(2),
             discount: discount,
             totalBill: calculateTotalPayment,
-            status: isEditing ? preorders.find(p=>p.id === preorderId).status : 'Pending', 
-            preorderDate: isEditing ? preorders.find(p=>p.id === preorderId).preorderDate : new Date().toISOString()
+            // Keep existing status if editing, else default to Pending
+            status: isEditing ? (preorders.find(p=>p.id === preorderId)?.status || 'Pending') : 'Pending', 
+            preorderDate: isEditing ? (preorders.find(p=>p.id === preorderId)?.preorderDate || new Date().toISOString()) : new Date().toISOString()
         };
-
-        // Note: Stock is NOT deducted in Preorder. It is deducted when converting to Sale.
 
         if (isEditing) {
             await editPreorder(preorderId, preorderData);
-            // alert("Preorder updated successfully!");
         } else {
             await addPreorder(preorderData);
-            // alert("Preorder saved successfully!");
         }
 
         navigate('/preorders');
@@ -331,7 +317,7 @@ const NewPreorder = () => {
                             <input type="text" value={preorderRefNo} readOnly className="input input-bordered w-full bg-gray-50" />
                         </div>
 
-                         {/* NEW: Global Price Mode Selector */}
+                         {/* Global Price Mode Selector */}
                          <div className="bg-white rounded-lg p-4 shadow flex flex-col justify-between">
                             <label className="text-sm font-semibold text-gray-600 mb-2">
                                 Global Price Mode:
@@ -421,7 +407,6 @@ const NewPreorder = () => {
                         setSearchProduct={setSearchProduct}
                         products={products}
                         handleOpenAddModal={handleOpenAddModal}
-                        // isPreorder={true} // Not needed for search, logic is same
                     />
 
                     <SelectedProductsTable
@@ -489,7 +474,7 @@ const NewPreorder = () => {
                     batch={selectedBatch}
                     onClose={() => setShowAddModal(false)}
                     onAdd={handleAddProduct}
-                    defaultPriceMode={globalPriceMode} // Added this
+                    defaultPriceMode={globalPriceMode} 
                 />
             )}
         </div>
@@ -497,3 +482,4 @@ const NewPreorder = () => {
 };
 
 export default NewPreorder;
+

@@ -4,16 +4,21 @@ import languageData from '../../assets/languageData.json';
 import { FaPrint, FaFilter } from 'react-icons/fa';
 
 const ProductPerformanceReport = () => {
-    const { language, SaleContext, settingContext, damageContext, productContext } = useAppContext();
+    const context = useAppContext();
+    const { language } = context;
     
-    // --- Data Sources ---
-    const allSales = SaleContext.Sales || [];
-    const allDamages = damageContext?.damages || [];
-    const allProducts = productContext.products || [];
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. All stores return 'data'
+    // 2. Added Safe Fallbacks || []
+    const allSales = context.SaleContext.data || [];
+    const allDamages = context.damageContext?.data || [];
+    const allProducts = context.productContext.data || [];
 
-    const userAndBusinessDetail = settingContext.settings;
-    const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
-    const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
+    const settingsData = context.settingContext.data || [];
+    const userAndBusinessDetail = settingsData[0] || {};
+    
+    const currency = userAndBusinessDetail?.business?.currency ?? 'Rs';
+    const businessName = userAndBusinessDetail?.business?.businessName ?? 'Business Bachao';
 
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -50,7 +55,7 @@ const ProductPerformanceReport = () => {
         });
 
         salesInRange.forEach(sale => {
-            if(!sale.products) return;
+            if(!sale.products || !Array.isArray(sale.products)) return;
             
             const totalDiscount = parseFloat(sale.discount || 0);
             let rawSubtotal = parseFloat(sale.subtotal || 0);
@@ -65,13 +70,27 @@ const ProductPerformanceReport = () => {
             }
 
             sale.products.forEach(p => {
-                if (!productStats[p.id]) return; // Safety check
+                if (!productStats[p.id]) return; // Skip deleted/unknown products
 
+                // Note: SellQuantity is Base Units in DB
                 const qty = parseFloat(p.SellQuantity) || 0;
-                const price = parseFloat(p.newSellPrice) || parseFloat(p.sellPrice) || 0;
-                const cost = parseFloat(p.purchasePrice) || 0;
+                
+                // Calculate Unit Price (Revenue per unit)
+                // If it was sold as Secondary Unit, newSellPrice is per secondary unit.
+                // We need to normalize revenue to the line item total.
+                let lineTotal = 0;
+                
+                if (p.enteredQty && p.newSellPrice) {
+                    // New System: Entered Qty (e.g. 5 Cartons) * Price (Per Carton)
+                    lineTotal = parseFloat(p.enteredQty) * parseFloat(p.newSellPrice);
+                } else {
+                    // Old System/Fallback: Base Qty * Unit Price
+                    const price = parseFloat(p.newSellPrice) || parseFloat(p.sellPrice) || 0;
+                    lineTotal = qty * price;
+                }
 
-                const lineTotal = price * qty;
+                // Cost is always tracked in Base Units
+                const cost = parseFloat(p.purchasePrice) || 0;
                 const lineCost = cost * qty;
 
                 // Distribute Discount Proportionally

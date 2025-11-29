@@ -1,71 +1,81 @@
 import React from 'react';
+import { FaEdit, FaTrash, FaMapMarkerAlt, FaPhoneAlt, FaIdBadge } from 'react-icons/fa';
 
 const PersonCard = ({ 
-    person, 
-    areas, 
-    languageData, 
-    language, 
-    onEdit, 
-    onDelete 
+  person, 
+  areas, 
+  languageData, 
+  language, 
+  onEdit, 
+  onDelete 
 }) => {
+  // Safe lookup for area name
+  const areaName = areas?.find(a => a.id === person.areaId)?.name || "Unknown Area";
   
-  // Safe extraction of Area Name to prevent crashes
-  const getAreaName = (areaId) => {
-    if (!areaId || !areas) return "N/A";
-    const area = areas.find(a => a.id === areaId);
-    return area ? area.name : "Unknown Area";
-  };
+  // Handling missing image
+  const defaultImage = "https://via.placeholder.com/150?text=User";
 
   return (
-    <div className="p-4 bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg flex flex-col items-center border border-gray-100">
+    <div className="bg-white rounded-lg shadow-md p-4 flex flex-col justify-between hover:shadow-lg transition-shadow border border-gray-100 relative overflow-hidden group">
       
-      {/* Image Handling with Fallback */}
-      <div className="w-20 h-20 mb-4 relative">
-        {person.image ? (
-            <img
-            src={person.image}
-            alt={person.name}
-            className="w-full h-full rounded-full object-cover border-2 border-blue-100"
-            />
-        ) : (
-            <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xl">
-                {person.name.charAt(0).toUpperCase()}
-            </div>
-        )}
-      </div>
-
-      <h3 className="text-lg font-bold text-gray-800 text-center">{person.name}</h3>
-      
+      {/* Optional: Show Code Badge if it exists */}
       {person.code && (
-          <span className="inline-block px-2 py-0.5 mt-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-            P-{person.code}
-          </span>
+        <div className={`absolute top-0 ${language === 'ur' ? 'left-0 rounded-br-lg' : 'right-0 rounded-bl-lg'} bg-blue-600 text-white text-xs font-bold px-2 py-1 shadow-sm z-10`}>
+          P-{person.code}
+        </div>
       )}
 
-      <div className="mt-3 text-sm text-gray-600 space-y-1 w-full text-center">
-        <p className="flex justify-center items-center gap-2">
-           <span className="text-gray-400">📞</span> {person.phone || "No Phone"}
-        </p>
-        <p className="truncate px-2">
-            <span className="text-gray-400">📍</span> {person.address || "No Address"}
-        </p>
-        <p className="font-medium text-gray-700">
-            🏙️ {getAreaName(person.areaId)}
-        </p>
+      <div className={`flex items-start gap-4 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+        {/* Image Section */}
+        <div className="flex-shrink-0">
+          <img 
+            src={person.image || defaultImage} 
+            alt={person.name} 
+            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+            onError={(e) => { e.target.src = defaultImage; }} // Fallback
+          />
+        </div>
+
+        {/* Info Section */}
+        <div className={`flex-grow ${language === "ur" ? "text-right" : "text-left"}`}>
+          <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{person.name}</h3>
+          
+          <div className="text-sm text-gray-500 space-y-1">
+            <div className={`flex items-center gap-2 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+               <FaPhoneAlt className="text-gray-400 text-xs" />
+               <span className="font-mono text-gray-700">{person.phone}</span>
+            </div>
+            
+            {person.address && (
+                <div className={`flex items-start gap-2 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+                   <span className="truncate max-w-[150px]">{person.address}</span>
+                </div>
+            )}
+            
+            <div className={`flex items-center gap-2 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+               <FaMapMarkerAlt className="text-gray-400 text-xs" />
+               <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                 {areaName}
+               </span>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <div className={`flex space-x-2 mt-5 w-full justify-center ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
-        <button
-          onClick={() => onEdit(person)}
-          className="flex-1 text-sm bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1.5 rounded hover:bg-yellow-100 transition"
+
+      {/* Action Buttons */}
+      <div className={`mt-4 pt-3 border-t border-gray-100 flex gap-2 ${language === "ur" ? "flex-row-reverse" : ""}`}>
+        <button 
+          onClick={() => onEdit(person)} 
+          className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-1.5 rounded hover:bg-blue-100 text-sm font-medium transition"
         >
-          {languageData[language].edit}
+          <FaEdit /> {languageData[language].edit}
         </button>
-        <button
-          onClick={() => onDelete(person.id)}
-          className="flex-1 text-sm bg-red-50 text-red-700 border border-red-200 px-2 py-1.5 rounded hover:bg-red-100 transition"
+        
+        <button 
+          onClick={() => onDelete(person.id)} 
+          className="flex-1 flex items-center justify-center gap-2 bg-red-50 text-red-600 py-1.5 rounded hover:bg-red-100 text-sm font-medium transition"
         >
-          {languageData[language].remove}
+          <FaTrash /> {languageData[language].delete}
         </button>
       </div>
     </div>

@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../Appfullcontext';
-import { FaPrint, FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt } from 'react-icons/fa';
 import languageData from '../assets/languageData.json';
 
-// --- NAYE REPORTS IMPORT KAREIN ---
-import BalancesReport from '../components//Reports/BalancesReport';
-import SalesSummaryReport from '../components//Reports/SalesSummaryReport';
-import PnLReport from '../components//Reports/PnLReport';
+// --- REPORTS COMPONENTS ---
+import BalancesReport from '../components/Reports/BalancesReport';
+import SalesSummaryReport from '../components/Reports/SalesSummaryReport';
+import PnLReport from '../components/Reports/PnLReport';
 import ProductPerformanceReport from '../components/Reports/ProductPerformanceReport';
-import CollectionSheet from '../components//Reports/CollectionSheet'; // <-- NAYA
-import CustomerCompanyReport from '../components//Reports/CustomerCompanyReport'; // <-- NAYA
- import PreorderAreaReport from '../components/Reports/PreorderAreaReport';
- import InventoryReport from '../components/Reports/InventoryReport';
- 
- 
- 
- // <-- Ye aap baad mein banayeinge
-
+import CollectionSheet from '../components/Reports/CollectionSheet'; 
+import CustomerCompanyReport from '../components/Reports/CustomerCompanyReport'; 
+import PreorderAreaReport from '../components/Reports/PreorderAreaReport';
+import InventoryReport from '../components/Reports/InventoryReport';
 
 const Reports = () => {
     const context = useAppContext();
-    const { language } = context;
+    
+    // --- CRASH PROOFING: Language ---
+    // If context is not ready or language is missing, fallback to 'en'
+    const safeLanguage = context.language && languageData[context.language] ? context.language : 'en';
+    const t = languageData[safeLanguage]; // 't' is a common convention for 'translation'
 
     const [activeReport, setActiveReport] = useState('collection_sheet');
 
@@ -38,50 +37,46 @@ const Reports = () => {
                 return <SalesSummaryReport />;
             case 'pnl':
                 return <PnLReport />;
-                
             case 'Inventory_Report':
                 return <InventoryReport />;
-                
             case 'product_performance':
                 return <ProductPerformanceReport />;
             default:
                 return (
                     <div className="text-center p-10 bg-white rounded-lg shadow">
-                        <p className="text-gray-500">{languageData[language].select_report_type || 'Please select a report type.'}</p>
+                        <p className="text-gray-500">{t.select_report_type || 'Please select a report type.'}</p>
                     </div>
                 );
         }
     };
 
     const reportButtons = [
-        { key: 'collection_sheet', label: languageData[language].collection_sheet || 'Collection Sheet', icon: <FaFileInvoice /> },
-        { key: 'customer_company', label: languageData[language].customer_company_report || 'Cust/Co. Report', icon: <FaTruckLoading /> },
-        { key: 'preorder_area', label: languageData[language].preorder_area_report || 'Preorder Report', icon: <FaMapMarkerAlt /> },
-        { key: 'balances', label: languageData[language].balances || 'Balances', icon: <FaUsers /> },
-        { key: 'sales_summary', label: languageData[language].sales_summary || 'Sales Summary', icon: <FaChartBar /> },
-        { key: 'pnl', label: languageData[language].pnl || 'P&L', icon: <FaMoneyBillWave /> },
-        { key: 'Inventory_Report', label: languageData[language].Inventory_Report || 'Inventory Report', icon: <FaMoneyBillWave /> },
-        { key: 'product_performance', label: languageData[language].product_performance || 'Product Report', icon: <FaStar /> },
+        { key: 'collection_sheet', label: t.collection_sheet || 'Collection Sheet', icon: <FaFileInvoice /> },
+        { key: 'customer_company', label: t.customer_company_report || 'Cust/Co. Report', icon: <FaTruckLoading /> },
+        { key: 'preorder_area', label: t.preorder_area_report || 'Preorder Report', icon: <FaMapMarkerAlt /> },
+        { key: 'balances', label: t.balances || 'Balances', icon: <FaUsers /> },
+        { key: 'sales_summary', label: t.sales_summary || 'Sales Summary', icon: <FaChartBar /> },
+        { key: 'pnl', label: t.pnl || 'P&L', icon: <FaMoneyBillWave /> },
+        { key: 'Inventory_Report', label: t.Inventory_Report || 'Inventory Report', icon: <FaMoneyBillWave /> },
+        { key: 'product_performance', label: t.product_performance || 'Product Report', icon: <FaStar /> },
     ];
 
     return (
         <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
-            {/* --- YEH HAI ASLI FIX --- */}
-            {/* Yeh style block ab poori app ko print ke waqt hide kar dega, 
-                siwaye '.print-area' ke. */}
+            {/* --- PRINT STYLES --- */}
             <style>{`
                 @media print {
-                    /* 1. Sab kuch hide karein */
+                    /* Hide everything by default */
                     body * {
                         visibility: hidden !important;
                     }
 
-                    /* 2. Sirf print-area aur uske children ko show karein */
+                    /* Only show the print container and its children */
                     .print-area, .print-area * {
                         visibility: visible !important;
                     }
 
-                    /* 3. Print-area ko poori page par phelayein */
+                    /* Position the print area to fill the page */
                     .print-area {
                         position: absolute !important;
                         left: 0 !important;
@@ -93,43 +88,21 @@ const Reports = () => {
                         background-color: white !important;
                     }
 
-                    /* 4. A4 Page setup */
                     @page {
                         size: A4;
-                        margin: 15mm;
+                        margin: 10mm;
                     }
 
-                    /* 5. Jo elements no-print mark hain, unko yaqeeni hide karein */
                     .no-print {
                         display: none !important;
                     }
-
-                    /* 6. Print-specific headers/footers ko show karein */
-                    .print-header { display: block !important; }
-                    .print-footer { display: block !important; }
-
-                    /* 7. Table styles for print */
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td {
-                        border: 1px solid #000;
-                        padding: 6px;
-                        font-size: 9pt;
-                        text-align: left;
-                    }
-                    th { background-color: #f0f0f0; }
-                    tfoot td { font-weight: bold; background-color: #f0f0f0; }
-                }
-                
-                /* Ye headers/footers by default hide honge */
-                .print-header, .print-footer {
-                    display: none;
                 }
             `}</style>
             
-            <h1 className="text-3xl font-bold text-gray-800 mb-6 no-print">{languageData[language].reports || 'Reports'}</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-6 no-print">{t.reports || 'Reports'}</h1>
             
             <div className="bg-white p-4 rounded-lg shadow-md mb-6 no-print">
-                <label className="block text-sm font-medium text-gray-700 mb-2">{languageData[language].select_report_type || 'Select Report Type'}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.select_report_type || 'Select Report Type'}</label>
                 <div className="flex flex-wrap gap-2">
                     {reportButtons.map(report => (
                         <button 
@@ -147,16 +120,13 @@ const Reports = () => {
                 </div>
             </div>
 
-            {/* Ab yeh 'print-area' div print styles ko trigger karega */}
+            {/* Print Area Wrapper */}
             <div className="print-area bg-white p-4 md:p-6 rounded-lg shadow-md">
                 {renderActiveReport()}
             </div>
         </div>
     );
 };
-
-
-
 
 export default Reports;
 

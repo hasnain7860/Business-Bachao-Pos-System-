@@ -9,20 +9,24 @@ const CreditManagement = () => {
   const context = useAppContext();
   const { language } = context;
   const navigate = useNavigate();
-  const t = languageData[language];
+  
+  // Safe language access
+  const t = languageData[language] || languageData['en'];
 
-  // --- Context Data ---
-  const peoples = context.peopleContext.people;
-  const salesData = context.SaleContext.Sales || [];
-  const purchasesData = context.purchaseContext.purchases || [];
-  const sellReturns = context.SellReturnContext.sellReturns || [];
-  const purchaseReturns = context.purchaseReturnContext?.purchaseReturns || [];
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // 1. All stores return 'data'
+  // 2. Added Safe Fallbacks || []
+  const peoples = context.peopleContext.data || [];
+  const salesData = context.SaleContext.data || [];
+  const purchasesData = context.purchaseContext.data || [];
+  const sellReturns = context.SellReturnContext.data || [];
+  const purchaseReturns = context.purchaseReturnContext.data || [];
   
   // --- Manual Records Actions ---
-  const submittedRecords = context.creditManagementContext.submittedRecords;
+  const submittedRecords = context.creditManagementContext.data || [];
   const addRecords = context.creditManagementContext.add;
   const editRecords = context.creditManagementContext.edit;
-  const deleteRecords = context.creditManagementContext.delete;
+  const deleteRecords = context.creditManagementContext.remove; // Changed from delete
 
   // --- States ---
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,16 +42,14 @@ const CreditManagement = () => {
     note: "",
   });
 
-  // --- UPDATED: Search Filter (Supports Name & Code) ---
+  // --- Search Filter ---
   const filteredPeoples = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return peoples.filter((person) => {
       const nameMatch = person.name.toLowerCase().includes(term);
-      // Check Code Match (Raw number OR "P-Number" format)
       const codeMatch = person.code 
         ? person.code.toString().includes(term) || `p-${person.code}`.includes(term)
         : false;
-      
       return nameMatch || codeMatch;
     });
   }, [searchTerm, peoples]);
@@ -77,13 +79,13 @@ const CreditManagement = () => {
     setShowPopup(true);
   };
 
-  const handleDelete = (recordId) => {
+  const handleDelete = async (recordId) => {
     if (window.confirm("Are you sure you want to delete this record? This will affect the balance.")) {
-      deleteRecords(recordId);
+      await deleteRecords(recordId);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.amount) return alert("Amount is required");
 
     const recordData = {
@@ -96,9 +98,9 @@ const CreditManagement = () => {
     };
 
     if (editingRecordId) {
-      editRecords(recordData.id, recordData);
+      await editRecords(recordData.id, recordData);
     } else {
-      addRecords(recordData);
+      await addRecords(recordData);
     }
     
     handleClosePopup();
@@ -111,9 +113,9 @@ const CreditManagement = () => {
      if(!selectedPeople) return { totalBill: 0, paid: 0, credit: 0 };
      const personSales = salesData.filter(s => s.personId === selectedPeople.id);
      return {
-        totalBill: personSales.reduce((acc, s) => acc + Number(s.totalBill), 0),
-        paid: personSales.reduce((acc, s) => acc + Number(s.amountPaid), 0),
-        credit: personSales.reduce((acc, s) => acc + Number(s.credit), 0)
+        totalBill: personSales.reduce((acc, s) => acc + Number(s.totalBill || 0), 0),
+        paid: personSales.reduce((acc, s) => acc + Number(s.amountPaid || 0), 0),
+        credit: personSales.reduce((acc, s) => acc + Number(s.credit || 0), 0)
      };
   }, [salesData, selectedPeople]);
 
@@ -122,9 +124,9 @@ const CreditManagement = () => {
      if(!selectedPeople) return { totalBill: 0, paid: 0, credit: 0 };
      const personPurchases = purchasesData.filter(p => p.personId === selectedPeople.id);
      return {
-        totalBill: personPurchases.reduce((acc, p) => acc + Number(p.totalBill), 0),
-        paid: personPurchases.reduce((acc, p) => acc + Number(p.totalPayment), 0),
-        credit: personPurchases.reduce((acc, p) => acc + Number(p.credit), 0)
+        totalBill: personPurchases.reduce((acc, p) => acc + Number(p.totalBill || 0), 0),
+        paid: personPurchases.reduce((acc, p) => acc + Number(p.totalPayment || 0), 0),
+        credit: personPurchases.reduce((acc, p) => acc + Number(p.credit || 0), 0)
      };
   }, [purchasesData, selectedPeople]);
 
@@ -148,13 +150,14 @@ const CreditManagement = () => {
     if(!selectedPeople) return { credit: 0, payment: 0 };
     const records = submittedRecords.filter(r => r.personId === selectedPeople.id);
     return {
-        credit: records.filter(r => r.type === 'credit').reduce((acc, r) => acc + Number(r.amount), 0),
-        payment: records.filter(r => r.type === 'payment').reduce((acc, r) => acc + Number(r.amount), 0)
+        credit: records.filter(r => r.type === 'credit').reduce((acc, r) => acc + Number(r.amount || 0), 0),
+        payment: records.filter(r => r.type === 'payment').reduce((acc, r) => acc + Number(r.amount || 0), 0)
     };
   }, [submittedRecords, selectedPeople]);
 
 
   // --- NET BALANCE ---
+  // Formula: (Receivables) - (Payables)
   const totalReceivablePlus = salesSummary.credit + manualSummary.credit + returnSummary.purchaseReturnAdj;
   const totalPayableMinus = purchaseSummary.credit + manualSummary.payment + returnSummary.salesReturnAdj;
   const netBalance = totalReceivablePlus - totalPayableMinus;
@@ -167,20 +170,19 @@ const CreditManagement = () => {
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <button onClick={() => navigate(-1)} className="btn btn-sm btn-ghost gap-2">
-            <FaArrowLeft /> {languageData[language].back}
+            <FaArrowLeft /> {languageData[language]?.back || 'Back'}
         </button>
-        <h1 className="text-xl font-bold text-blue-700 uppercase tracking-wide">{t.creditManagement}</h1>
+        <h1 className="text-xl font-bold text-blue-700 uppercase tracking-wide">{t.creditManagement || 'Credit Management'}</h1>
       </div>
 
       {/* SEARCH OR DETAILS */}
       {!selectedPeople ? (
         <div className="max-w-md mx-auto mt-10">
-          <label className="label text-gray-600 font-semibold">{t.searchCustomer}</label>
+          <label className="label text-gray-600 font-semibold">{t.searchCustomer || 'Search Customer'}</label>
           <div className="relative">
-            {/* Search Input updated placeholder */}
             <input
               type="text"
-              placeholder={`${t.searchCustomer} / Code (e.g. 1001)...`}
+              placeholder={`${t.searchCustomer || 'Search'} / Code (e.g. 1001)...`}
               className="input input-bordered w-full shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -196,7 +198,6 @@ const CreditManagement = () => {
                   >
                     <div className="flex justify-between items-center">
                         <span className="font-bold text-gray-800">{people.name}</span>
-                        {/* Display Code in Dropdown */}
                         {people.code && <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded">P-{people.code}</span>}
                     </div>
                     <span className="text-xs text-gray-500 block mt-1">{people.phone}</span>
@@ -229,8 +230,8 @@ const CreditManagement = () => {
                     {salesSummary.totalBill > 0 && (
                         <div className="border rounded-lg overflow-hidden">
                             <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between">
-                                <span>{t.salesData}</span>
-                                <span className="text-blue-600">Total Credit: {salesSummary.credit}</span>
+                                <span>{t.salesData || 'Sales Data'}</span>
+                                <span className="text-blue-600">Total Credit: {salesSummary.credit.toFixed(2)}</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="table table-compact w-full min-w-[300px]">
@@ -245,7 +246,7 @@ const CreditManagement = () => {
                                         {salesData.filter(s => s.personId === selectedPeople.id).map(s => (
                                             <tr key={s.id} className={s.credit > 0 ? "bg-red-50" : ""}>
                                                 <td>{s.salesRefNo}</td>
-                                                <td className="font-bold text-red-600">{s.credit}</td>
+                                                <td className="font-bold text-red-600">{Number(s.credit).toFixed(2)}</td>
                                                 <td>{new Date(s.dateTime).toLocaleDateString()}</td>
                                             </tr>
                                         ))}
@@ -259,8 +260,8 @@ const CreditManagement = () => {
                     {purchaseSummary.totalBill > 0 && (
                         <div className="border rounded-lg overflow-hidden">
                             <div className="bg-gray-100 p-2 font-bold text-gray-700 flex justify-between">
-                                <span>{t.purchaseData}</span>
-                                <span className="text-orange-600">Total Payable: {purchaseSummary.credit}</span>
+                                <span>{t.purchaseData || 'Purchase Data'}</span>
+                                <span className="text-orange-600">Total Payable: {purchaseSummary.credit.toFixed(2)}</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="table table-compact w-full min-w-[300px]">
@@ -274,7 +275,7 @@ const CreditManagement = () => {
                                         {purchasesData.filter(p => p.personId === selectedPeople.id).map(p => (
                                             <tr key={p.id} className={p.credit > 0 ? "bg-orange-50" : ""}>
                                                 <td>{new Date(p.date).toLocaleDateString()}</td>
-                                                <td className="font-bold text-orange-600">{p.credit}</td>
+                                                <td className="font-bold text-orange-600">{Number(p.credit).toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -371,7 +372,7 @@ const CreditManagement = () => {
                                                     {r.type === 'credit' ? 'Credit' : 'Pay'}
                                                 </span>
                                             </td>
-                                            <td className="font-bold">{r.amount}</td>
+                                            <td className="font-bold">{Number(r.amount).toFixed(2)}</td>
                                             <td>{new Date(r.date).toLocaleDateString()}</td>
                                             <td>
                                                 <div className="flex gap-3">
@@ -527,3 +528,4 @@ const CreditManagement = () => {
 };
 
 export default CreditManagement;
+

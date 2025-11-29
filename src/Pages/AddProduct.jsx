@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../Appfullcontext";
-import { FaPlus, FaSyncAlt, FaBarcode } from "react-icons/fa";
+import { FaPlus, FaBarcode } from "react-icons/fa";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,8 +11,12 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const context = useAppContext();
 
-  const companies = context.companyContext.companies;
-  const units = context.unitContext.units;
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // Universal Store returns 'data', NOT specific names like 'companies' or 'units'
+  const companies = context.companyContext.data || [];
+  const units = context.unitContext.data || [];
+  const products = context.productContext.data || []; // Load products safely
+  
   const addProduct = context.productContext.add;
   const updateProduct = context.productContext.edit;
 
@@ -20,11 +24,11 @@ const AddProduct = () => {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedUnit, setSelectedUnit] = useState(""); // Base Unit (e.g., Pcs)
   
-  // --- NEW: Secondary Unit Logic ---
-  const [hasSecondaryUnit, setHasSecondaryUnit] = useState(false); // Toggle for UI
-  const [selectedSecondaryUnit, setSelectedSecondaryUnit] = useState(""); // Secondary (e.g., Ctn)
-  const [conversionRate, setConversionRate] = useState(""); // e.g., 12 (1 Ctn = 12 Pcs)
-  // ---------------------------------
+  // --- Secondary Unit Logic ---
+  const [hasSecondaryUnit, setHasSecondaryUnit] = useState(false); 
+  const [selectedSecondaryUnit, setSelectedSecondaryUnit] = useState(""); 
+  const [conversionRate, setConversionRate] = useState(""); 
+  // ----------------------------
 
   const [productName, setProductName] = useState("");
   const [productNameInUrdu, setProductNameInUrdu] = useState("");
@@ -44,7 +48,8 @@ const AddProduct = () => {
 
   useEffect(() => {
     if (id) {
-      const product = context.productContext.products.find((p) => p.id == id);
+      // FIX: Use the safe 'products' array defined above
+      const product = products.find((p) => p.id == id);
 
       if (product) {
         setProductName(product.name || "");
@@ -53,18 +58,16 @@ const AddProduct = () => {
         setSelectedUnit(product.unitId || "");
         setBarcode(product.barcode || "");
         
-        // --- NEW: Check if old product has secondary unit data ---
+        // --- Check for Secondary Unit Data ---
         if (product.secondaryUnitId && product.conversionRate) {
             setHasSecondaryUnit(true);
             setSelectedSecondaryUnit(product.secondaryUnitId);
             setConversionRate(product.conversionRate);
         } else {
-            // Old data will fall here. Safe logic.
             setHasSecondaryUnit(false);
             setSelectedSecondaryUnit("");
             setConversionRate("");
         }
-        // --------------------------------------------------------
 
         if (isCopy) {
           const nextBatchNumber = batches.length + 1;
@@ -72,7 +75,7 @@ const AddProduct = () => {
           setBatchCode(newBatchCode);
           setEdit(false);
         } else {
-          if (product.batchCode) {
+          if (product.batchCode && Array.isArray(product.batchCode)) {
             setBatches(product.batchCode);
           } else {
              const nextBatchNumber = batches.length + 1;
@@ -87,7 +90,7 @@ const AddProduct = () => {
       const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
       setBatchCode(newBatchCode);
     }
-  }, [id, isCopy, context.productContext.products, batches.length]);
+  }, [id, isCopy, products, batches.length]); // Added 'products' to dependency
 
   useEffect(() => {
     if (selectedBatch) {
@@ -112,11 +115,11 @@ const AddProduct = () => {
     const batchData = {
       batchCode: batchCode,
       expirationDate: expirationDate || "",
-      purchasePrice: purchasePrice,
-      sellPrice: sellPrice,
-      wholeSalePrice: wholeSalePrice,
-      retailPrice: retailPrice,
-      quantity: quantity,
+      purchasePrice: Number(purchasePrice),
+      sellPrice: Number(sellPrice),
+      wholeSalePrice: Number(wholeSalePrice),
+      retailPrice: Number(retailPrice) || 0,
+      quantity: Number(quantity),
       openingStock: Number(quantity),
       openingStockDate: new Date().toISOString(),
       damageQuantity: 0
@@ -140,13 +143,13 @@ const AddProduct = () => {
     setBarcode(newBarcode);
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!productName || !selectedUnit ) {
-      alert("Please fill all required fields.");
+      alert("Please fill all required fields (Name & Base Unit).");
       return;
     }
     
-    // --- NEW: Validation for Secondary Unit ---
+    // --- Validation for Secondary Unit ---
     if (hasSecondaryUnit) {
         if (!selectedSecondaryUnit || !conversionRate || Number(conversionRate) <= 1) {
             alert("Please select Secondary Unit and a valid Conversion Rate (>1).");
@@ -157,7 +160,6 @@ const AddProduct = () => {
             return;
         }
     }
-    // ------------------------------------------
 
     if (Number(sellPrice) < Number(purchasePrice)) {
       alert("Selling price cannot be less than purchase price");
@@ -166,26 +168,52 @@ const AddProduct = () => {
 
     const existingBatch = edit ? batches.find(b => b.batchCode === selectedBatch) : null;
 
-    const currentBatchData = {
-      batchCode: edit ? selectedBatch : batchCode,
-      expirationDate: expirationDate || "",
-      purchasePrice: purchasePrice || "",
-      sellPrice: sellPrice || "",
-      wholeSalePrice: wholeSalePrice || "",
-      retailPrice: retailPrice || "",
-      quantity: quantity || "",
-      openingStock: existingBatch?.openingStock !== undefined ? existingBatch.openingStock : Number(quantity || 0),
-      openingStockDate: existingBatch?.openingStockDate || new Date().toISOString(),
-      damageQuantity: existingBatch?.damageQuantity !== undefined ? existingBatch.damageQuantity : 0,
-    };
+    // Handle current batch input (if user typed something but didn't click "Add Batch")
+    // Only if we are in Add mode or Editing specific batch
+    let updatedBatches = [...batches];
+    
+    // If user entered data in the inputs but didn't add it to the list yet, 
+    // we should consider adding/updating it before saving.
+    // However, for simplicity and consistency with your logic:
+    // We assume 'batches' state holds the list. 
+    // If editing a specific batch:
+    if (edit && selectedBatch) {
+         const currentBatchData = {
+            batchCode: selectedBatch,
+            expirationDate: expirationDate || "",
+            purchasePrice: Number(purchasePrice),
+            sellPrice: Number(sellPrice),
+            wholeSalePrice: Number(wholeSalePrice),
+            retailPrice: Number(retailPrice) || 0,
+            quantity: Number(quantity),
+            openingStock: existingBatch?.openingStock !== undefined ? existingBatch.openingStock : Number(quantity || 0),
+            openingStockDate: existingBatch?.openingStockDate || new Date().toISOString(),
+            damageQuantity: existingBatch?.damageQuantity !== undefined ? existingBatch.damageQuantity : 0,
+        };
+        updatedBatches = batches.map((batch) =>
+            batch.batchCode === selectedBatch ? currentBatchData : batch
+        );
+    } 
+    // If adding new product and inputs are filled, add as first batch
+    else if (!edit && purchasePrice && quantity) {
+        const firstBatch = {
+            batchCode: batchCode,
+            expirationDate: expirationDate || "",
+            purchasePrice: Number(purchasePrice),
+            sellPrice: Number(sellPrice),
+            wholeSalePrice: Number(wholeSalePrice),
+            retailPrice: Number(retailPrice) || 0,
+            quantity: Number(quantity),
+            openingStock: Number(quantity),
+            openingStockDate: new Date().toISOString(),
+            damageQuantity: 0
+        };
+        updatedBatches = [...batches, firstBatch];
+    }
 
-    let updatedBatches;
-    if (edit) {
-      updatedBatches = batches.map((batch) =>
-        batch.batchCode === selectedBatch ? currentBatchData : batch
-      );
-    } else {
-      updatedBatches = [...batches, currentBatchData];
+    if(updatedBatches.length === 0) {
+        alert("Please add at least one batch (Price/Qty details).");
+        return;
     }
 
     const productData = {
@@ -195,21 +223,19 @@ const AddProduct = () => {
       companyId: selectedCompany || "",
       unitId: selectedUnit, // Base Unit
       
-      // --- NEW: Saving Secondary Unit Data ---
-      // If toggle is off, we save null/empty to keep data clean
+      // --- Saving Secondary Unit Data ---
       secondaryUnitId: hasSecondaryUnit ? selectedSecondaryUnit : null,
       conversionRate: hasSecondaryUnit ? Number(conversionRate) : null,
-      // ---------------------------------------
       
       barcode: barcode,
       batchCode: updatedBatches,
     };
 
-    if (edit) {
-      updateProduct(productData.id, productData);
+    if (edit && !isCopy) {
+      await updateProduct(productData.id, productData);
       alert("Product updated successfully!");
     } else {
-      addProduct(productData);
+      await addProduct(productData);
       alert("Product added successfully!");
     }
     navigate(-1);
@@ -219,7 +245,7 @@ const AddProduct = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4">
       <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
         <h2 className="text-3xl font-bold text-center mb-8 text-indigo-700 border-b pb-4">
-          {edit ? "✏️ Update Product" : "➕ Add New Product"}
+          {edit && !isCopy ? "✏️ Update Product" : "➕ Add New Product"}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -242,7 +268,7 @@ const AddProduct = () => {
                 </div>
             </div>
 
-            {/* --- UPDATED: Unit Selection Area --- */}
+            {/* --- Unit Configuration --- */}
             <div className="col-span-full bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h4 className="font-bold text-gray-600 mb-3">Unit Configuration</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,7 +320,6 @@ const AddProduct = () => {
                     )}
                 </div>
             </div>
-            {/* ------------------------------------- */}
 
             <div className="form-control col-span-full">
                 <label className="label"><span className="label-text font-semibold text-gray-700">Product Barcode</span></label>
@@ -305,10 +330,8 @@ const AddProduct = () => {
             </div>
         </div>
 
-        {/* Batch Section (No Major Changes needed here, Logic remains same) */}
+        {/* Batch Section */}
         <div className="col-span-full bg-indigo-50 p-6 rounded-lg my-6 border border-indigo-100">
-             {/* ... (Batch fields same as before) ... */}
-             {/* Just a note: When adding Quantity here, user must enter value in BASE UNIT (e.g. total Pcs) */}
              <div className="alert alert-info shadow-sm mb-4">
                 <div>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current flex-shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -316,11 +339,7 @@ const AddProduct = () => {
                 </div>
              </div>
              
-             {/* ... Insert the rest of your Batch UI code here (Inputs for Price/Qty) ... */}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 {/* (Apna purana code yahan paste karo for batch inputs: Expiry, Price, etc.) */}
-                 {/* Maine upar "Note" add kiya hai taake user confuse na ho */}
-                 
                  <div className="form-control">
                   <label className="label"><span className="label-text font-semibold text-gray-700">{edit ? "Select Batch Code" : "New Batch Code"}</span></label>
                   {edit ? ( <select value={selectedBatch || ""} onChange={(e) => setSelectedBatch(e.target.value)} className="select select-bordered w-full bg-white focus:border-indigo-500"><option value="">Select a Batch to Edit</option>{batches.map((batch) => (<option key={batch.batchCode} value={batch.batchCode}>{batch.batchCode}</option>))}</select>) : (<input type="text" value={batchCode} readOnly className="input input-bordered w-full bg-gray-200 cursor-not-allowed"/>)}
@@ -359,10 +378,9 @@ const AddProduct = () => {
               )}
         </div>
         
-        {/* ... List of Batches Table (Same as before) ... */}
+        {/* List of Batches Table */}
         {!edit && batches.length > 0 && (
           <div className="col-span-full mb-6">
-             {/* ... table code ... */}
              <div className="overflow-x-auto border rounded-lg">
               <table className="table table-compact w-full">
                 <thead className="bg-gray-100">
@@ -389,7 +407,7 @@ const AddProduct = () => {
         )}
 
         <div className="flex flex-col md:flex-row gap-4 mt-8">
-            <button type="button" onClick={handleSaveProduct} className="btn btn-primary flex-1 hover:bg-indigo-600 transition-colors duration-200 text-lg py-3">{edit ? "💾 Update Product" : "➕ Save Product"}</button>
+            <button type="button" onClick={handleSaveProduct} className="btn btn-primary flex-1 hover:bg-indigo-600 transition-colors duration-200 text-lg py-3">{edit && !isCopy ? "💾 Update Product" : "➕ Save Product"}</button>
             <button type="button" onClick={() => navigate(-1)} className="btn btn-outline hover:bg-gray-100 flex-1 transition-colors duration-200 text-lg py-3">← Back</button>
         </div>
       </div>
@@ -398,3 +416,4 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
+

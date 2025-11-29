@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../Appfullcontext.jsx';
-import { FaPrint, FaFilter } from 'react-icons/fa'; 
+import { FaPrint } from 'react-icons/fa'; 
 import languageData from '../../assets/languageData.json';
 import { useNavigate } from "react-router-dom";
 
@@ -9,20 +9,24 @@ const InventoryReport = () => {
     const navigate = useNavigate();
     const { language } = context;
 
-    // Context Data
-    const products = context.productContext.products;
-    const companies = context.companyContext.companies;
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. All stores return 'data'
+    // 2. Added Safe Fallbacks || []
+    const products = context.productContext.data || [];
+    const companies = context.companyContext.data || [];
     
     // Transactions Data
-    const allSales = context.SaleContext.Sales || [];
-    const allPurchases = context.purchaseContext.purchases || [];
-    const sellReturns = context.SellReturnContext.sellReturns || [];
-    const purchaseReturns = context.purchaseReturnContext.purchaseReturns || [];
-    const allDamages = context.damageContext?.damages || [];
+    const allSales = context.SaleContext.data || [];
+    const allPurchases = context.purchaseContext.data || [];
+    const sellReturns = context.SellReturnContext.data || [];
+    const purchaseReturns = context.purchaseReturnContext.data || [];
+    const allDamages = context.damageContext?.data || [];
     
-    const userAndBusinessDetail = context.settingContext.settings;
-    const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Inventory';
-    const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
+    const settingsData = context.settingContext.data || [];
+    const userAndBusinessDetail = settingsData[0] || {};
+    
+    const businessName = userAndBusinessDetail?.business?.businessName ?? 'Business Inventory';
+    const currency = userAndBusinessDetail?.business?.currency ?? 'Rs';
 
     // Filters State
     const [selectedCompany, setSelectedCompany] = useState("");
@@ -47,7 +51,7 @@ const InventoryReport = () => {
             : products;
 
         filteredProducts.forEach(product => {
-            if (product.batchCode && product.batchCode.length > 0) {
+            if (product.batchCode && Array.isArray(product.batchCode)) {
                 product.batchCode.forEach(batch => {
                     
                     // BASELINE: Opening Stock
@@ -81,6 +85,7 @@ const InventoryReport = () => {
                             if (isAfterOpening(compareDate, openingDateStr) && sale.products) {
                                 sale.products.forEach(item => {
                                     if (item.id === product.id && item.batchCode === batch.batchCode) {
+                                        // Note: SellQuantity is stored as Base Units in DB
                                         saleQty += Number(item.SellQuantity || 0);
                                     }
                                 });
@@ -111,16 +116,13 @@ const InventoryReport = () => {
                             }
                         });
 
-                        // E. Damages (-) (UPDATED LOGIC)
+                        // E. Damages (-)
                         allDamages.forEach(dmg => {
                             const compareDate = dmg.updatedAt || dmg.date;
                             
                             if (isAfterOpening(compareDate, openingDateStr)) {
-                                // CRITICAL CHECK: 
-                                // If resolution is 'replace', we got stock back, so DO NOT count as inventory deduction.
                                 if (dmg.resolution === 'replace') return;
 
-                                // Match Product ID and Batch Code
                                 if (dmg.productId === product.id && dmg.batchCode === batch.batchCode) {
                                     damageQty += Number(dmg.quantity || 0);
                                 }
@@ -129,7 +131,6 @@ const InventoryReport = () => {
                     }
 
                     // FINAL FORMULA
-                    // Balance = Opening + Purchase + SaleReturn - Sale - PurReturn - Damage
                     const balance = openingStock + purchaseQty + saleReturnQty - saleQty - purReturnQty - damageQty;
                     
                     // Valuation
@@ -171,7 +172,7 @@ const InventoryReport = () => {
                         className="flex items-center gap-2 bg-gray-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"
                     >
                         {language === "ur" ? null : "🔙"}
-                        <span>{languageData[language].back}</span>
+                        <span>{languageData[language]?.back || 'Back'}</span>
                         {language === "ur" ? "🔙" : null}
                     </button>
                 </div>

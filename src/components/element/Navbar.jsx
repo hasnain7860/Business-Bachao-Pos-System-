@@ -19,7 +19,7 @@ import Cookies from 'js-cookie';
 import languageData from "../../assets/languageData.json";
 
 import Syncauto from "../Syncauto.jsx";
-import {clearAllStores }  from '../../Logic/ClearAllStores.jsx'
+import { clearAllStores }  from '../../Logic/ClearAllStores.jsx'
 import { getDB } from '../../Utils/IndexedDb'; 
 
 
@@ -35,7 +35,8 @@ const Navbar = () => {
     const sidebarRef = useRef(null);
     const menuButtonRef = useRef(null);
 
-    const businessName = settingContext?.settings[0]?.business?.businessName || "POS System";
+    // Safe Access for Universal Store
+    const businessName = settingContext?.data?.[0]?.business?.businessName || "POS System";
     const userRole = Cookies.get('userRole') || 'seller'; // Default 'seller' agar role set na ho
 
     // --- Navigation Links Data Structure ---
@@ -67,7 +68,7 @@ const Navbar = () => {
         { path: "/CreditManagement", labelKey: "credit_management", icon: FiClipboard, roles: ['Admin'] },
         { path: "/damage", labelKey: "damage", icon: FiClipboard, roles: ['Admin', 'seller'] },
         { path: "/Cost", labelKey: "cost_management", icon: FiClipboard, roles: ['Admin', 'seller'] },
-        { path: "/data", labelKey: "data_sync", icon: FiClipboard, roles: ['Admin'] },
+
         { path: "/settings", labelKey: "settings", icon: FiSettings, roles: ['Admin'] },
     ];
 
@@ -80,11 +81,6 @@ const Navbar = () => {
     const toggleSection = (sectionKey) => {
         setCollapsedSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
     };
-
-
-
-
-
 
    const handleLogout = async () => {
         try {
@@ -111,7 +107,7 @@ const Navbar = () => {
             Cookies.remove('userName');
             Cookies.remove('userRole');
             
-localStorage.removeItem('userSession')
+            localStorage.removeItem('userSession')
             await setIsAuthenticated(false);
 
         } catch (error) {
@@ -119,13 +115,6 @@ localStorage.removeItem('userSession')
             alert("Logout fail ho gaya. Please dobara try karein.");
         }
     };
-
-
-
-
-
-
-    
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -193,14 +182,6 @@ localStorage.removeItem('userSession')
                 </button>
                 <h1 className="text-2xl font-bold">{businessName}</h1>
                 <div className={`flex items-center space-x-4 transition-all duration-300 ${language === 'ur' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                {/*    <Link to="/notifications" className="relative p-2 bg-gray-700 rounded-full hover:bg-gray-600">
-                        🔔
-                        {notificationCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                {notificationCount}
-                            </span>
-                        )
-                    </Link>}*/}
                     <SyncStatusIcon/>
                     <ForceSyncButton/>
                     <button onClick={toggleLanguage} className="p-2 bg-gray-700 rounded-full hover:bg-gray-600">
@@ -230,7 +211,7 @@ localStorage.removeItem('userSession')
                         </li>
                     </ul>
                     <div className="text-base pb-20 pl-5">
-                        version 9.0.0
+                        version 10.0.0
                     </div>
                 </div>
             </div>
@@ -239,3 +220,4 @@ localStorage.removeItem('userSession')
 };
 
 export default Navbar;
+

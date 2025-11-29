@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
-// 1. DeleteConfirmationModal import has been removed.
 
 // Helper function to get status color
 const getStatusBadgeColor = (status) => {
@@ -16,22 +15,27 @@ const getStatusBadgeColor = (status) => {
 
 const PreordersList = () => {
     const navigate = useNavigate();
-    // 2. Changed customersContext to peopleContext
     const { preordersContext, peopleContext, areasContext, language } = useAppContext();
-    const { preorders, edit: editPreorder, delete: deletePreorder } = preordersContext;
-    // 3. Changed customers to people
-    const people = peopleContext.people || [];
-    const areas = areasContext.areas || [];
+
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. 'preorders' -> 'data'
+    // 2. 'delete' -> 'remove'
+    // 3. 'people' -> 'data'
+    // 4. 'areas' -> 'data'
+    const { data: preordersData, edit: editPreorder, remove: deletePreorder } = preordersContext;
+    
+    // Safety Checks
+    const preorders = preordersData || [];
+    const people = peopleContext.data || [];
+    const areas = areasContext.data || [];
 
     // Filters State
     const [filterArea, setFilterArea] = useState('');
     const [filterStatus, setFilterStatus] = useState("");
     const [searchQuery, setSearchQuery] = useState('');
 
-    // 4. Removed modalState
     const [errorMessage, setErrorMessage] = useState('');
 
-    // 5. Renamed getCustomerName to getPersonName and updated logic
     const getPersonName = (id) => people.find(p => p.id === id)?.name || 'N/A';
     const getAreaName = (id) => areas.find(a => a.id === id)?.name || 'N/A';
 
@@ -41,13 +45,11 @@ const PreordersList = () => {
             .filter(p => filterArea ? p.areaId === filterArea : true)
             .filter(p => {
                 if (!searchQuery) return true;
-                // 6. Updated to use getPersonName and personId
                 const personName = getPersonName(p.personId).toLowerCase();
-                const refNo = p.preorderRefNo.toLowerCase();
+                const refNo = (p.preorderRefNo || "").toLowerCase();
                 return personName.includes(searchQuery.toLowerCase()) || refNo.includes(searchQuery.toLowerCase());
             })
             .sort((a, b) => new Date(b.preorderDate) - new Date(a.preorderDate));
-    // 7. Updated dependencies to use 'people'
     }, [preorders, filterArea, filterStatus, searchQuery, people]);
 
     // Action Handlers
@@ -56,36 +58,25 @@ const PreordersList = () => {
     };
 
     const handleEditPreorder = (preorder) => {
-        // Hum user ko naye route par bhej rahe hain
-        // Aap ko 'App.jsx' mein yeh route add karna hoga:
-        // <Route path="/preorders/edit/:id" element={<NewPreorder />} />
         navigate(`/preorders/edit/${preorder.id}`);
     };
 
-    const handleCancelPreorder = (preorder) => {
-        // WARNING: window.confirm() bura UX hai. Ise bhi DeleteConfirmationModal se replace karein.
+    const handleCancelPreorder = async (preorder) => {
         if (window.confirm("Are you sure you want to cancel this preorder?")) {
-            editPreorder(preorder.id, { ...preorder, status: 'Cancelled' });
+            await editPreorder(preorder.id, { ...preorder, status: 'Cancelled' });
         }
     };
     
-    // 8. Replaced 'handleDeleteRequest' and 'handleConfirmDelete' with one function
-    const handleDeletePreorder = (preorder) => {
+    const handleDeletePreorder = async (preorder) => {
         setErrorMessage(''); 
-        
-        // 9. REMOVED the check for 'Delivered' status. Delete is now direct.
-        // if (preorder.status === 'Delivered') {
-        //     setErrorMessage(`Cannot delete "${preorder.preorderRefNo}". It is already linked to a completed sale.`);
-        //     return;
-        // }
-        
-        // 10. Delete directly without a modal
-        deletePreorder(preorder.id);
+        // Adding a basic safety confirm because accidental deletions are bad UX
+        if(window.confirm(languageData[language].areYouSureDelete || "Delete this preorder permanently?")) {
+            await deletePreorder(preorder.id);
+        }
     };
 
     return (
         <div className="p-4 bg-gray-50 min-h-screen">
-            {/* ... (Header) ... */}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">{languageData[language].preorder_list || 'Preorder List'}</h1>
                 <button 
@@ -102,7 +93,6 @@ const PreordersList = () => {
                 </div>
             )}
 
-            {/* ... (Filters Section) ... */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input
                     type="text"
@@ -128,14 +118,12 @@ const PreordersList = () => {
                 {filteredPreorders.map(preorder => (
                     <div key={preorder.id} className="bg-white rounded-lg shadow-md p-5 flex flex-col justify-between">
                         <div>
-                            {/* ... (Card details) ... */}
                             <div className="flex justify-between items-start mb-3">
                                 <span className="font-bold text-primary text-lg">{preorder.preorderRefNo}</span>
                                 <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(preorder.status)}`}>
                                     {preorder.status}
                                 </span>
                             </div>
-                            {/* 10. Updated to use getPersonName and personId */}
                             <h3 className="text-xl font-semibold text-gray-800">{getPersonName(preorder.personId)}</h3>
                             <p className="text-gray-500">{getAreaName(preorder.areaId)}</p>
                             <p className="text-sm text-gray-400 mt-1">{new Date(preorder.preorderDate).toLocaleString()}</p>
@@ -167,7 +155,6 @@ const PreordersList = () => {
                                         </button>
                                     </li>
                                     <li><button onClick={() => handleCancelPreorder(preorder)} disabled={preorder.status !== 'Pending'}>Cancel Preorder</button></li>
-                                    {/* 11. Updated onClick to call handleDeletePreorder */}
                                     <li><button onClick={() => handleDeletePreorder(preorder)} className="text-red-500">Delete</button></li>
                                 </ul>
                             </div>
@@ -180,12 +167,9 @@ const PreordersList = () => {
                     <p className="text-gray-500 text-lg">No preorders found with the selected filters.</p>
                 </div>
             )}
-
-            {/* 12. Deleted the DeleteConfirmationModal component from here */}
         </div>
     );
 };
 
 export default PreordersList;
-
 

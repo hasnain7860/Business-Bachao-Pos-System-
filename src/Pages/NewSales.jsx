@@ -16,11 +16,15 @@ const NewSales = () => {
     const location = useLocation(); 
     const context = useAppContext();
 
-    // Ab humain areas ya settings ki zaroorat nahi yahan
+    // --- CRITICAL FIX: Universal Store Mapping ---
     const { peopleContext, productContext, preordersContext, SaleContext } = context;
-    const { people } = peopleContext; 
-    const products = productContext.products;
+    
+    const people = peopleContext.data || [];
+    const products = productContext.data || [];
+    const preorders = preordersContext.data || []; 
+    
     const editProduct = productContext.edit;
+    const editPreorder = preordersContext.edit; 
 
     const isPrint = useRef(false);
 
@@ -29,7 +33,7 @@ const NewSales = () => {
     const [searchPerson, setSearchPerson] = useState("");
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [searchProduct, setSearchProduct] = useState("");
-    const [paymentMode, setPaymentMode] = useState("");
+    const [paymentMode, setPaymentMode] = useState("cash");
     const [amountPaid, setAmountPaid] = useState("0");
     const [credit, setCredit] = useState(0);
     const [discount, setDiscount] = useState(0);
@@ -41,28 +45,46 @@ const NewSales = () => {
     const [sourcePreorderId, setSourcePreorderId] = useState(null);
     const [globalPriceMode, setGlobalPriceMode] = useState('sell');
 
-    // --- ONLY STATE NEEDED FOR MODAL ---
     const [showPeopleModal, setShowPeopleModal] = useState(false);
 
     useEffect(() => {
         if (selectedPerson) {
             setUserCreditData(CalculateUserCredit(context, selectedPerson));
         }
-    }, [selectedPerson]);
+    }, [selectedPerson, context]); 
 
-    // ... (Preorder Logic - Same as before, code hidden for brevity) ...
-    // Note: Copy your Preorder useEffect here if needed, keeping it collapsed for clarity
+    // --- FIXED: Preorder Data Loading ---
     useEffect(() => {
         if (location.state && location.state.preorderData) {
-            // ... same logic ...
              const { preorderData } = location.state;
+             
+             console.log("Loading Preorder:", preorderData); // Debugging
+
              setSourcePreorderId(preorderData.id);
              setSelectedPerson(preorderData.personId);
              setDiscount(preorderData.discount || 0);
-             // ... rest of logic
+             
+             // FIX 1: Check for 'products', NOT 'items'
+             if (preorderData.products && Array.isArray(preorderData.products)) {
+                 // FIX 2: Map data to ensure UI fields exist (just like in Edit Preorder)
+                 const mappedProducts = preorderData.products.map(p => ({
+                    ...p,
+                    // Ensure UI fields exist
+                    enteredQty: p.enteredQty || p.SellQuantity,
+                    unitMode: p.unitMode || 'base',
+                    unitName: p.unitName || 'Pcs',
+                    conversionRate: p.conversionRate || 1,
+                    newSellPrice: p.newSellPrice || p.sellPrice 
+                 }));
+                 
+                 // FIX 3: Actually set the state!
+                 setSelectedProducts(mappedProducts); 
+             }
+
+             // Clean up location state so refresh doesn't reload it
              navigate(location.pathname, { replace: true, state: {} });
         }
-    }, [location.state, products, navigate]);
+    }, [location.state, navigate]);
 
 
     useEffect(() => {
@@ -76,35 +98,45 @@ const NewSales = () => {
     }, [selectedProducts, amountPaid, discount]);
 
 
-    // --- SIMPLE SUCCESS HANDLER ---
-    // Jab modal se banda save ho jaye, toh yeh chalao
     const handlePersonAdded = (newPerson) => {
         setMessage(`Person Added: ${newPerson.name}`);
-        setSelectedPerson(newPerson.id); // Auto select
+        setSelectedPerson(newPerson.id); 
         setSearchPerson("");
-        
-        // Timeout to clear message
         setTimeout(() => setMessage(""), 3000);
     };
 
 
     const handleAddProduct = (product, batch, userEnteredQty, basePrice, priceType, unitMode, conversionRate, unitName) => {
-        // ... (Same Product Add Logic) ...
          setSelectedProducts(currentProducts => {
-            // ... Same logic
              const totalPieces = unitMode === 'secondary' ? Number(userEnteredQty) * Number(conversionRate) : Number(userEnteredQty);
              const displayPrice = unitMode === 'secondary' ? Number(basePrice) * Number(conversionRate) : Number(basePrice);
+             
              const existingProduct = currentProducts.find(p => p.id === product.id && p.batchCode === batch.batchCode);
              if (existingProduct) { alert("Already in list"); return currentProducts; }
+             
              if (batch.quantity > 0) {
-                return [...currentProducts, { ...product, batchCode: batch.batchCode, SellQuantity: totalPieces, purchasePrice: batch.purchasePrice, enteredQty: userEnteredQty, unitMode: unitMode || 'base', unitName: unitName || 'Pcs', conversionRate: conversionRate || 1, newSellPrice: displayPrice, discount: 0, priceUsedType: priceType, batchQuantity: batch.quantity, sellPrice: batch.sellPrice, wholeSalePrice: batch.wholeSalePrice }];
+                return [...currentProducts, { 
+                    ...product, 
+                    batchCode: batch.batchCode, 
+                    SellQuantity: totalPieces, 
+                    purchasePrice: batch.purchasePrice, 
+                    enteredQty: userEnteredQty, 
+                    unitMode: unitMode || 'base', 
+                    unitName: unitName || 'Pcs', 
+                    conversionRate: conversionRate || 1, 
+                    newSellPrice: displayPrice, 
+                    discount: 0, 
+                    priceUsedType: priceType, 
+                    batchQuantity: batch.quantity, 
+                    sellPrice: batch.sellPrice, 
+                    wholeSalePrice: batch.wholeSalePrice 
+                }];
              }
              return currentProducts; 
         });
     };
 
     const handleProductChange = (id, batchCode, field, value) => {
-        // ... (Same Logic) ...
         setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
@@ -121,7 +153,6 @@ const NewSales = () => {
     };
     
     const handleSellingPriceChange = (id, batchCode, value) => {
-        // ... (Same Discount Logic) ...
          setSelectedProducts(currentProducts => {
             return currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
@@ -171,7 +202,6 @@ const NewSales = () => {
     };
 
     const handleSaveSales = async () => {
-        // ... (Same Save Logic) ...
         if (!selectedPerson) { setMessage("Please add a person first."); return; }
         if (selectedProducts.length === 0) { setMessage("Please add at least one product."); return; }
         for (let p of selectedProducts) {
@@ -210,14 +240,17 @@ const NewSales = () => {
         await SaleContext.add(salesData);
 
         if (sourcePreorderId) {
-            const originalPreorder = preordersContext.preorders.find(p => p.id === sourcePreorderId);
-            if (originalPreorder) { await preordersContext.edit(sourcePreorderId, { ...originalPreorder, status: 'Delivered' }); }
+            // Updated to use array lookup
+            const originalPreorder = preorders.find(p => p.id === sourcePreorderId);
+            if (originalPreorder) { 
+                await editPreorder(sourcePreorderId, { ...originalPreorder, status: 'Delivered' }); 
+            }
         }
         
         if (isPrint.current) { return salesData; }
 
         // Reset
-        setSelectedPerson(""); setSearchPerson(""); setSelectedProducts([]); setPaymentMode("");
+        setSelectedPerson(""); setSearchPerson(""); setSelectedProducts([]); setPaymentMode("cash");
         setAmountPaid("0"); setDiscount(0); setCredit(0); setSourcePreorderId(null); 
         setGlobalPriceMode('sell'); setSalesRefNo(`SALE-${Math.floor(100000 + Math.random() * 900000)}`);
         setMessage("");
@@ -310,13 +343,11 @@ const NewSales = () => {
                 </div>
 
                 <div className="lg:w-1/4 lg:min-w-[300px] w-full">
-                    {/* ... (Payment UI - No changes needed here, keeping logic same) ... */}
                     <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
                         <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
                         <div className="mb-4">
                              <label className="text-sm font-semibold text-gray-600 mb-2 block">Payment Mode:</label>
                              <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)} className="select select-bordered w-full bg-white shadow-sm hover:border-blue-400 transition-colors">
-                                <option value="">Select Payment Mode</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
                                 <option value="bank">Bank</option>
@@ -360,7 +391,6 @@ const NewSales = () => {
                 />
             )}
 
-            {/* SUPER CLEAN USAGE */}
             <PeopleFormModal 
                 isVisible={showPeopleModal}
                 onClose={() => setShowPeopleModal(false)}
@@ -371,3 +401,5 @@ const NewSales = () => {
 };
 
 export default NewSales;
+
+

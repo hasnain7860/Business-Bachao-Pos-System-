@@ -5,13 +5,17 @@ import { FaPrint, FaSave } from "react-icons/fa";
 
 const SalesView = () => {
     const context = useAppContext();
-    const salesData = context?.SaleContext?.Sales || [];
-    const people = context?.peopleContext?.people || [];
-    const userAndBusinessDetail = context?.settingContext?.settings || [];
-    const allPurchases = context?.purchaseContext?.purchases || [];
-    const submittedRecords = context?.creditManagementContext?.submittedRecords || [];
-    const sellReturns = context?.SellReturnContext?.sellReturns || [];
-    const purchaseReturns = context?.purchaseReturnContext?.purchaseReturns || [];
+    
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // All Universal Stores return 'data'. 
+    // Accessing .Sales, .people, .settings etc will result in undefined.
+    const salesData = context?.SaleContext?.data || [];
+    const people = context?.peopleContext?.data || [];
+    const userAndBusinessDetail = context?.settingContext?.data || [];
+    const allPurchases = context?.purchaseContext?.data || [];
+    const submittedRecords = context?.creditManagementContext?.data || [];
+    const sellReturns = context?.SellReturnContext?.data || [];
+    const purchaseReturns = context?.purchaseReturnContext?.data || [];
 
     const { id } = useParams();
     const location = useLocation();
@@ -29,11 +33,13 @@ const SalesView = () => {
     const [saveMessage, setSaveMessage] = useState('');
 
     useEffect(() => {
-        if (salesData.length > 0 && sale) {
-            setLoading(false);
-            setNaqCount(sale.naq || ''); 
-        } else if (salesData.length > 0 && !sale) {
-            setLoading(false);
+        if (salesData.length > 0) {
+            if (sale) {
+                setLoading(false);
+                setNaqCount(sale.naq || ''); 
+            } else {
+                setLoading(false); // Sale not found but data loaded
+            }
         }
     }, [salesData, sale]);
 
@@ -41,19 +47,29 @@ const SalesView = () => {
         if (!person || !sale) {
             return { previousBalance: 0, netBalance: parseFloat(sale?.credit || 0) };
         }
+        
+        // 1. Total Receivable (Sales + Manual Credits)
         const totalSalesCredit = salesData.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
         const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const totalReceivable = totalSalesCredit + manualCredit;
+        
+        // 2. Total Reductions (Payments + Sales Returns)
         const manualPayments = submittedRecords.filter(r => r.personId === person.id && r.type === 'payment').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const sellReturnAdjustments = sellReturns.filter(r => r.peopleId === person.id || r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
         const totalReductions = manualPayments + sellReturnAdjustments;
+        
         const netReceivable = totalReceivable - totalReductions;
+        
+        // 3. Total Payable (Purchases - Purchase Returns)
         const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
         const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
         const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
+        
+        // 4. Final Math
         const totalCurrentBalance = netReceivable - netPayable;
         const currentSaleCredit = parseFloat(sale.credit || 0);
         const prevBalance = totalCurrentBalance - currentSaleCredit;
+        
         return { 
             previousBalance: prevBalance, 
             netBalance: totalCurrentBalance
@@ -148,7 +164,7 @@ const SalesView = () => {
                         border-top: 2px dashed #000 !important;
                     }
                     #navbar{
-                      display:none !imoortant;
+                      display:none !important;
                     }
                     body * { visibility: hidden !important; }
                     .print-container, .print-container * { visibility: visible !important; }
@@ -221,20 +237,15 @@ const SalesView = () => {
                                     // --- NEW LOGIC APPLIED HERE ---
                                     
                                     // 1. Qty Determination:
-                                    // Agar 'enteredQty' exist karta hai (New System), to woh use karein (e.g. 1 Carton).
-                                    // Agar nahi (Old System), to 'SellQuantity' (e.g. 12 Pcs) use karein.
                                     const displayQty = product.enteredQty || product.SellQuantity;
                                     
                                     // 2. Rate Determination:
-                                    // Rate wohi hoga jo product pe save hai (Carton ka Rate ya Piece ka Rate)
                                     const rate = parseFloat(product.newSellPrice || product.sellPrice);
                                     
                                     // 3. Unit Name:
-                                    // Agar unitName saved hai (e.g. Ctn) to show karein
                                     const unitLabel = product.unitName || '';
 
                                     // 4. Row Total:
-                                    // Simple math: Displayed Qty * Rate
                                     const rowTotal = rate * parseFloat(displayQty);
 
                                     return (

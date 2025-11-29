@@ -8,7 +8,7 @@ import { FaBroom, FaFileImport, FaAddressBook, FaDownload } from "react-icons/fa
 // --- Imported Components & Utils ---
 import PeopleFormModal from "../components/people/PeopleFormModal";
 import PersonCard from "../components/people/PersonCard";
-import { parseVcfFile, getPhoneContacts } from "../components/people/peopleImportUtils"; // <--- NEW IMPORT
+import { parseVcfFile, getPhoneContacts } from "../components/people/peopleImportUtils"; 
 
 const PEOPLE_CODE_KEY = "nextPeopleCode"; 
 
@@ -16,10 +16,30 @@ const People = () => {
   const context = useAppContext();
   const { peopleContext, areasContext, language, settingContext, creditManagementContext } = context;
   
-  const { people, add: addPerson, delete: deletePerson, edit: editPerson } = peopleContext;
-  const { submittedRecords, delete: deleteCreditRecord } = creditManagementContext;
-  const { areas } = areasContext;
-  const { selectedSetting, saveSetting } = settingContext; 
+  // --- CRITICAL FIXES FOR UNIVERSAL STORE MAPPING ---
+  
+  // 1. People: 'data' ko 'people' aur 'remove' ko 'delete' map kiya
+  const { data: people, add: addPerson, remove: deletePerson, edit: editPerson } = peopleContext;
+  
+  // 2. Credit: 'data' ko 'submittedRecords' map kiya
+  const { data: submittedRecords, remove: deleteCreditRecord } = creditManagementContext;
+  
+  // 3. Areas: 'data' ko 'areas' map kiya
+  const { data: areas } = areasContext;
+  
+  // 4. Settings: Universal Store raw data deta hai, hamein logic yahan handle karna padega
+  //    Assuming settings array ka pehla item hi main setting object hai.
+  const { data: settingsData, edit: editSetting, add: addSetting } = settingContext;
+  const selectedSetting = settingsData[0] || {}; 
+  
+  // Wrapper function to mimic old saveSetting behavior
+  const saveSetting = async (updatedSettings) => {
+    if (selectedSetting.id) {
+      await editSetting(selectedSetting.id, updatedSettings);
+    } else {
+      await addSetting(updatedSettings);
+    }
+  };
 
   const navigate = useNavigate();
 
@@ -72,9 +92,8 @@ const People = () => {
       setTimeout(() => setCodeMessage(""), 2000);
   };
 
-  // --- 3. Clean Import Handlers (Using Utils) ---
+  // --- 3. Clean Import Handlers ---
   
-  // Generic function to process a list of raw people and add them to DB
   const processAndAddPeople = async (rawPeopleList, sourceName) => {
     if (!rawPeopleList || rawPeopleList.length === 0) return;
 
@@ -105,7 +124,7 @@ const People = () => {
   const handleVcfUpload = async (e) => {
     try {
         const file = e.target.files[0];
-        const peopleList = await parseVcfFile(file); // Utility Call
+        const peopleList = await parseVcfFile(file); 
         await processAndAddPeople(peopleList, "VCF");
     } catch (error) {
         console.error(error);
@@ -115,7 +134,7 @@ const People = () => {
 
   const handlePhoneImport = async () => {
     try {
-        const contacts = await getPhoneContacts(); // Utility Call
+        const contacts = await getPhoneContacts(); 
         await processAndAddPeople(contacts, "Phone");
     } catch (error) {
         console.error(error);
@@ -245,5 +264,4 @@ const People = () => {
 };
 
 export default People;
-
 

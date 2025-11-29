@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../Appfullcontext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { Save, ArrowLeft, Search } from 'lucide-react';
+import { FaSave, FaArrowLeft, FaSearch } from 'react-icons/fa';
 
 const AddDamage = () => {
   const context = useAppContext();
   const navigate = useNavigate();
 
-  const products = context.productContext.products;
-  const units = context.unitContext.units;
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // 1. 'products' -> 'data'
+  // 2. 'units' -> 'data'
+  const products = context.productContext.data || [];
+  const units = context.unitContext.data || [];
+  
   const updateProduct = context.productContext.edit;
   const addDamage = context.damageContext.add;
 
@@ -19,7 +23,7 @@ const AddDamage = () => {
   const [selectedBatch, setSelectedBatch] = useState("");
   const [reason, setReason] = useState("");
   
-  // --- NEW: Unit & Qty States ---
+  // --- Unit & Qty States ---
   const [enteredQty, setEnteredQty] = useState(1);
   const [unitMode, setUnitMode] = useState('base'); // 'base' or 'secondary'
 
@@ -42,6 +46,8 @@ const AddDamage = () => {
 
   const getSelectedBatchDetails = () => {
       if(!selectedProduct || !selectedBatch) return null;
+      // Safety check for batchCode array
+      if (!selectedProduct.batchCode) return null;
       return selectedProduct.batchCode.find(b => b.batchCode === selectedBatch);
   };
 
@@ -56,6 +62,7 @@ const AddDamage = () => {
 
   // Calculate Max Qty in Display Unit
   const currentStockBase = batchDetails ? Number(batchDetails.quantity) : 0;
+  
   const maxQtyDisplay = unitMode === 'secondary' 
       ? Math.floor(currentStockBase / convRate) 
       : currentStockBase;
@@ -112,7 +119,7 @@ const AddDamage = () => {
   return (
     <div className="p-4 max-w-2xl mx-auto bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between mb-6">
-        <button onClick={() => navigate(-1)} className="btn btn-ghost gap-2"><ArrowLeft className="w-5 h-5" /> Back</button>
+        <button onClick={() => navigate(-1)} className="btn btn-ghost gap-2"><FaArrowLeft /> Back</button>
         <h1 className="text-2xl font-bold text-red-800">Report Damage</h1>
       </div>
 
@@ -137,14 +144,14 @@ const AddDamage = () => {
                         onChange={e => setSearchQuery(e.target.value)}
                         autoFocus
                     />
-                    <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                    <FaSearch className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
                 {searchQuery && (
                     <div className="border rounded mt-2 max-h-48 overflow-y-auto bg-white shadow-lg z-10">
                         {filteredProducts.map(p => (
                             <div key={p.id} onClick={() => handleSelectProduct(p)} className="p-3 hover:bg-blue-50 cursor-pointer border-b transition-colors">
                                 <div className="font-bold">{p.name}</div>
-                                <div className="text-xs text-gray-500">Stock: {p.batchCode?.reduce((a,b)=>a+Number(b.quantity),0)}</div>
+                                <div className="text-xs text-gray-500">Stock: {(p.batchCode || []).reduce((a,b)=>a+Number(b.quantity),0)}</div>
                             </div>
                         ))}
                     </div>
@@ -159,7 +166,7 @@ const AddDamage = () => {
                 <div className="mt-3">
                     <label className="text-xs font-bold uppercase text-blue-800 tracking-wide">Select Batch</label>
                     <select className="select select-bordered select-sm w-full mt-1 bg-white" value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)}>
-                        {selectedProduct.batchCode.map(b => (
+                        {(selectedProduct.batchCode || []).map(b => (
                             <option key={b.batchCode} value={b.batchCode}>{b.batchCode} (Base Qty: {b.quantity})</option>
                         ))}
                     </select>
@@ -225,7 +232,7 @@ const AddDamage = () => {
             onClick={handleSave} 
             disabled={!selectedProduct || enteredQty > maxQtyDisplay || enteredQty <= 0}
         >
-            <Save className="w-5 h-5" /> Confirm Damage Entry
+            <FaSave /> Confirm Damage Entry
         </button>
 
       </div>

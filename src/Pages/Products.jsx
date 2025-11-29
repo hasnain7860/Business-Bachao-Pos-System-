@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaEdit, FaTrashAlt, FaCopy, FaWarehouse } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import * as XLSX from 'xlsx';
-import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
 
@@ -13,12 +12,33 @@ const OPENING_STOCK_KEY = "isOpeningStockSet";
 const Products = () => {
     const context = useAppContext();
     const navigate = useNavigate();
-    
-    const products = context.productContext.products;
-    const { edit: editProduct, delete: handleDelete } = context.productContext;
-    const companies = context.companyContext.companies;
-    const { selectedSetting, saveSetting } = context.settingContext;
     const { language } = context;
+    
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    const { 
+        data: productsData, 
+        edit: editProduct, 
+        remove: removeProduct 
+    } = context.productContext;
+
+    const { data: companiesData } = context.companyContext;
+    
+    // Settings Logic Rewrite (Universal Store compatibility)
+    const { data: settingsData, add: addSetting, edit: editSetting } = context.settingContext;
+    const selectedSetting = settingsData[0] || {}; // Get first setting object
+    
+    // Wrapper for saveSetting
+    const saveSetting = async (updatedSettings) => {
+        if (selectedSetting.id) {
+            await editSetting(selectedSetting.id, updatedSettings);
+        } else {
+            await addSetting(updatedSettings);
+        }
+    };
+
+    // --- SAFETY CHECK ---
+    const products = productsData || [];
+    const companies = companiesData || [];
     
     const [selectedCompany, setSelectedCompany] = useState(""); 
     const [currentPage, setCurrentPage] = useState(1);
@@ -30,7 +50,7 @@ const Products = () => {
     const isOpeningStockSet = selectedSetting[OPENING_STOCK_KEY] === true;
 
     const calculateTotalStock = (batchCode) => {
-        if (!batchCode || batchCode.length === 0) {
+        if (!batchCode || !Array.isArray(batchCode) || batchCode.length === 0) {
             return 0;
         }
         return batchCode.reduce((total, batch) => total + Number(batch.quantity || 0), 0);
@@ -44,21 +64,20 @@ const Products = () => {
         
         setMessage("Initializing opening stock... Please wait.");
         let updatedCount = 0;
-        const currentDate = new Date().toISOString(); // Save the current timestamp
+        const currentDate = new Date().toISOString(); 
 
         for (const product of products) {
             let needsUpdate = false;
             
-            const updatedBatchCode = product.batchCode.map(batch => {
+            const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+
+            const updatedBatchCode = safeBatches.map(batch => {
                 // Only set if not already set
                 if (batch.openingStock === undefined || batch.openingStock === null) {
                     needsUpdate = true;
                     return {
                         ...batch,
-                        // Set current quantity as Opening
                         openingStock: Number(batch.quantity || 0), 
-                        // CRITICAL: Save WHEN we did this. 
-                        // Only transactions AFTER this date will be calculated in report columns
                         openingStockDate: currentDate,
                         damageQuantity: 0,
                     };
@@ -88,12 +107,10 @@ const Products = () => {
         await saveSetting(updatedSettings);
 
         setMessage(`Successfully initialized Opening Stock for ${updatedCount} products.`);
+        setTimeout(() => setMessage(""), 5000);
     };
-    // --- END UPDATED FUNCTION ---
 
-    // ... (Rest of your existing code for Filtering, Sorting, Pagination, Export, Render remains EXACTLY the same) ...
-    
-    // **Filtering Products Based on Search & Company**
+    // **Filtering Products**
     const filteredProducts = products.filter(product => 
         (selectedCompany ? product.companyId === selectedCompany : true) &&
         (searchTerm ? 
@@ -102,8 +119,7 @@ const Products = () => {
         : true)
     );
     
-
-    // Sorting Products Based on Total Stock
+    // Sorting Products
     const sortedProducts = filteredProducts.sort((a, b) => {
         const totalStockA = calculateTotalStock(a.batchCode);
         const totalStockB = calculateTotalStock(b.batchCode);
@@ -127,7 +143,7 @@ const Products = () => {
     };
 
     const renderBatchOptions = (batchCode) => {
-        if (!batchCode || batchCode.length === 0) {
+        if (!batchCode || !Array.isArray(batchCode) || batchCode.length === 0) {
             return <option value="">Batch Not Available</option>;
         }
         return batchCode.map((batch, index) => (
@@ -144,7 +160,7 @@ const Products = () => {
     }
 
     const renderPageNumbers = () => {
-        const maxPageNumbersToShow = 1;
+        const maxPageNumbersToShow = 5; // Increased for better UX
         const halfMaxPageNumbersToShow = Math.floor(maxPageNumbersToShow / 2);
         let startPage = Math.max(1, currentPage - halfMaxPageNumbersToShow);
         let endPage = Math.min(totalPages, currentPage + halfMaxPageNumbersToShow);
@@ -155,18 +171,16 @@ const Products = () => {
             startPage = Math.max(1, totalPages - maxPageNumbersToShow + 1);
         }
 
-        const pageNumbersToShow = pageNumbers.slice(startPage - 1, endPage);
+        const pageNumbersToShow = pageNumbers.slice(Math.max(0, startPage - 1), endPage);
 
         return (
             <>
                 {startPage > 1 && (
                     <>
                         <li className="page-item">
-                            <button onClick={() => paginate(1)} className="page-link btn btn-secondary">
-                                1
-                            </button>
+                            <button onClick={() => paginate(1)} className="page-link btn btn-secondary">1</button>
                         </li>
-                        {startPage > 2 && <li className="page-item">...</li>}
+                        {startPage > 2 && <li className="page-item px-2">...</li>}
                     </>
                 )}
                 {pageNumbersToShow.map((number) => (
@@ -181,11 +195,9 @@ const Products = () => {
                 ))}
                 {endPage < totalPages && (
                     <>
-                        {endPage < totalPages - 1 && <li className="page-item">...</li>}
+                        {endPage < totalPages - 1 && <li className="page-item px-2">...</li>}
                         <li className="page-item">
-                            <button onClick={() => paginate(totalPages)} className="page-link btn btn-secondary">
-                                {totalPages}
-                            </button>
+                            <button onClick={() => paginate(totalPages)} className="page-link btn btn-secondary">{totalPages}</button>
                         </li>
                     </>
                 )}
@@ -235,7 +247,6 @@ const Products = () => {
                 <h1 className="text-2xl font-semibold">{languageData[language].products}</h1>
             </div>
             
-            {/* Conditional Message Display */}
             {message && (
                 <div className={`mb-4 p-3 rounded-lg ${message.includes('Successfully') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                     {message}
@@ -244,19 +255,16 @@ const Products = () => {
 
 
             <div className={`flex flex-wrap items-center mb-4 ${language === 'ur' ? 'justify-end' : 'justify-start'} gap-4`}>
-                {/* Add Product Button */}
                 <Link to="/inventory/addProduct">
                     <button className="btn btn-primary">
                         {languageData[language].add_product}
                     </button>
                 </Link>
                 
-                {/* Export to Excel Button */}
                 <button onClick={exportToExcel} className="btn btn-secondary">
                     Export to Excel
                 </button>
                 
-                {/* --- Initialize Opening Stock Button --- */}
                 {!isOpeningStockSet && products.length > 0 && (
                     <button 
                         onClick={handleSetOpeningStock} 
@@ -269,13 +277,13 @@ const Products = () => {
             </div>
 
             {/* **Search Input & Filter** */}
-            <div className="flex items-center flex-col gap-4 mb-4">
+            <div className="flex items-center flex-col sm:flex-row gap-4 mb-4">
                 <input
                     type="text"
                     placeholder="Search Product..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="p-2 border rounded w-1/3"
+                    className="p-2 border rounded w-full sm:w-1/3"
                 />
                 <select
                     className="form-select p-2 border rounded"
@@ -303,47 +311,43 @@ const Products = () => {
             </div>
 
             {/* Products Table */}
-            <div className="overflow-x-auto mt-4">
+            <div className="overflow-x-auto mt-4 bg-white shadow rounded-lg">
                 <table className="table w-full table-auto border-collapse">
-                    <thead>
+                    <thead className="bg-gray-100">
                         <tr className={language === 'ur' ? 'text-right' : 'text-left'}>
                             {language === 'ur' ? (
                                 <>
-                                    <th className="p-2 border-b">Delete</th>
-                                    <th className="p-2 border-b">Edit</th>
-                                    <th className="p-2 border-b">Copy</th>
-                                    <th className="p-2 border-b">{languageData[language].retail_price}</th>
-                                    <th className="p-2 border-b">{languageData[language].sell_price}</th>
-                                    <th className="p-2 border-b">{languageData[language].purchase_price}</th>
-                                    <th className="p-2 border-b">total stock Price</th>
-                                    <th className="p-2 border-b">{languageData[language].batch_stock}</th>
-                                    <th className="p-2 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
+                                    <th className="p-3 border-b">Actions</th>
+                                    <th className="p-3 border-b">{languageData[language].retail_price}</th>
+                                    <th className="p-3 border-b">{languageData[language].sell_price}</th>
+                                    <th className="p-3 border-b">{languageData[language].purchase_price}</th>
+                                    <th className="p-3 border-b">Total Value</th>
+                                    <th className="p-3 border-b">{languageData[language].batch_stock}</th>
+                                    <th className="p-3 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
                                         {languageData[language].total_stock} {sortOrder === "asc" ? "↑" : "↓"}
                                     </th>
-                                    <th className="p-2 border-b">{languageData[language].image}</th>
-                                    <th className="p-2 border-b">{languageData[language].company}</th>
-                                    <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
-                                    <th className="p-2 border-b">{languageData[language].product_name}</th>
-                                    <th className="p-2 border-b">{languageData[language].no}</th>
+                                    <th className="p-3 border-b">{languageData[language].image}</th>
+                                    <th className="p-3 border-b">{languageData[language].company}</th>
+                                    <th className="p-3 border-b">{languageData[language].product_name_in_urdu}</th>
+                                    <th className="p-3 border-b">{languageData[language].product_name}</th>
+                                    <th className="p-3 border-b">#</th>
                                 </>
                             ) : (
                                 <>
-                                    <th className="p-2 border-b">{languageData[language].no}</th>
-                                    <th className="p-2 border-b">{languageData[language].product_name}</th>
-                                    <th className="p-2 border-b">{languageData[language].product_name_in_urdu}</th>
-                                    <th className="p-2 border-b">{languageData[language].company}</th>
-                                    <th className="p-2 border-b">{languageData[language].image}</th>
-                                    <th className="p-2 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
+                                    <th className="p-3 border-b">#</th>
+                                    <th className="p-3 border-b">{languageData[language].product_name}</th>
+                                    <th className="p-3 border-b">{languageData[language].product_name_in_urdu}</th>
+                                    <th className="p-3 border-b">{languageData[language].company}</th>
+                                    <th className="p-3 border-b">{languageData[language].image}</th>
+                                    <th className="p-3 border-b" onClick={handleSort} style={{ cursor: 'pointer' }}>
                                         {languageData[language].total_stock} {sortOrder === "asc" ? "↑" : "↓"}
                                     </th>
-                                    <th className="p-2 border-b">{languageData[language].batch_stock}</th>
-                                    <th className="p-2 border-b">total stock Price</th>
-                                    <th className="p-2 border-b">{languageData[language].purchase_price}</th>
-                                    <th className="p-2 border-b">{languageData[language].sell_price}</th>
-                                    <th className="p-2 border-b">{languageData[language].retail_price}</th>
-                                    <th className="p-2 border-b">Copy</th>
-                                    <th className="p-2 border-b">Edit</th>
-                                    <th className="p-2 border-b">Delete</th>
+                                    <th className="p-3 border-b">{languageData[language].batch_stock}</th>
+                                    <th className="p-3 border-b">Total Value</th>
+                                    <th className="p-3 border-b">{languageData[language].purchase_price}</th>
+                                    <th className="p-3 border-b">{languageData[language].sell_price}</th>
+                                    <th className="p-3 border-b">{languageData[language].retail_price}</th>
+                                    <th className="p-3 border-b">Actions</th>
                                 </>
                             )}
                         </tr>
@@ -351,133 +355,73 @@ const Products = () => {
                     <tbody>
                         {products && currentProducts.map((product, l) => {
                             const batchIndex = selectedBatch[product.id] || 0;
-                            const batch = product.batchCode?.[batchIndex] || {};
-                            const totalStock = calculateTotalStock(product.batchCode);
-                            const totalstockprice = product?.batchCode?.reduce((total, batch) => {
-                                const quantity = Number(batch.quantity || 0);
-                                const purchasePrice = Number(batch.purchasePrice || 0);
-                                
-                                if (isNaN(quantity) || isNaN(purchasePrice)) {
-                                    return total;
-                                }
-                                
+                            const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+                            const batch = safeBatches[batchIndex] || {};
+                            const totalStock = calculateTotalStock(safeBatches);
+                            const totalstockprice = safeBatches.reduce((total, b) => {
+                                const quantity = Number(b.quantity || 0);
+                                const purchasePrice = Number(b.purchasePrice || 0);
                                 return total + (quantity * purchasePrice);
                             }, 0) || 0;
+
                              return (
-                                <tr key={product.id} className="hover:bg-gray-100">
+                                <tr key={product.id} className="hover:bg-gray-50 border-b">
                                     {language === 'ur' ? (
                                         <>
-                                            <td className="p-2 border-b">
-                                                <button
-                                                    onClick={() => {
-                                                        console.log(`${languageData[language].areYouSureDelete} - Product: ${product.name}`);
-                                                        handleDelete(product.id)
-                                                    }}
-                                                    className="btn btn-danger"
-                                                >
-                                                    <FaTrashAlt />
-                                                </button>
+                                            <td className="p-2 flex gap-1 justify-end">
+                                                <button onClick={() => { if(window.confirm(languageData[language].areYouSureDelete)) removeProduct(product.id) }} className="btn btn-xs btn-error text-white"><FaTrashAlt /></button>
+                                                <Link to={`/inventory/edit-product/${product.id}`}><button className="btn btn-xs btn-warning text-white"><FaEdit /></button></Link>
+                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}><button className="btn btn-xs btn-info text-white"><FaCopy /></button></Link>
                                             </td>
-                                            <td className="p-2 border-b">
-                                                <Link to={`/inventory/edit-product/${product.id}`}>
-                                                    <button className="btn btn-warning">
-                                                        <FaEdit />
-                                                    </button>
-                                                </Link>
-                                            </td>
-                                            <td className="p-2 border-b">
-                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
-                                                    <button className="btn btn-info">       
-                                                        <FaCopy />
-                                                    </button>
-                                                </Link>
-                                            </td>
-                                            <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
+                                            <td className="p-2">{batch.retailPrice || '-'}</td>
+                                            <td className="p-2">{batch.sellPrice || '-'}</td>
+                                            <td className="p-2">{batch.purchasePrice || '-'}</td>
+                                            <td className="p-2 font-mono">{totalstockprice.toFixed(0)}</td>
                                             
-                                            <td className="p-2 border-b">
-                                                <select
-                                                    onChange={(e) => handleBatchChange(product.id, e.target.value)}
-                                                    value={batchIndex}
-                                                    className="form-select"
-                                                >
-                                                    {renderBatchOptions(product.batchCode)}
+                                            <td className="p-2">
+                                                <select onChange={(e) => handleBatchChange(product.id, e.target.value)} value={batchIndex} className="select select-bordered select-xs w-full max-w-[120px] mb-1">
+                                                    {renderBatchOptions(safeBatches)}
                                                 </select>
-                                                <div>{batch.quantity || languageData[language].batch_not_available}</div>
+                                                <div className="text-xs font-bold text-blue-600">{batch.quantity || 0}</div>
                                             </td>
-                                            <td className="p-2 border-b">{totalStock}</td>
-                                            <td className="p-2 border-b">
+                                            <td className="p-2 font-bold">{totalStock}</td>
+                                            <td className="p-2">
                                                 {product.productImage ? (
                                                     <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover rounded" />
-                                                ) : (
-                                                    <div className="w-10 h-10 flex items-center justify-center bg-gray-200 rounded">
-                                                        <span className="text-gray-500">🛒</span>
-                                                    </div>
-                                                )}
+                                                ) : <span className="text-2xl">📦</span>}
                                             </td>
-                                            <td className="p-2 border-b">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
-                                            <td className="p-2 border-b">{product.nameInUrdu}</td>
-                                            <td className="p-2 border-b">{product.name}</td>
-                                            <td className="p-2 border-b">{l + 1}</td>
+                                            <td className="p-2">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
+                                            <td className="p-2 font-urdu">{product.nameInUrdu}</td>
+                                            <td className="p-2 font-bold">{product.name}</td>
+                                            <td className="p-2">{l + 1 + indexOfFirstProduct}</td>
                                         </>
                                     ) : (
                                         <>
-                                            <td className="p-2 border-b">{l + 1}</td>
-                                            <td className="p-2 border-b">{product.name}</td>
-                                            <td className="p-2 border-b">{product.nameInUrdu}</td>
-                                            <td className="p-2 border-b">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
-                                            <td className="p-2 border-b">
+                                            <td className="p-2">{l + 1 + indexOfFirstProduct}</td>
+                                            <td className="p-2 font-bold">{product.name}</td>
+                                            <td className="p-2 font-urdu">{product.nameInUrdu}</td>
+                                            <td className="p-2">{companies.find((c) => c.id == product.companyId)?.name || "N/A"}</td>
+                                            <td className="p-2">
                                                 {product.productImage ? (
                                                     <img src={product.productImage} alt={product.name} className="w-10 h-10 object-cover rounded" />
-                                                ) : (
-                                                    <div className="w-10 h-10 flex items-center justify-center bg-gray-200 rounded">
-                                                        <span className="text-gray-500">🛒</span>
-                                                    </div>
-                                                )}
+                                                ) : <span className="text-2xl">📦</span>}
                                             </td>
-                                            <td className="p-2 border-b">{totalStock}</td>
-                                            <td className="p-2 border-b">
-                                                <select
-                                                    onChange={(e) => handleBatchChange(product.id, e.target.value)}
-                                                    value={batchIndex}
-                                                    className="form-select"
-                                                >
-                                                    {renderBatchOptions(product.batchCode)}
+                                            <td className="p-2 font-bold">{totalStock}</td>
+                                            <td className="p-2">
+                                                <select onChange={(e) => handleBatchChange(product.id, e.target.value)} value={batchIndex} className="select select-bordered select-xs w-full max-w-[120px] mb-1">
+                                                    {renderBatchOptions(safeBatches)}
                                                 </select>
-                                                <div>{batch.quantity || languageData[language].batch_not_available}</div>
+                                                <div className="text-xs font-bold text-blue-600">{batch.quantity || 0}</div>
                                             </td>
-                                            <td className="p-2 border-b">{totalstockprice.toFixed(2)}</td>
-                                            <td className="p-2 border-b">{batch.purchasePrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{batch.sellPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">{batch.retailPrice || <span className="text-gray-500">{languageData[language].not_available}</span>}</td>
-                                            <td className="p-2 border-b">
-                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}>   
-                                                    <button className="btn btn-info">       
-                                                        <FaCopy />
-                                                    </button>
-                                                </Link>
+                                            <td className="p-2 font-mono">{totalstockprice.toFixed(0)}</td>
+                                            <td className="p-2">{batch.purchasePrice || '-'}</td>
+                                            <td className="p-2">{batch.sellPrice || '-'}</td>
+                                            <td className="p-2">{batch.retailPrice || '-'}</td>
+                                            <td className="p-2 flex gap-1">
+                                                <Link to={`/inventory/addProduct/${product.id}?copy=true`}><button className="btn btn-xs btn-info text-white" title="Copy"><FaCopy /></button></Link>
+                                                <Link to={`/inventory/edit-product/${product.id}`}><button className="btn btn-xs btn-warning text-white" title="Edit"><FaEdit /></button></Link>
+                                                <button onClick={() => { if(window.confirm(languageData[language].areYouSureDelete)) removeProduct(product.id) }} className="btn btn-xs btn-error text-white" title="Delete"><FaTrashAlt /></button>
                                             </td>
-                                            <td className="p-2 border-b">
-                                                <Link to={`/inventory/edit-product/${product.id}`}>
-                                                    <button className="btn btn-warning">
-                                                        <FaEdit />
-                                                    </button>
-                                                </Link>
-                                            </td>
-                                            <td className="p-2 border-b">
-                                                <button
-                                                    onClick={() => {
-                                                        console.log(`${languageData[language].areYouSureDelete} - Product: ${product.name}`);
-                                                        handleDelete(product.id)
-                                                    }}
-                                                    className="btn btn-danger"
-                                                >
-                                                    <FaTrashAlt />
-                                                </button>
-                                            </td>
-                                        
                                         </>
                                     )}
                                 </tr>
@@ -488,35 +432,36 @@ const Products = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex justify-center mt-4">
-                <nav>
-                    <ul className="pagination flex space-x-2">
-                        <li className="page-item">
-                            <button
-                                onClick={() => paginate(currentPage - 1)}
-                                className="page-link btn btn-secondary"
-                                disabled={currentPage === 1}
-                            >
-                                Previous
-                            </button>
-                        </li>
-                        {renderPageNumbers()}
-                        <li className="page-item">
-                            <button
-                                onClick={() => paginate(currentPage + 1)}
-                                className="page-link btn btn-secondary"
-                                disabled={currentPage === totalPages}
-                            >
-                                Next
-                            </button>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
+            {totalPages > 1 && (
+                <div className="flex justify-center mt-6">
+                    <nav>
+                        <ul className="pagination flex space-x-2 items-center">
+                            <li className="page-item">
+                                <button
+                                    onClick={() => paginate(currentPage - 1)}
+                                    className="btn btn-sm btn-outline"
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </button>
+                            </li>
+                            {renderPageNumbers()}
+                            <li className="page-item">
+                                <button
+                                    onClick={() => paginate(currentPage + 1)}
+                                    className="btn btn-sm btn-outline"
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            )}
         </div>
     );
 };
 
 export default Products;
-
 

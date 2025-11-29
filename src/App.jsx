@@ -24,7 +24,7 @@ import AddProduct from "./Pages/AddProduct.jsx";
 import Products from "./Pages/Products.jsx";
 import Purchases from "./Pages/Purchases.jsx";
 import NewPurchases from "./Pages/NewPurchases.jsx";
-import DataSync from "./Pages/DataSync.jsx";
+
 import Sales from "./Pages/Sales.jsx";
 import EditSale from "./Pages/EditSale.jsx"
 import Reports from './Pages/reports.jsx'
@@ -500,16 +500,7 @@ function App() {
                     }
                 />
 
-                <Route
-                    path="/data"
-                    element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <DataSync />
-                            </Layout>
-                        </ProtectedRoute>
-                    }
-                />
+
             </Routes>
         </Router>
     );

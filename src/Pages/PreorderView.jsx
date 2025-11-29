@@ -5,10 +5,16 @@ import { FaPrint } from "react-icons/fa";
 
 const PreorderView = () => {
     const context = useAppContext();
-    const preordersData = context?.preordersContext?.preorders || [];
-    const people = context?.peopleContext?.people || [];
-    const areas = context?.areasContext?.areas || [];
-    const userAndBusinessDetail = context?.settingContext?.settings || [];
+    
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. 'preorders' -> 'data'
+    // 2. 'people' -> 'data'
+    // 3. 'areas' -> 'data'
+    // 4. 'settings' -> 'data'
+    const preordersData = context?.preordersContext?.data || [];
+    const people = context?.peopleContext?.data || [];
+    const areas = context?.areasContext?.data || [];
+    const userAndBusinessDetail = context?.settingContext?.data || [];
 
     const { id } = useParams();
     const location = useLocation();
@@ -18,16 +24,17 @@ const PreorderView = () => {
 
     // --- Data Fetching ---
     const preorder = useMemo(() => {
+        if (!preordersData) return null;
         return preordersData.find((p) => p.id === id) || null;
     }, [preordersData, id]);
 
     const person = useMemo(() => {
-        if (!preorder) return null;
+        if (!preorder || !people) return null;
         return people.find((p) => p.id === preorder.personId) || null;
     }, [preorder, people]);
     
     const area = useMemo(() => {
-        if (!preorder) return null;
+        if (!preorder || !areas) return null;
         return areas.find((a) => a.id === preorder.areaId) || null;
     }, [preorder, areas]);
 
@@ -36,12 +43,10 @@ const PreorderView = () => {
 
     // --- Loading Effect ---
     useEffect(() => {
-        if (preordersData.length > 0 && preorder) {
-            setLoading(false);
-        } else if (preordersData.length > 0 && !preorder) {
-            setLoading(false);
+        if (preordersData.length > 0) {
+            setLoading(false); // Data loaded, stop spinner regardless of result
         }
-    }, [preordersData, preorder]);
+    }, [preordersData]);
 
     // --- Print Effect ---
     useEffect(() => {
@@ -162,10 +167,10 @@ const PreorderView = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {preorder.products.length > 0 ? (
+                            {preorder.products && preorder.products.length > 0 ? (
                                 preorder.products.map((product, index) => {
                                     
-                                    // --- LOGIC UPDATE: Use 'enteredQty' if available (New System) ---
+                                    // Logic Update: Use 'enteredQty' if available (New System)
                                     const displayQty = product.enteredQty || product.SellQuantity;
                                     const unitLabel = product.unitName || '';
                                     const rate = parseFloat(product.newSellPrice || 0);

@@ -1,24 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { useAppContext } from '../../Appfullcontext.jsx'; // Context connect kar diya
+import { useAppContext } from '../../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
-import languageData from "../../assets/languageData.json"; // Direct import
+import languageData from "../../assets/languageData.json";
 
 const PEOPLE_CODE_KEY = "nextPeopleCode"; 
 
 const PeopleFormModal = ({ 
   isVisible, 
   onClose, 
-  onSuccess, // Callback jab banda save ho jaye
-  initialData // Sirf Edit case ke liye
+  onSuccess, 
+  initialData 
 }) => {
   
-  // --- INTERNAL CONTEXT CONNECTION ---
-  // Ab parent ko yeh data pass karnay ki zaroorat nahi
   const context = useAppContext();
   const { peopleContext, areasContext, language, settingContext } = context;
+  
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // Pehle ye direct functions thay, ab ye store object hain
   const { add: addPerson, edit: editPerson } = peopleContext;
-  const { areas } = areasContext;
-  const { selectedSetting, saveSetting } = settingContext;
+  
+  // Area Context ab { data: [...] } hai, direct array nahi
+  const { data: areas } = areasContext; 
+
+  // Setting Context ab raw CRUD hai. Hamein logic yahan handle karni padegi.
+  const { data: settingsData, add: addSetting, edit: editSetting } = settingContext;
+  const selectedSetting = settingsData[0] || {}; // Assume first item is the setting
+
+  // Wrapper helper to handle settings update
+  const saveSetting = async (newSettings) => {
+    if (selectedSetting.id) {
+      await editSetting(selectedSetting.id, newSettings);
+    } else {
+      await addSetting(newSettings);
+    }
+  };
 
   const isCodeSystemActive = selectedSetting.peopleAllcode === true;
   const nextCode = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
@@ -72,7 +87,6 @@ const PeopleFormModal = ({
     reader.readAsDataURL(file);
   };
 
-  // --- MAIN LOGIC MOVED INSIDE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -93,7 +107,7 @@ const PeopleFormModal = ({
                 const currentNextCode = nextCode; 
                 finalData.code = currentNextCode; 
 
-                // Update Settings Internally
+                // Optimistic UI update for settings
                 const updatedCodeSetting = {
                     ...selectedSetting,
                     [PEOPLE_CODE_KEY]: currentNextCode + 1,
@@ -106,12 +120,8 @@ const PeopleFormModal = ({
             await addPerson(finalData);
         }
 
-        // Parent ko batao ke kaam ho gaya aur naya data ye hai
-        if (onSuccess) {
-            onSuccess(finalData);
-        }
-
-        onClose(); // Modal band karo
+        if (onSuccess) onSuccess(finalData);
+        onClose(); 
     } catch (err) {
         console.error("Error saving person", err);
         setError("Failed to save. Check console.");
@@ -124,7 +134,7 @@ const PeopleFormModal = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
-      <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`}>
+      <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`} dir={language === "ur" ? "rtl" : "ltr"}>
         
         <h2 className="text-xl font-bold mb-4">
           {isEditingMode ? languageData[language].edit_person : languageData[language].add_person}
@@ -139,9 +149,9 @@ const PeopleFormModal = ({
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
             
-            {/* Logic handled internally now */}
+            {/* System Code Display */}
             {isEditingMode && formData.code && (
-                <div className="p-3 bg-gray-100 rounded-lg">
+                <div className="p-3 bg-gray-100 rounded-lg flex justify-between items-center">
                     <label className="block font-bold text-xs text-gray-500">System Code</label>
                     <div className="font-mono text-lg font-bold text-blue-600">P-{formData.code}</div>
                 </div>
@@ -206,3 +216,4 @@ const PeopleFormModal = ({
 };
 
 export default PeopleFormModal;
+

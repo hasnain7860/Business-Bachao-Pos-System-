@@ -5,9 +5,15 @@ import languageData from '../../assets/languageData.json';
 
 const PreorderHeader = ({ preorderRefNo, selectedCustomer, setSelectedCustomer, selectedArea, setSelectedArea }) => {
     const navigate = useNavigate();
-    const { customersContext, areasContext, language } = useAppContext();
-    const customers = customersContext.customers || [];
-    const areas = areasContext.areas || [];
+    const context = useAppContext();
+    const { language } = context;
+
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. 'customers' are in 'peopleContext.data'
+    // 2. 'areas' are in 'areasContext.data'
+    const customers = context.peopleContext.data || [];
+    const areas = context.areasContext.data || [];
+    
     const [searchTerm, setSearchTerm] = useState("");
 
     const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
@@ -16,18 +22,18 @@ const PreorderHeader = ({ preorderRefNo, selectedCustomer, setSelectedCustomer, 
         <div className="grid md:grid-cols-3 gap-4">
             {/* Preorder Reference */}
             <div className="bg-white rounded-lg p-4 shadow">
-                <label className="text-sm font-semibold text-gray-600">{languageData[language].preorder_ref_no}</label>
+                <label className="text-sm font-semibold text-gray-600">{languageData[language].preorder_ref_no || 'Ref No'}</label>
                 <input type="text" value={preorderRefNo} readOnly className="input input-bordered w-full bg-gray-50 mt-1" />
             </div>
 
             {/* Customer Selection */}
             <div className="bg-white rounded-lg p-4 shadow">
-                <label className="text-sm font-semibold text-gray-600">{languageData[language].customer_name}</label>
+                <label className="text-sm font-semibold text-gray-600">{languageData[language].customer_name || 'Customer'}</label>
                  {selectedCustomer ? (
                     <div className="mt-1">
                         <input type="text" value={selectedCustomerData?.name || ''} readOnly className="input input-bordered w-full" />
                         <button type="button" onClick={() => setSelectedCustomer("")} className="btn btn-sm btn-ghost text-red-500 mt-1">
-                            {languageData[language].change}
+                            {languageData[language].change || 'Change'}
                         </button>
                     </div>
                 ) : (
@@ -36,7 +42,7 @@ const PreorderHeader = ({ preorderRefNo, selectedCustomer, setSelectedCustomer, 
                             type="text"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            placeholder={languageData[language].search_placeholder}
+                            placeholder={languageData[language].search_placeholder || 'Search...'}
                             className="input input-bordered w-full"
                         />
                         {searchTerm && (
@@ -47,7 +53,7 @@ const PreorderHeader = ({ preorderRefNo, selectedCustomer, setSelectedCustomer, 
                                         <div key={customer.id} className="p-2 hover:bg-gray-100 cursor-pointer"
                                             onClick={() => {
                                                 setSelectedCustomer(customer.id);
-                                                setSelectedArea(customer.areaId); // Automatically select customer's area
+                                                if(customer.areaId) setSelectedArea(customer.areaId); // Automatically select customer's area
                                                 setSearchTerm("");
                                             }}>
                                             <span>{customer.name}</span>
@@ -61,14 +67,14 @@ const PreorderHeader = ({ preorderRefNo, selectedCustomer, setSelectedCustomer, 
             
             {/* Area Selection */}
             <div className="bg-white rounded-lg p-4 shadow">
-                <label className="text-sm font-semibold text-gray-600">{languageData[language].area}</label>
+                <label className="text-sm font-semibold text-gray-600">{languageData[language].area || 'Area'}</label>
                 <select 
                     value={selectedArea}
                     onChange={(e) => setSelectedArea(e.target.value)}
                     className="select select-bordered w-full mt-1"
                     required
                 >
-                    <option value="">{languageData[language].select_area}</option>
+                    <option value="">{languageData[language].select_area || 'Select Area'}</option>
                     {areas.map(area => (
                         <option key={area.id} value={area.id}>{area.name}</option>
                     ))}

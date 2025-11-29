@@ -7,15 +7,18 @@ import { v4 as uuidv4 } from 'uuid';
 const DamageList = () => {
   const context = useAppContext();
   
-  // Context Data
-  const damages = context.damageContext.damages || [];
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // 1. All stores return 'data'
+  // 2. Delete action is 'remove'
+  const damages = context.damageContext.data || [];
   const updateDamage = context.damageContext.edit;
-  const deleteDamage = context.damageContext.delete;
-  const products = context.productContext.products; 
-  const updateProduct = context.productContext.edit;
-  const units = context.unitContext.units; // Units for display names
+  const deleteDamage = context.damageContext.remove; 
   
-  const suppliers = context.peopleContext.people; 
+  const products = context.productContext.data || []; 
+  const updateProduct = context.productContext.edit;
+  const units = context.unitContext.data || []; 
+  
+  const suppliers = context.peopleContext.data || []; 
   const addTransaction = context.creditManagementContext.add; 
 
   // Modal State
@@ -60,9 +63,11 @@ const DamageList = () => {
     if (dmg.status === 'Pending') {
         const product = products.find(p => p.id === dmg.productId);
         if (product) {
-            const updatedBatchCode = product.batchCode.map(b => {
+            // Safety check for batchCode array
+            const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+            const updatedBatchCode = safeBatches.map(b => {
                 if(b.batchCode === dmg.batchCode) {
-                    return { ...b, quantity: Number(b.quantity) + Number(dmg.quantity) };
+                    return { ...b, quantity: Number(b.quantity || 0) + Number(dmg.quantity) };
                 }
                 return b;
             });
@@ -110,9 +115,10 @@ const DamageList = () => {
     else if (resolutionType === 'replace') {
         const product = products.find(p => p.id === selectedDamage.productId);
         if (product) {
-            const updatedBatchCode = product.batchCode.map(b => {
+            const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+            const updatedBatchCode = safeBatches.map(b => {
                 if(b.batchCode === selectedDamage.batchCode) {
-                    return { ...b, quantity: Number(b.quantity) + Number(selectedDamage.quantity) };
+                    return { ...b, quantity: Number(b.quantity || 0) + Number(selectedDamage.quantity) };
                 }
                 return b;
             });
@@ -173,70 +179,71 @@ const DamageList = () => {
                 </tr>
             </thead>
             <tbody>
-                {damages.map(dmg => (
-                    <tr key={dmg.id} className="hover:bg-gray-50 transition-colors">
-                        <td>
-                            <div className="font-bold text-gray-700">{new Date(dmg.date).toLocaleDateString()}</div>
-                            <div className="font-mono text-xs text-gray-400">{dmg.refNo}</div>
-                        </td>
-                        <td>
-                            <div className="font-bold text-gray-800">{dmg.productName}</div>
-                            <div className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit mt-1">Batch: {dmg.batchCode}</div>
-                        </td>
-                        <td>
-                            {/* SMART UNIT DISPLAY */}
-                            <div className="font-bold text-blue-700">
-                                {formatDisplayQty(dmg.productId, dmg.quantity)}
-                            </div>
-                        </td>
-                        <td className="font-mono font-bold text-red-600">
-                            {Number(dmg.purchasePrice || 0) * Number(dmg.quantity || 0)}
-                        </td>
-                        <td>
-                            <span className={`badge ${dmg.status === 'Pending' ? 'badge-warning text-white' : 'badge-success text-white'} font-bold`}>
-                                {dmg.status}
-                            </span>
-                        </td>
-                        <td className="text-sm max-w-xs">
-                            {dmg.resolution ? (
-                                <div className="flex flex-col">
-                                    <span className={`uppercase font-bold text-[10px] px-1 rounded w-fit ${
-                                        dmg.resolution === 'loss' ? 'bg-red-100 text-red-700' : 
-                                        dmg.resolution === 'refund' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                        {dmg.resolution}
-                                    </span>
-                                    <span className="text-xs text-gray-500 truncate block mt-1" title={dmg.resolutionNote}>
-                                        {dmg.resolutionNote}
-                                    </span>
+                {damages.length > 0 ? (
+                    damages.map(dmg => (
+                        <tr key={dmg.id} className="hover:bg-gray-50 transition-colors">
+                            <td>
+                                <div className="font-bold text-gray-700">{new Date(dmg.date).toLocaleDateString()}</div>
+                                <div className="font-mono text-xs text-gray-400">{dmg.refNo}</div>
+                            </td>
+                            <td>
+                                <div className="font-bold text-gray-800">{dmg.productName}</div>
+                                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit mt-1">Batch: {dmg.batchCode}</div>
+                            </td>
+                            <td>
+                                {/* SMART UNIT DISPLAY */}
+                                <div className="font-bold text-blue-700">
+                                    {formatDisplayQty(dmg.productId, dmg.quantity)}
                                 </div>
-                            ) : (
-                                <span className="text-gray-300 text-xs italic">-- Pending --</span>
-                            )}
-                        </td>
-                        <td>
-                            <div className="flex items-center justify-center gap-2">
-                                {dmg.status === 'Pending' && (
-                                    <button 
-                                        className="btn btn-xs btn-outline btn-primary gap-1"
-                                        onClick={() => openModal(dmg)}
-                                        title="Resolve Issue"
-                                    >
-                                        <CheckSquare className="w-3 h-3" /> Resolve
-                                    </button>
+                            </td>
+                            <td className="font-mono font-bold text-red-600">
+                                {Number(dmg.purchasePrice || 0) * Number(dmg.quantity || 0)}
+                            </td>
+                            <td>
+                                <span className={`badge ${dmg.status === 'Pending' ? 'badge-warning text-white' : 'badge-success text-white'} font-bold`}>
+                                    {dmg.status}
+                                </span>
+                            </td>
+                            <td className="text-sm max-w-xs">
+                                {dmg.resolution ? (
+                                    <div className="flex flex-col">
+                                        <span className={`uppercase font-bold text-[10px] px-1 rounded w-fit ${
+                                            dmg.resolution === 'loss' ? 'bg-red-100 text-red-700' : 
+                                            dmg.resolution === 'refund' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                            {dmg.resolution}
+                                        </span>
+                                        <span className="text-xs text-gray-500 truncate block mt-1" title={dmg.resolutionNote}>
+                                            {dmg.resolutionNote}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-gray-300 text-xs italic">-- Pending --</span>
                                 )}
-                                <button 
-                                    className="btn btn-xs btn-ghost text-red-400 hover:bg-red-50 hover:text-red-600"
-                                    onClick={() => handleDelete(dmg)}
-                                    title="Delete Record"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-                {damages.length === 0 && (
+                            </td>
+                            <td>
+                                <div className="flex items-center justify-center gap-2">
+                                    {dmg.status === 'Pending' && (
+                                        <button 
+                                            className="btn btn-xs btn-outline btn-primary gap-1"
+                                            onClick={() => openModal(dmg)}
+                                            title="Resolve Issue"
+                                        >
+                                            <CheckSquare className="w-3 h-3" /> Resolve
+                                        </button>
+                                    )}
+                                    <button 
+                                        className="btn btn-xs btn-ghost text-red-400 hover:bg-red-50 hover:text-red-600"
+                                        onClick={() => handleDelete(dmg)}
+                                        title="Delete Record"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))
+                ) : (
                     <tr>
                         <td colSpan="7" className="text-center py-10 text-gray-400 bg-gray-50">
                             <div className="flex flex-col items-center">

@@ -10,13 +10,17 @@ import ProductSearch from "../components/element/ProductSearch.jsx";
 
 const NewPurchases = () => {
     const context = useAppContext();
+    const navigate = useNavigate();
 
-    const peoples = context.peopleContext.people;
-    const products = context.productContext.products;
-    const units = context.unitContext.units;
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. Map .data to your variables
+    const peoples = context.peopleContext.data || [];
+    const products = context.productContext.data || [];
+    const units = context.unitContext.data || [];
+    
+    // 2. Map actions
     const updateProduct = context.productContext.edit;
     const addPurchase = context.purchaseContext.add;
-    const navigate = useNavigate();
 
     // States
     const [selectedPeople, setselectedPeople] = useState('');
@@ -72,7 +76,7 @@ const NewPurchases = () => {
             secUnitName: secUnitName,
             conversionRate: hasSecondary ? Number(product.conversionRate) : 1,
             
-            enteredQty: 0, // Start empty so user types
+            enteredQty: 0, 
             enteredPurchasePrice: batchInfo.purchasePrice || 0,
 
             sellPrice: batchInfo.sellPrice || 0,
@@ -190,7 +194,7 @@ const NewPurchases = () => {
         setTotalPayment(newPayment);
     };
 
-    const handleAddPurchase = () => {
+    const handleAddPurchase = async () => {
         if (!selectedPeople) { alert("Please select a supplier."); return; }
         if (!currentDate) { alert("Please select a purchase date."); return; }
         if (selectedProducts.length === 0) { alert("Please add at least one product."); return; }
@@ -203,7 +207,8 @@ const NewPurchases = () => {
 
         const autoInitDate = new Date(0).toISOString(); 
 
-        selectedProducts.forEach((product) => {
+        // Update Stock Logic
+        for (const product of selectedProducts) {
             const existingProduct = products.find((p) => p.id === product.id);
             if (existingProduct) {
                 let batches = existingProduct.batchCode ? [...existingProduct.batchCode] : [];
@@ -238,9 +243,9 @@ const NewPurchases = () => {
                     };
                     batches.push(newBatch);
                 }
-                updateProduct(product.id, { ...existingProduct, batchCode: batches });
+                await updateProduct(product.id, { ...existingProduct, batchCode: batches });
             }
-        });
+        }
 
         const newPurchase = {
             id: uuidv4(),
@@ -267,10 +272,11 @@ const NewPurchases = () => {
             totalBill: calculateTotalBill(),
         };
 
-        addPurchase(newPurchase);
+        await addPurchase(newPurchase);
         setSelectedProducts([]);
         setTotalPayment(0);
         alert('Purchase added successfully!');
+        navigate(-1);
     };
 
     return (
@@ -299,16 +305,16 @@ const NewPurchases = () => {
                         </div>
                     </div>
 
-                    {/* Product Search with isPurchase={true} */}
+                    {/* Product Search */}
                     <ProductSearch 
                          searchProduct={productSearch}
                          setSearchProduct={setProductSearch}
                          products={products}
-                         isPurchase={true} // CRITICAL PROP
+                         isPurchase={true} 
                          handleOpenAddModal={(product, batch) => handleAddProductToTable(product, batch)}
                     />
 
-                    {/* CUSTOM PURCHASE TABLE (Fixed Scrolling) */}
+                    {/* CUSTOM PURCHASE TABLE */}
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 sm:p-4 shadow-lg">
                         <div className="overflow-x-auto -mx-2 sm:mx-0">
                             <div className="min-w-full inline-block align-middle">
@@ -470,5 +476,3 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
-
-

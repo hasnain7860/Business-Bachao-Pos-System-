@@ -6,12 +6,21 @@ import languageData from "../assets/languageData.json";
 const Sales = () => {
   const navigate = useNavigate();
   const context = useAppContext();
-  const sales = context.SaleContext.Sales;
-  const peoples = context.peopleContext.people;
   
-  const userAndBusinessDetail = context.settingContext.settings;
-  const currency = userAndBusinessDetail?.[0]?.business?.currency ?? '$';
-  const {language} = context; // This is the APP's current language
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // 1. 'Sales' -> 'data'
+  // 2. 'people' -> 'data'
+  // 3. 'settings' -> 'data'
+  // 4. 'delete' -> 'remove'
+  const sales = context.SaleContext.data || [];
+  const removeSale = context.SaleContext.remove; // Renamed for clarity
+  
+  const peoples = context.peopleContext.data || [];
+  
+  const settingsData = context.settingContext.data || [];
+  const currency = settingsData[0]?.business?.currency ?? '$';
+  
+  const { language } = context; 
 
   // State for Search and Date
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,13 +35,13 @@ const Sales = () => {
   const isAnyMenuOpen = Object.values(openMenu).some(value => value);
 
   const handlePeopleNameViaId = (sale) => {
+    // Safe check if peoples array exists
+    if (!peoples) return "Unknown";
     const existPeople = peoples.find((people) => people.id === sale.personId);
     return existPeople ? existPeople.name : "Name not found";
   };
 
-  // --- MODIFIED: handleMenuAction ---
-  // Added new actions for specific language-based navigation
-  const handleMenuAction = (action, id) => {
+  const handleMenuAction = async (action, id) => {
     setOpenMenu({}); // Close menu on action
     switch (action) {
       // --- NEW ACTIONS ---
@@ -57,7 +66,9 @@ const Sales = () => {
         navigate(`/return/sell_return/add/${id}`);
         break;
       case 'delete':
-        context.SaleContext.delete(id);
+        if(window.confirm(languageData[language].areYouSureDelete || "Are you sure?")) {
+            await removeSale(id); // FIX: Use remove instead of delete
+        }
         break;
       default:
         break;
@@ -75,23 +86,33 @@ const Sales = () => {
     });
   };
 
-  // Filtered sales logic (unchanged)
+  // Filtered sales logic
   const filteredSales = useMemo(() => {
+    if (!sales) return []; // Crash proofing
     let processedSales = [...sales];
+    
+    // Sort descending by date
     processedSales.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+    
     if (selectedDate) {
       processedSales = processedSales.filter(sale => {
+        if (!sale.dateTime) return false;
         const saleDate = new Date(sale.dateTime).toISOString().split('T')[0];
         return saleDate === selectedDate;
       });
     }
+    
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       processedSales = processedSales.filter(sale => {
         const customerName = handlePeopleNameViaId(sale).toLowerCase();
+        const totalBill = (sale.totalBill || "").toString();
+        const refNo = (sale.salesRefNo || "").toString();
+        
         return (
-          customerName.includes(searchQuery.toLowerCase()) ||
-          sale.totalBill.toString().includes(searchQuery) ||
-          sale.salesRefNo.toString().includes(searchQuery)
+          customerName.includes(query) ||
+          totalBill.includes(query) ||
+          refNo.includes(query)
         );
       });
     }
@@ -101,7 +122,7 @@ const Sales = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header Section (unchanged) */}
+        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <button 
             className="flex items-center gap-2 bg-white text-gray-600 px-4 py-2 rounded-lg shadow hover:bg-gray-50 transition duration-200"
@@ -118,7 +139,7 @@ const Sales = () => {
           </button>
         </div>
 
-        {/* Search and Date Picker Section (unchanged) */}
+        {/* Search and Date Picker Section */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="max-w-xl mx-auto flex flex-col sm:flex-row gap-4">
             <div className="relative flex-grow">
@@ -142,7 +163,7 @@ const Sales = () => {
           </div>
         </div>
 
-        {/* Sales Table Section (unchanged structure) */}
+        {/* Sales Table Section */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {filteredSales.length > 0 ? (
           <div 
@@ -151,7 +172,6 @@ const Sales = () => {
           >
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  {/* Table headers (unchanged) */}
                   <tr>
                     {[
                       languageData[language].no,
@@ -175,7 +195,6 @@ const Sales = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredSales.map((sale, index) => {
-                    // Row calculations (unchanged)
                     const totalPaidFromPayments = Array.isArray(sale?.addPayment)
                       ? sale.addPayment.reduce((sum, payment) => {
                           const amount = Number(payment?.amount);
@@ -193,7 +212,6 @@ const Sales = () => {
 
                     return (
                       <tr key={index} className="hover:bg-gray-50">
-                        {/* Table data cells (unchanged) */}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.salesRefNo}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{handlePeopleNameViaId(sale)}</td>
@@ -203,7 +221,7 @@ const Sales = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{currency} {updatedCredit}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.paymentMode}</td>
                        
-                        {/* --- MODIFIED: Actions Menu --- */}
+                        {/* --- Actions Menu --- */}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative">
                           <div className="relative inline-block text-left">
                             <button 
@@ -218,10 +236,10 @@ const Sales = () => {
                             {openMenu[sale.id] && (
                               <div 
                                 className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 divide-y divide-gray-100"
-                                onClick={(e) => e.stopPropagation()} // Prevent row click
+                                onClick={(e) => e.stopPropagation()} 
                               >
                                 <div className="py-1">
-                                  {/* --- NEW: View (Eng) --- */}
+                                  {/* View (Eng) */}
                                   <button
                                     className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('view_en', sale.id)}
@@ -233,7 +251,7 @@ const Sales = () => {
                                     <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">EN</span>
                                   </button>
                                   
-                                  {/* --- NEW: View (Urdu) --- */}
+                                  {/* View (Urdu) */}
                                   <button
                                     className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('view_ur', sale.id)}
@@ -245,7 +263,7 @@ const Sales = () => {
                                     <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">UR</span>
                                   </button>
 
-                                  {/* --- UNCHANGED: Edit --- */}
+                                  {/* Edit */}
                                   <button
                                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('edit', sale.id)}
@@ -254,7 +272,7 @@ const Sales = () => {
                                     {languageData[language].edit}
                                   </button>
                                   
-                                  {/* --- NEW: Print (Eng) --- */}
+                                  {/* Print (Eng) */}
                                   <button
                                     className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('print_en', sale.id)}
@@ -266,7 +284,7 @@ const Sales = () => {
                                     <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">EN</span>
                                   </button>
 
-                                  {/* --- NEW: Print (Urdu) --- */}
+                                  {/* Print (Urdu) */}
                                   <button
                                     className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('print_ur', sale.id)}
@@ -280,7 +298,7 @@ const Sales = () => {
                                 </div>
 
                                 <div className="py-1">
-                                  {/* --- UNCHANGED: Sale Return --- */}
+                                  {/* Sale Return */}
                                   <button
                                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 group"
                                     onClick={() => handleMenuAction('saleReturn', sale.id)}
@@ -289,7 +307,7 @@ const Sales = () => {
                                     {languageData[language].sale_return}
                                   </button>
                                   
-                                  {/* --- UNCHANGED: Delete --- */}
+                                  {/* Delete */}
                                   <button
                                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 group"
                                     onClick={() => handleMenuAction('delete', sale.id)}

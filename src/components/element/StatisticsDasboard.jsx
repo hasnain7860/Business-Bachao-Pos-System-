@@ -13,17 +13,17 @@ const StatisticsDasboard = () => {
     // --- SAFETY LEVEL 1: Context & Settings ---
     // Fallback to 'english' and default settings if context is not ready
     const language = context?.language || "english";
-    const settings = context?.settingContext?.settings || [];
+    const settings = context?.settingContext?.data || [];
     const currency = settings?.[0]?.business?.currency ?? '$';
 
     // --- SAFETY LEVEL 2: Data Sources ---
     // Ensure these are always arrays. If context is null, these become [].
-    const products = context?.productContext?.products || [];
-    const sales = context?.SaleContext?.Sales || [];
-    const sellReturns = context?.SellReturnContext?.sellReturns || [];
-    const creditRecord = context?.creditManagementContext?.submittedRecords || [];
-    const costData = context?.costContext?.costData || [];
-    const damages = context?.damageContext?.damages || []; 
+    const products = context?.productContext?.data || [];
+    const sales = context?.SaleContext?.data || [];
+    const sellReturns = context?.SellReturnContext?.data || [];
+    const creditRecord = context?.creditManagementContext?.data || [];
+    const costData = context?.costContext?.data || [];
+    const damages = context?.damageContext?.data || []; 
 
     // Safe Language Access
     const currentLangData = languageData[language] || languageData["english"];
@@ -84,7 +84,6 @@ const StatisticsDasboard = () => {
             const discount = parseFloat(sale.discount) || 0;
             
             // --- CRITICAL FIX 1: Handle undefined products ---
-            // If sale.products is undefined, default to empty array [] so .reduce doesn't crash
             const safeProducts = Array.isArray(sale.products) ? sale.products : [];
             
             const purchaseCost = safeProducts.reduce((acc, product) => {
@@ -129,7 +128,6 @@ const StatisticsDasboard = () => {
                 const product = products.find(p => p.id === item.id);
                 let costPrice = 0;
                 if(product){
-                     // Handle undefined batchCode
                      const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
                      const batch = safeBatches.find(b => b.batchCode === item.batchCode);
                      costPrice = batch ? parseFloat(batch.purchasePrice) : parseFloat(product.purchasePrice || 0);
@@ -196,10 +194,8 @@ const StatisticsDasboard = () => {
 
         return stats;
     }, [sales, sellReturns, costData, creditRecord, products, damages, currentLangData]); 
-    // ^ Removed 'today' from dependencies to fix ReferenceError
 
     // --- RENDER SAFEGUARDS ---
-    // If filter doesn't match a key (rare), fallback to daily to prevent UI crash
     const currentViewData = salesData[filter] || salesData[currentLangData.daily];
 
     return ( 

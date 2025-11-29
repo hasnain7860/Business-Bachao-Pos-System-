@@ -10,6 +10,16 @@ const AddSellReturn = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // Access .data, not specific names
+  const salesData = context.SaleContext.data || [];
+  const products = context.productContext.data || [];
+  const peoples = context.peopleContext.data || [];
+  const sellReturns = context.SellReturnContext.data || [];
+  
+  const addReturn = context.SellReturnContext.add;
+  const updateProduct = context.productContext.edit;
+
   const [salesRef, setSalesRef] = useState('');
   const [filteredSales, setFilteredSales] = useState([]);
   const [addCustomProduct, setAddCustomProduct] = useState([])
@@ -20,20 +30,12 @@ const AddSellReturn = () => {
   const [selectedProduct, setSelectedProduct] = useState('');
   
   const [customerCredit, setCustomerCredit] = useState(0);
-
-  const addReturn = context.SellReturnContext.add
-  const sellReturns = context.SellReturnContext.sellReturns
-
-  const salesData = context.SaleContext.Sales;
-  const products = context.productContext.products;
-  const updateProduct = context.productContext.edit;
-  const peoples = context.peopleContext.people;
   const [cashReturn, setCashReturn] = useState(0);
   const [creditAdjustment, setCreditAdjustment] = useState(0);
 
 
   useEffect(() => {
-    if (id) {
+    if (id && salesData.length > 0) {
       const data = salesData.find((sale) => sale.id === id)
       if (data) {
         setSalesRef(data.salesRefNo);
@@ -48,14 +50,14 @@ const AddSellReturn = () => {
       const { pendingCredit } = CalculateUserCredit(context, selectedPeople);
       setCustomerCredit(pendingCredit);
     }
-  }, [selectedPeople]);
+  }, [selectedPeople, context]); // Added context dependency
 
 
   const handleSearch = (value) => {
-    setSalesRef(value); // Update state immediately so typing shows up
+    setSalesRef(value); 
     if(value.length > 0) {
         const filtered = salesData.filter((sale) =>
-          sale.salesRefNo.toLowerCase().includes(value.toLowerCase())
+          (sale.salesRefNo || "").toLowerCase().includes(value.toLowerCase())
         );
         setFilteredSales(filtered);
     } else {
@@ -64,7 +66,7 @@ const AddSellReturn = () => {
   };
   
   const handleSearchProduct = (value) => {
-    setSelectedProduct(value); // Update state immediately
+    setSelectedProduct(value); 
     if(value.length > 0){
         const filtered = products.filter((product) =>
         product.name.toLowerCase().includes(value.toLowerCase())
@@ -78,30 +80,31 @@ const AddSellReturn = () => {
   const handleSaleSelect = (sale) => {
     setSelectedSale(sale);
     
-    const mappedItems = sale.products.map((item) => {
-      // 1. Calculate Remaining Qty (IN BASE UNITS - PIECES)
-      // Logic: Start with original Sold Quantity (Pieces)
-      let remainingQtyInPieces = Number(item.SellQuantity); 
+    // Safety check for sale.products
+    const safeProducts = Array.isArray(sale.products) ? sale.products : [];
 
-      // Subtract items already returned (assuming stored in Base Units)
+    const mappedItems = safeProducts.map((item) => {
+      // 1. Calculate Remaining Qty (IN BASE UNITS - PIECES)
+      let remainingQtyInPieces = Number(item.SellQuantity || 0); 
+
+      // Subtract items already returned
       const relatedReturns = sellReturns.filter(r => r.salesRef === sale.salesRefNo);
       relatedReturns.forEach(returnDoc => {
-        returnDoc.items.forEach(returnItem => {
-           if (returnItem.id === item.id) {
-             // Safe check: if returnItem has conversionRate, normalize it. 
-             // Ideally, returns are saved in Base Units or we calculate:
-             const retQty = Number(returnItem.quantity); // This should be base units based on logic below
-             remainingQtyInPieces -= retQty;
-           }
-        });
+        if(returnDoc.items && Array.isArray(returnDoc.items)){
+            returnDoc.items.forEach(returnItem => {
+               if (returnItem.id === item.id) {
+                 // Return Item quantity should be in Base Units in DB
+                 const retQty = Number(returnItem.quantity || 0); 
+                 remainingQtyInPieces -= retQty;
+               }
+            });
+        }
       });
 
-      // 2. Determine Display Mode (Was it sold as Ctn or Pcs?)
-      const isSecondary = item.unitMode === 'secondary';
+      // 2. Determine Display Mode
       const convRate = Number(item.conversionRate) || 1;
       
-      // 3. Calculate Max Display Qty (e.g., 24 Pcs left / 12 = 2 Cartons)
-      // We allow returning decimal cartons if necessary, but ideally integers.
+      // 3. Calculate Max Display Qty
       const maxDisplayQty = remainingQtyInPieces / convRate; 
 
       return {
@@ -115,12 +118,11 @@ const AddSellReturn = () => {
         conversionRate: convRate,
         
         // Quantities
-        quantity: 0, // Input by user (Display Unit)
-        maxDisplayQuantity: maxDisplayQty,
+        quantity: 0, 
+        maxDisplayQuantity: maxDisplayQty < 0 ? 0 : maxDisplayQty, // Prevent negative
         
         // Price (Per Display Unit)
-        // If sold as Carton, newSellPrice was Carton Price.
-        price: Number(item.newSellPrice || item.sellPrice),
+        price: Number(item.newSellPrice || item.sellPrice || 0),
         
         total: 0,
       };
@@ -140,8 +142,6 @@ const AddSellReturn = () => {
     const total = returnItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
     setTotalAmount(total);
     
-    // Reset or Auto-fill payment
-    // Logic: If total changes, default to full credit adjustment for safety
     setCreditAdjustment(total); 
     setCashReturn(0);
     
@@ -156,7 +156,6 @@ const AddSellReturn = () => {
       return;
     }
 
-    // Custom items default to Base Unit (Pieces) to avoid complexity
     const newItem = {
       id: product.id,
       batchCode: batch.batchCode,
@@ -167,10 +166,10 @@ const AddSellReturn = () => {
       conversionRate: 1,
 
       quantity: 1,
-      maxDisplayQuantity: Number.POSITIVE_INFINITY, // No limit for custom add
+      maxDisplayQuantity: Number.POSITIVE_INFINITY, 
       
-      price: Number(batch.sellPrice), // Piece Price
-      total: Number(batch.sellPrice) * 1,
+      price: Number(batch.sellPrice || 0), 
+      total: Number(batch.sellPrice || 0) * 1,
     };
 
     setReturnItems([...returnItems, newItem]);
@@ -197,19 +196,16 @@ const AddSellReturn = () => {
   };
 
   // Validation Check
-  // Note: We check if entered qty > max available qty
   const isValid = returnItems.every(item => {
       const qty = Number(item.quantity);
-      if(qty === 0 && returnItems.length > 1) return true; // Allow 0 if multiple items, but we filter them out usually
+      if(qty === 0 && returnItems.length > 1) return true; 
       if(qty < 0) return false;
-      // Floating point tolerance for max quantity check
       return qty <= (item.maxDisplayQuantity + 0.001);
   });
   
-  // Filter out items with 0 quantity before submitting
   const activeItems = returnItems.filter(i => Number(i.quantity) > 0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!selectedPeople) return alert("Please select a person for the return");
@@ -223,19 +219,14 @@ const AddSellReturn = () => {
 
     const returnRefNo = `RET-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-    // Prepare Items for Storage
-    // CRITICAL: Convert everything back to BASE UNITS (Pieces) for Inventory
+    // Prepare Items for Storage (Base Units)
     const processedItems = activeItems.map(i => ({
           id: i.id,
           batchCode: i.batchCode,
           productName: i.productName,
-          
-          // Store visual info for history
           displayQuantity: Number(i.quantity), 
           unitName: i.unitName,
-          
-          // Store ACTUAL info for calculations/stock
-          quantity: Number(i.quantity) * Number(i.conversionRate), // Convert Ctn -> Pcs
+          quantity: Number(i.quantity) * Number(i.conversionRate), 
           total: Number(i.total)
     }));
 
@@ -244,9 +235,9 @@ const AddSellReturn = () => {
       returnRefNo,
       salesRef: selectedSale?.salesRefNo || 'Direct Return',
       peopleId: selectedPeople,
-      items: processedItems, // Saved with Base Unit Qty
+      items: processedItems, 
       totalAmount,
-      returnDate: new Date(),
+      returnDate: new Date().toISOString(), // Standardize date format
       paymentDetails: {
         creditAdjustment: Number(creditAdjustment),
         cashReturn: Number(cashReturn),
@@ -256,24 +247,24 @@ const AddSellReturn = () => {
     };
 
     // Stock Update Logic
-    processedItems.forEach(returnItem => {
+    for (const returnItem of processedItems) {
       const product = products.find(p => p.id === returnItem.id);
       if (product) {
-        const updatedBatchCode = product.batchCode.map(batch => {
+        const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+        const updatedBatchCode = safeBatches.map(batch => {
             if (batch.batchCode === returnItem.batchCode) {
-                // Add back the Base Quantity (Pieces)
                 return {
                     ...batch,
-                    quantity: Number(batch.quantity) + Number(returnItem.quantity)
+                    quantity: Number(batch.quantity || 0) + Number(returnItem.quantity)
                 };
             }
             return batch;
         });
-        updateProduct(product.id, { ...product, batchCode: updatedBatchCode });
+        await updateProduct(product.id, { ...product, batchCode: updatedBatchCode });
       }
-    });
+    }
 
-    addReturn(returnData);
+    await addReturn(returnData);
     alert("Sales Return Processed Successfully");
     navigate(-1); 
   };
@@ -334,7 +325,7 @@ const AddSellReturn = () => {
         </div>
       </div>
 
-      {/* Add Custom Product (Only if no sale selected) */}
+      {/* Add Custom Product */}
       {!selectedSale && (
         <div className="card bg-base-100 shadow-sm border border-gray-200 mt-4 mb-8">
           <div className="card-body p-4">
@@ -392,17 +383,14 @@ const AddSellReturn = () => {
                         <div className="text-xs text-gray-500 badge badge-ghost badge-sm mt-1">{item.batchCode}</div>
                     </td>
                     
-                    {/* Unit Name */}
                     <td className="text-center font-bold text-blue-600">
                         {item.unitName}
                     </td>
 
-                    {/* Max Available (Display Units) */}
                     <td className="text-center text-gray-600">
                         {Number(item.maxDisplayQuantity).toFixed(2)}
                     </td>
 
-                    {/* Input Qty */}
                     <td className="text-center">
                         <input
                             type="number"
@@ -412,12 +400,10 @@ const AddSellReturn = () => {
                         />
                     </td>
                     
-                    {/* Price Per Unit */}
                     <td className="text-right">
                         {item.price.toFixed(2)}
                     </td>
                     
-                    {/* Total */}
                     <td className="text-right font-bold text-gray-800">
                         {item.total.toFixed(2)}
                     </td>
@@ -472,7 +458,6 @@ const AddSellReturn = () => {
                         onChange={(e) => {
                             const val = e.target.value === '' ? '' : parseFloat(e.target.value);
                             setCreditAdjustment(val);
-                            // Auto adjust cash
                             const numVal = Number(val);
                             if(numVal <= totalAmount) {
                                 setCashReturn(totalAmount - numVal);
@@ -493,7 +478,6 @@ const AddSellReturn = () => {
                         onChange={(e) => {
                              const val = e.target.value === '' ? '' : parseFloat(e.target.value);
                              setCashReturn(val);
-                             // Auto adjust credit
                              const numVal = Number(val);
                              if(numVal <= totalAmount) {
                                 setCreditAdjustment(totalAmount - numVal);
@@ -533,3 +517,4 @@ const AddSellReturn = () => {
 };
 
 export default AddSellReturn;
+

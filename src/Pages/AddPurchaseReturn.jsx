@@ -9,12 +9,14 @@ const AddPurchaseReturn = () => {
   const navigate = useNavigate();
   const { id: paramPurchaseId } = useParams();
 
-  // Data from Context
-  const products = context.productContext.products;
-  const suppliers = context.peopleContext.people;
-  const purchases = context.purchaseContext.purchases;
-  const units = context.unitContext.units; // Added units context
-  const existingReturns = context.purchaseReturnContext.purchaseReturns || []; 
+  // --- CRITICAL FIX: Universal Store Mapping ---
+  // Access .data, not specific names like .products or .people
+  const products = context.productContext.data || [];
+  const suppliers = context.peopleContext.data || [];
+  const purchases = context.purchaseContext.data || [];
+  const units = context.unitContext.data || [];
+  const existingReturns = context.purchaseReturnContext.data || [];
+  
   const addPurchaseReturn = context.purchaseReturnContext.add;
   const updateProduct = context.productContext.edit; 
 
@@ -68,7 +70,8 @@ const AddPurchaseReturn = () => {
             const realProduct = products.find(p => p.id === purItem.id);
             
             if (realProduct) {
-                const realBatch = realProduct.batchCode.find(b => b.batchCode === purItem.batchCode);
+                // Safety check for batches
+                const realBatch = (realProduct.batchCode || []).find(b => b.batchCode === purItem.batchCode);
                 
                 if (realBatch) {
                     // --- UNIT LOGIC ---
@@ -157,7 +160,7 @@ const AddPurchaseReturn = () => {
 
   const getProductBatches = (productId) => {
     const product = products.find(p => p.id === productId);
-    return product ? product.batchCode : [];
+    return product ? (product.batchCode || []) : [];
   };
 
   const handleAddItem = (product, specificBatch = null) => {
@@ -228,13 +231,8 @@ const AddPurchaseReturn = () => {
             item.unitName = item.secUnitName;
             item.price = item.basePrice * item.conversionRate;
             // Adjust Max Qty Display
-            // Note: We need the raw Max Base Qty to recalc correctly. 
-            // Approximation: current max * conversion (if moving from base->sec, divide)
-            // Better: Store maxBaseQuantity in state. 
-            // But for now, let's recalculate based on logic:
-            // If switching Base -> Sec: Max / Rate. Qty / Rate.
-             item.maxDisplayQuantity = item.maxDisplayQuantity / item.conversionRate;
-             item.quantity = Number((item.quantity / item.conversionRate).toFixed(2));
+            item.maxDisplayQuantity = item.maxDisplayQuantity / item.conversionRate;
+            item.quantity = Number((item.quantity / item.conversionRate).toFixed(2));
         } else {
             item.unitName = item.baseUnitName;
             item.price = item.basePrice;
@@ -245,7 +243,7 @@ const AddPurchaseReturn = () => {
 
     } else if (field === "batchCode") {
       const product = products.find(p => p.id === item.id);
-      const newBatch = product.batchCode.find(b => b.batchCode === value);
+      const newBatch = (product.batchCode || []).find(b => b.batchCode === value);
       if (newBatch) {
         item.batchCode = value;
         // Reset to base unit values when batch changes
@@ -273,10 +271,10 @@ const AddPurchaseReturn = () => {
   const grandTotal = returnItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0);
   const creditAdjustment = Math.max(0, grandTotal - Number(cashReturn));
   
-  // Validation: quantity > 0 AND quantity <= maxDisplayQuantity
+  // Validation
   const isValid = returnItems.every(item => Number(item.quantity) > 0 && Number(item.quantity) <= (item.maxDisplayQuantity + 0.001));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedSupplier) return alert("Please select a supplier.");
     if (returnItems.length === 0) return alert("Please add items to return.");
     if (!isValid) return alert("Please correct quantities in red (cannot exceed purchased/stock amount).");
@@ -294,7 +292,7 @@ const AddPurchaseReturn = () => {
         
         // Actual Database Values (Base Units)
         quantity: Number(item.quantity) * (item.unitMode === 'secondary' ? item.conversionRate : 1),
-        price: item.price, // We store the unit price used for refund calculation
+        price: item.price, 
         total: item.total
     }));
 
@@ -314,10 +312,11 @@ const AddPurchaseReturn = () => {
     };
 
     // Update Stock (Subtract Base Units)
-    processedItems.forEach(item => {
+    for (const item of processedItems) {
       const product = products.find(p => p.id === item.id);
       if (product) {
-        const updatedBatchCode = product.batchCode.map(batch => {
+        const safeBatches = Array.isArray(product.batchCode) ? product.batchCode : [];
+        const updatedBatchCode = safeBatches.map(batch => {
           if (batch.batchCode === item.batchCode) {
             return {
               ...batch,
@@ -326,18 +325,18 @@ const AddPurchaseReturn = () => {
           }
           return batch;
         });
-        updateProduct(product.id, { ...product, batchCode: updatedBatchCode });
+        await updateProduct(product.id, { ...product, batchCode: updatedBatchCode });
       }
-    });
+    }
 
-    addPurchaseReturn(returnData);
+    await addPurchaseReturn(returnData);
     alert("Return Saved Successfully!");
     navigate('/return/purchase_return'); 
   };
 
   const filteredProducts = products.filter(p => 
     (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-     p.nameInUrdu?.includes(searchQuery))
+     (p.nameInUrdu && p.nameInUrdu.includes(searchQuery)))
   );
 
   const supplierPurchases = purchases.filter(p => p.personId === selectedSupplier);
@@ -449,7 +448,7 @@ const AddPurchaseReturn = () => {
                     >
                         <div className="text-sm">
                             <div className="font-bold">{prod.name}</div>
-                            <div className="text-xs text-gray-500">Stock: {prod.batchCode.reduce((a,b) => a + Number(b.quantity), 0)}</div>
+                            <div className="text-xs text-gray-500">Stock: {(prod.batchCode || []).reduce((a,b) => a + Number(b.quantity), 0)}</div>
                         </div>
                         <button className="btn btn-xs btn-ghost text-blue-600 opacity-0 group-hover:opacity-100">
                             <FaPlus />
@@ -578,3 +577,4 @@ const AddPurchaseReturn = () => {
 };
 
 export default AddPurchaseReturn;
+

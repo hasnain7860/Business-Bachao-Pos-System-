@@ -6,17 +6,22 @@ import { FaArrowDown, FaArrowUp, FaUsers, FaPrint } from 'react-icons/fa';
 const BalancesReport = () => {
     const { language, peopleContext, SaleContext, purchaseContext, creditManagementContext, SellReturnContext, purchaseReturnContext, settingContext } = useAppContext();
 
-    // --- Data Sources ---
-    const allSales = SaleContext.Sales || [];
-    const allPurchases = purchaseContext.purchases || [];
-    const allPeoples = peopleContext.people || [];
-    const submittedRecords = creditManagementContext.submittedRecords || [];
-    const sellReturns = SellReturnContext.sellReturns || [];
-    const purchaseReturns = purchaseReturnContext.purchaseReturns || [];
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. All stores return 'data'
+    // 2. Added Safe Fallbacks || []
+    const allSales = SaleContext.data || [];
+    const allPurchases = purchaseContext.data || [];
+    const allPeoples = peopleContext.data || [];
+    const submittedRecords = creditManagementContext.data || [];
+    const sellReturns = SellReturnContext.data || [];
+    const purchaseReturns = purchaseReturnContext.data || [];
     
-    const userAndBusinessDetail = settingContext.settings;
-    const currency = userAndBusinessDetail?.[0]?.business?.currency ?? 'Rs';
-    const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Report';
+    // Settings is also just 'data'
+    const settingsData = settingContext.data || [];
+    const userAndBusinessDetail = settingsData[0] || {};
+    
+    const currency = userAndBusinessDetail?.business?.currency ?? 'Rs';
+    const businessName = userAndBusinessDetail?.business?.businessName ?? 'Business Report';
 
     // --- State ---
     const [sortConfig, setSortConfig] = useState({ key: 'balance', direction: 'descending' });
@@ -24,6 +29,9 @@ const BalancesReport = () => {
 
     // --- CORE CALCULATION LOGIC ---
     const reportData = useMemo(() => {
+        // If no people loaded yet, return defaults to avoid crash
+        if (allPeoples.length === 0) return { data: [], summary: { totalReceivable: 0, totalPayable: 0, debtorsCount: 0, creditorsCount: 0 } };
+
         const balancesData = allPeoples.map(person => {
             
             // 1. SALES (Receivable +)
@@ -63,7 +71,7 @@ const BalancesReport = () => {
         });
 
         // --- FILTERING ---
-        // Remove people with 0 balance
+        // Remove people with 0 balance (Tolerance 0.01)
         let filteredBalances = balancesData.filter(p => Math.abs(p.balance) > 0.01);
 
         if (balanceFilter === 'receivable') {
@@ -72,7 +80,7 @@ const BalancesReport = () => {
             filteredBalances = filteredBalances.filter(p => p.balance < 0);
         }
 
-        // --- SUMMARY CALCULATION (Based on Filtered Data) ---
+        // --- SUMMARY CALCULATION ---
         const summary = filteredBalances.reduce((acc, item) => {
             if (item.balance > 0) {
                 acc.totalReceivable += item.balance;
@@ -115,15 +123,15 @@ const BalancesReport = () => {
     return (
         <div className="p-4 bg-gray-50 min-h-screen">
             
-            {/* Print Header (Visible only on Print) */}
-            <div className="hidden print:block text-center mb-6 border-b pb-4">
+            {/* Print Header */}
+            <div className="hidden print-header text-center mb-6 border-b pb-4">
                 <h1 className="text-3xl font-bold">{businessName}</h1>
                 <h2 className="text-xl text-gray-600">Balances Report</h2>
                 <p className="text-sm text-gray-500">{new Date().toLocaleDateString()}</p>
             </div>
 
             <div className="flex justify-between items-center mb-6 no-print">
-                <h3 className="text-2xl font-bold text-gray-800">{languageData[language].balances_report || 'Balances Report'}</h3>
+                <h3 className="text-2xl font-bold text-gray-800">{languageData[language]?.balances_report || 'Balances Report'}</h3>
                 <button onClick={handlePrint} className="btn btn-primary gap-2 shadow-md">
                     <FaPrint /> Print Report
                 </button>
@@ -217,11 +225,10 @@ const BalancesReport = () => {
                                 <tr><td colSpan="4" className="text-center py-8 text-gray-400">No outstanding balances found.</td></tr>
                             )}
                         </tbody>
-                        <tfoot className="bg-gray-50 font-bold text-gray-800 print:table-footer-group">
+                        <tfoot className="bg-gray-50 font-bold text-gray-800">
                             <tr>
                                 <td colSpan="3" className="py-3 px-4 text-right">Total:</td>
                                 <td className="py-3 px-4 text-right text-xl">
-                                    {/* Shows Net Total of current view */}
                                     {currency} {sortedData.reduce((acc, curr) => acc + curr.balance, 0).toFixed(2)}
                                 </td>
                             </tr>
@@ -229,21 +236,6 @@ const BalancesReport = () => {
                     </table>
                 </div>
             </div>
-             
-            {/* Print Styles */}
-            <style>{`
-                @media print {
-                    .no-print { display: none !important; }
-                    body { background: white; font-size: 12px; }
-                    .shadow { box-shadow: none !important; }
-                    .border { border: 1px solid #ddd !important; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ddd; padding: 8px; }
-                    thead { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
-                    .badge { border: 1px solid #000; color: #000 !important; background: transparent !important; }
-                    .text-green-600, .text-red-600 { color: #000 !important; }
-                }
-            `}</style>
         </div>
     );
 };

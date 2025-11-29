@@ -7,14 +7,18 @@ const PreorderAreaReport = () => {
     const context = useAppContext();
     const { language } = context;
 
-    // --- Data from context ---
-    const allPreorders = context.preordersContext.preorders || [];
-    const allProducts = context.productContext.products || []; // Needed for Unit Conversion
-    const { areas } = context.areasContext;
-    const { units } = context.unitContext; // Needed for Unit Names (Ctn/Pcs)
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. All stores return 'data'
+    // 2. Added Safe Fallbacks || []
+    const allPreorders = context.preordersContext.data || [];
+    const allProducts = context.productContext.data || []; 
+    const areas = context.areasContext.data || [];
+    const units = context.unitContext.data || []; 
     
-    const userAndBusinessDetail = context.settingContext.settings;
-    const businessName = userAndBusinessDetail?.[0]?.business?.businessName ?? 'Business Bachao';
+    const settingsData = context.settingContext.data || [];
+    const userAndBusinessDetail = settingsData[0] || {};
+    
+    const businessName = userAndBusinessDetail?.business?.businessName ?? 'Business Bachao';
 
     // --- Filters State ---
     const [selectedArea, setSelectedArea] = useState('all');
@@ -25,7 +29,7 @@ const PreorderAreaReport = () => {
     const [showFilters, setShowFilters] = useState(true);
 
     const uniqueAreas = useMemo(() => {
-        return areas.sort((a, b) => a.name.localeCompare(b.name));
+        return [...areas].sort((a, b) => a.name.localeCompare(b.name));
     }, [areas]);
 
     // --- HELPER: Format Quantity (Smart Unit Display) ---
@@ -86,7 +90,10 @@ const PreorderAreaReport = () => {
                     totalBaseQuantity: 0 
                 };
                 
-                // Always sum up the BASE QUANTITY (SellQuantity is always in Pieces now)
+                // Logic Update: Use 'enteredQty' (Visual) OR 'SellQuantity' (Base)
+                // Since we want to aggregate totals for loading, we MUST sum up Base Units (SellQuantity)
+                // Because 1 Ctn + 2 Pcs is hard to sum directly without base conversion.
+                // SellQuantity is stored as Base Units in DB.
                 existing.totalBaseQuantity += (parseFloat(product.SellQuantity) || 0);
                 
                 productSummary.set(product.id, existing);
@@ -102,33 +109,33 @@ const PreorderAreaReport = () => {
     
     const handlePrint = () => window.print();
 
-    const selectedAreaName = selectedArea === 'all' ? (languageData[language].all_areas || 'All Areas') : areas.find(a => a.id === selectedArea)?.name;
+    const selectedAreaName = selectedArea === 'all' ? (languageData[language]?.all_areas || 'All Areas') : areas.find(a => a.id === selectedArea)?.name;
 
     return (
         <div>
             {/* --- Filters --- */}
             <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
-                <h3 className="text-xl font-semibold mb-4">{languageData[language].preorder_area_report || 'Area-wise Preorder Report'}</h3>
+                <h3 className="text-xl font-semibold mb-4">{languageData[language]?.preorder_area_report || 'Area-wise Preorder Report'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">{languageData[language].filter_by_area || 'Filter by Area'}</label>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language]?.filter_by_area || 'Filter by Area'}</label>
                         <select
                             value={selectedArea}
                             onChange={e => setSelectedArea(e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                         >
-                            <option value="all">{languageData[language].all_areas || 'All Areas'}</option>
+                            <option value="all">{languageData[language]?.all_areas || 'All Areas'}</option>
                             {uniqueAreas.map(area => <option key={area.id} value={area.id}>{area.name}</option>)}
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">{languageData[language].start_date || 'Start Date'}</label>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language]?.start_date || 'Start Date'}</label>
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">{languageData[language].end_date || 'End Date'}</label>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language]?.end_date || 'End Date'}</label>
                         <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/>
                     </div>
 
@@ -136,7 +143,7 @@ const PreorderAreaReport = () => {
                         onClick={handleGenerateReport} 
                         className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10"
                     >
-                        {languageData[language].generate || 'Generate'}
+                        {languageData[language]?.generate || 'Generate'}
                     </button>
                 </div>
             </div>
@@ -146,18 +153,18 @@ const PreorderAreaReport = () => {
                 <div className="mt-6">
                     <div className="flex justify-between items-center mb-4 no-print">
                         <button onClick={() => setShowFilters(true)} className="flex items-center gap-2 text-blue-600 hover:underline">
-                            <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
+                            <FaFilter /> {languageData[language]?.change_filters || 'Change Filters'}
                         </button>
                         <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
-                            <FaPrint /> {languageData[language].print || 'Print'}
+                            <FaPrint /> {languageData[language]?.print || 'Print'}
                         </button>
                     </div>
 
-                    <div className="print-header">
-                        <h2>{businessName}</h2>
-                        <h3>{languageData[language].preorder_area_report || 'Area-wise Loading Sheet'}</h3>
-                        <p>{languageData[language].area || 'Area'}: {selectedAreaName}</p>
-                        <p>{languageData[language].date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
+                    <div className="print-header hidden print:block mb-4 text-center">
+                        <h2 className="text-2xl font-bold">{businessName}</h2>
+                        <h3 className="text-xl">{languageData[language]?.preorder_area_report || 'Area-wise Loading Sheet'}</h3>
+                        <p>{languageData[language]?.area || 'Area'}: {selectedAreaName}</p>
+                        <p>{languageData[language]?.date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
                     </div>
 
                     {reportData.length > 0 ? (
@@ -165,19 +172,19 @@ const PreorderAreaReport = () => {
                             <table className="min-w-full border-collapse border border-gray-300">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="py-2 px-3 text-center border border-gray-300 w-16">S.No.</th>
-                                        <th className="py-2 px-3 text-left border border-gray-300">{languageData[language].product_name || 'Product Name'}</th>
-                                        <th className="py-2 px-3 text-right border border-gray-300 font-bold">{languageData[language].total_ordered_qty || 'Total Load Qty'}</th>
+                                        <th className="py-2 px-3 border border-gray-300 text-center w-16">S.No.</th>
+                                        <th className="py-2 px-3 border border-gray-300 text-left">{languageData[language]?.product_name || 'Product Name'}</th>
+                                        <th className="py-2 px-3 border border-gray-300 text-right font-bold">{languageData[language]?.total_ordered_qty || 'Total Load Qty'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {reportData.map((item, index) => (
                                         <tr key={item.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-2 px-3 text-center border border-gray-300">{index + 1}</td>
-                                            <td className="py-2 px-3 font-medium border border-gray-300">{item.name}</td>
+                                            <td className="py-2 px-3 border border-gray-300 text-center">{index + 1}</td>
+                                            <td className="py-2 px-3 border border-gray-300 font-medium">{item.name}</td>
                                             
                                             {/* Smart Quantity Display (e.g., 5 Ctn, 2 Pcs) */}
-                                            <td className="py-2 px-3 text-right border border-gray-300 font-bold text-blue-800">
+                                            <td className="py-2 px-3 border border-gray-300 text-right font-bold text-blue-800">
                                                 {formatQuantity(item.id, item.totalBaseQuantity)}
                                             </td>
                                         </tr>
@@ -187,7 +194,7 @@ const PreorderAreaReport = () => {
                         </div>
                     ) : (
                         <div className="text-center p-10 no-print">
-                             <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
+                             <p className="text-gray-500">{languageData[language]?.no_data_found || 'No data found for the selected filters.'}</p>
                         </div>
                     )}
                 </div>
@@ -196,9 +203,9 @@ const PreorderAreaReport = () => {
              {/* No Data Helper */}
              {reportData && reportData.length === 0 && !showFilters && (
                  <div className="text-center p-10 mt-6 bg-white rounded-lg shadow no-print">
-                    <p className="text-gray-500">{languageData[language].no_data_found || 'No data found for the selected filters.'}</p>
+                    <p className="text-gray-500">{languageData[language]?.no_data_found || 'No data found for the selected filters.'}</p>
                     <button onClick={() => setShowFilters(true)} className="mt-4 flex items-center gap-2 text-blue-600 mx-auto hover:underline">
-                        <FaFilter /> {languageData[language].change_filters || 'Change Filters'}
+                        <FaFilter /> {languageData[language]?.change_filters || 'Change Filters'}
                     </button>
                  </div>
             )}
@@ -207,7 +214,7 @@ const PreorderAreaReport = () => {
                 @media print {
                     .no-print { display: none !important; }
                     body { font-size: 12px; }
-                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-header { text-align: center; margin-bottom: 20px; display: block !important; }
                     .print-header h2 { font-size: 24px; font-weight: bold; margin: 0; }
                     .print-header h3 { font-size: 18px; margin: 5px 0; }
                     table { width: 100%; border-collapse: collapse; }
