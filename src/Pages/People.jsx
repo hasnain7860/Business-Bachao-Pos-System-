@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from '../Appfullcontext.jsx';
 import { v4 as uuidv4 } from 'uuid';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from "react-router-dom";
-import { FaBroom } from "react-icons/fa"; 
+import { FaBroom, FaFileImport, FaAddressBook, FaDownload } from "react-icons/fa"; 
+
+// --- Imported Components & Utils ---
+import PeopleFormModal from "../components/people/PeopleFormModal";
+import PersonCard from "../components/people/PersonCard";
+import { parseVcfFile, getPhoneContacts } from "../components/people/peopleImportUtils"; // <--- NEW IMPORT
 
 const PEOPLE_CODE_KEY = "nextPeopleCode"; 
 
@@ -11,649 +16,230 @@ const People = () => {
   const context = useAppContext();
   const { peopleContext, areasContext, language, settingContext, creditManagementContext } = context;
   
-  const { people } = peopleContext;
-  const { add: addPerson, edit: editPerson, delete: deletePerson } = peopleContext;
-  
-  // Context for Cleaning Up Records
+  const { people, add: addPerson, delete: deletePerson, edit: editPerson } = peopleContext;
   const { submittedRecords, delete: deleteCreditRecord } = creditManagementContext;
-
   const { areas } = areasContext;
   const { selectedSetting, saveSetting } = settingContext; 
 
   const navigate = useNavigate();
 
+  // --- UI State ---
   const [columns, setColumns] = useState(3);
   const [currentPage, setCurrentPage] = useState(1);
-  const [peoplePerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isContactPickerSupported, setIsContactPickerSupported] = useState(false);
   const [codeMessage, setCodeMessage] = useState(""); 
-  
+  const [isContactPickerSupported, setIsContactPickerSupported] = useState(false);
+
+  // --- Modal State ---
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingPerson, setEditingPerson] = useState(null);
+
   const isCodeSystemActive = selectedSetting.peopleAllcode === true;
   const nextCode = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
 
+  // --- 1. Setup ---
   useEffect(() => {
     const updateColumns = () => {
       const width = window.innerWidth;
-      if (width < 640) setColumns(1);
-      else if (width < 1024) setColumns(2);
-      else setColumns(3);
+      setColumns(width < 640 ? 1 : width < 1024 ? 2 : 3);
     };
-
     updateColumns();
     window.addEventListener("resize", updateColumns);
-
-    if ('contacts' in navigator && 'select' in navigator.contacts) {
-      setIsContactPickerSupported(true);
-    }
-
+    if ('contacts' in navigator && 'select' in navigator.contacts) setIsContactPickerSupported(true);
     return () => window.removeEventListener("resize", updateColumns);
   }, []);
 
-  const [formData, setFormData] = useState({
-    id: null,
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    image: null,
-    areaId: "", 
-    code: null, 
-  });
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isEditingMode, setIsEditingMode] = useState(false);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  // --- 2. Action Handlers ---
+  const handleEdit = (person) => {
+    setEditingPerson(person);
+    setIsModalVisible(true);
   };
 
-  const handleImageSelection = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData({ ...formData, image: reader.result });
-    };
-    reader.readAsDataURL(file);
+  const handleDelete = async (id) => {
+    if(!window.confirm("Are you sure? This deletes the person AND all manual records.")) return;
+    try {
+        const associated = submittedRecords.filter(r => r.personId === id);
+        if (associated.length > 0) await Promise.all(associated.map(r => deleteCreditRecord(r.id)));
+        await deletePerson(id);
+        alert("Deleted successfully.");
+    } catch (e) { console.error(e); }
   };
+
+  const handleModalSuccess = () => {
+      setIsModalVisible(false);
+      setEditingPerson(null);
+      setCodeMessage("Saved Successfully!");
+      setTimeout(() => setCodeMessage(""), 2000);
+  };
+
+  // --- 3. Clean Import Handlers (Using Utils) ---
   
-  const handleFormSubmission = async (e) => {
-    e.preventDefault();
-    if (isEditingMode) {
-      await editPerson(formData.id, formData);
-    } else {
-      let personData = { ...formData, id: uuidv4() };
+  // Generic function to process a list of raw people and add them to DB
+  const processAndAddPeople = async (rawPeopleList, sourceName) => {
+    if (!rawPeopleList || rawPeopleList.length === 0) return;
 
-      if (isCodeSystemActive) {
-        const newCode = nextCode; 
-        personData.code = newCode; 
+    let currentNextCode = nextCode; 
+    let addedCount = 0;
 
-        const updatedCodeSetting = {
-            ...selectedSetting,
-            [PEOPLE_CODE_KEY]: newCode + 1,
-        };
-        await saveSetting(updatedCodeSetting);
-      } else {
-        personData.code = null; 
-      }
-
-      await addPerson(personData);
-    }
-    closeModal();
-  };
-
-  const initiateEdit = (person) => {
-    setFormData({
-        ...person,
-        areaId: person.areaId || "", 
-        code: person.code || null, 
-    });
-    setIsEditingMode(true);
-    setIsModalVisible(true);
-  };
-
-  // --- SINGLE DELETE (Updated Logic) ---
-  const removePerson = async (id) => {
-    if(!window.confirm("Are you sure? This will delete the person AND all their manual credit/payment records.")) {
-        return;
-    }
-    // 1. Find associated records
-    const associatedRecords = submittedRecords.filter(record => record.personId === id);
-    
-    // 2. Delete records first
-    if (associatedRecords.length > 0) {
-        const deletePromises = associatedRecords.map(record => deleteCreditRecord(record.id));
-        await Promise.all(deletePromises);
+    for (const rawPerson of rawPeopleList) {
+        let personData = { ...rawPerson, id: uuidv4(), areaId: "" };
+        
+        if (isCodeSystemActive) {
+            personData.code = currentNextCode;
+            currentNextCode++;
+        } else {
+            personData.code = null;
+        }
+        await addPerson(personData);
+        addedCount++;
     }
 
-    // 3. Delete Person
-    await deletePerson(id);
-    alert("Person and associated financial records deleted.");
+    if (isCodeSystemActive && addedCount > 0) {
+        await saveSetting({ ...selectedSetting, [PEOPLE_CODE_KEY]: currentNextCode });
+    }
+
+    setCodeMessage(`Imported ${addedCount} contacts from ${sourceName}.`);
+    setTimeout(() => setCodeMessage(""), 3000);
   };
 
-  // ======================================================
-  // --- NEW: CLEANUP ORPHANED/GHOST RECORDS ---
-  // ======================================================
+  const handleVcfUpload = async (e) => {
+    try {
+        const file = e.target.files[0];
+        const peopleList = await parseVcfFile(file); // Utility Call
+        await processAndAddPeople(peopleList, "VCF");
+    } catch (error) {
+        console.error(error);
+        alert("Failed to parse file.");
+    }
+  };
+
+  const handlePhoneImport = async () => {
+    try {
+        const contacts = await getPhoneContacts(); // Utility Call
+        await processAndAddPeople(contacts, "Phone");
+    } catch (error) {
+        console.error(error);
+    }
+  };
+
+  // --- 4. Bulk Operations ---
   const handleCleanupGhosts = async () => {
-      // 1. Get list of all valid People IDs
-      const validPersonIds = new Set(people.map(p => p.id));
+      const validIds = new Set(people.map(p => p.id));
+      const ghosts = submittedRecords.filter(r => !validIds.has(r.personId));
+      if (ghosts.length === 0) { setCodeMessage("Database is clean."); setTimeout(() => setCodeMessage(""), 2000); return; }
 
-      // 2. Find records where personId is NOT in the valid list
-      const ghostRecords = submittedRecords.filter(record => !validPersonIds.has(record.personId));
-
-      if (ghostRecords.length === 0) {
-          setCodeMessage("No ghost records found. Database is clean.");
-          setTimeout(() => setCodeMessage(""), 3000);
-          return;
+      if (window.confirm(`Found ${ghosts.length} ghost records. Delete?`)) {
+          for (const r of ghosts) await deleteCreditRecord(r.id);
+          setCodeMessage(`Cleaned ${ghosts.length} records.`);
       }
-
-      if (!window.confirm(`Found ${ghostRecords.length} records belonging to deleted people. Delete them?`)) {
-          return;
-      }
-
-      setCodeMessage(`Cleaning up ${ghostRecords.length} ghost records...`);
-
-      // 3. Delete them one by one
-      for (const record of ghostRecords) {
-          await deleteCreditRecord(record.id);
-      }
-
-      setCodeMessage(`Successfully deleted ${ghostRecords.length} orphaned records.`);
-      setTimeout(() => setCodeMessage(""), 5000);
-  };
-  // ======================================================
-
-  const openModal = () => {
-    setFormData({
-      id: null,
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      image: null,
-      areaId: "", 
-      code: null, 
-    });
-    setIsEditingMode(false);
-    setIsModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setIsModalVisible(false);
   };
 
   const handleGenerateCodes = async () => {
-    setCodeMessage("Generating codes, please wait...");
-    let startingCode = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
-    
-    let codesAssigned = 0;
-    
-    for (const person of people) {
-      if (!person.code) {
-        const newCodeNumber = startingCode;
-        await editPerson(person.id, { ...person, code: newCodeNumber });
-        startingCode++; 
-        codesAssigned++;
-      }
+    setCodeMessage("Generating codes...");
+    let code = Number(selectedSetting[PEOPLE_CODE_KEY]) || 1000;
+    let count = 0;
+    for (const p of people) {
+      if (!p.code) { await editPerson(p.id, { ...p, code }); code++; count++; }
     }
-    
-    const updatedSettings = {
-        ...selectedSetting,
-        peopleAllcode: true, 
-        [PEOPLE_CODE_KEY]: startingCode, 
-    };
-    await saveSetting(updatedSettings);
-
-    setCodeMessage(`Successfully assigned codes to ${codesAssigned} people.`);
+    await saveSetting({ ...selectedSetting, peopleAllcode: true, [PEOPLE_CODE_KEY]: code });
+    setCodeMessage(`Assigned codes to ${count} people.`);
   };
 
-  const handleVcfFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const vcfContent = event.target.result;
-        const peopleList = extractPeopleFromVcf(vcfContent);
-        
-        let currentNextCode = nextCode; 
-        
-        peopleList.forEach(async (person) => {
-          let personData = { ...person, id: uuidv4() };
+  // --- 5. Filtering ---
+  const filteredPeople = useMemo(() => {
+    if (!searchQuery) return people;
+    const q = searchQuery.toLowerCase();
+    return people.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        (p.phone && p.phone.includes(q)) || 
+        (p.code && `P-${p.code}`.toLowerCase().includes(q))
+    );
+  }, [people, searchQuery]);
 
-          if (isCodeSystemActive) {
-            personData.code = currentNextCode;
-            currentNextCode++;
-          }
-          await addPerson(personData);
-        });
+  const currentPeople = useMemo(() => {
+    const last = currentPage * 10;
+    return filteredPeople.slice(last - 10, last);
+  }, [filteredPeople, currentPage]);
 
-        if (isCodeSystemActive && currentNextCode > nextCode) {
-             const updatedCodeSetting = {
-                ...selectedSetting,
-                [PEOPLE_CODE_KEY]: currentNextCode,
-            };
-            saveSetting(updatedCodeSetting);
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const decodeQuotedPrintable = (input) => {
-    input = input.replace(/=\r?\n/g, "");
-    return input.replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {
-      return String.fromCharCode(parseInt(hex, 16));
-    });
-  };
-
-  const extractPeopleFromVcf = (vcfContent) => {
-    const people = [];
-    const entries = vcfContent.split("END:VCARD");
-
-    entries.forEach(entry => {
-      if (entry.includes("BEGIN:VCARD")) {
-        let nameMatch = entry.match(/FN[:;]?(?:CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:)?(.*)/i);
-        let phoneMatch = entry.match(/TEL[^:]*:(.*)/);
-        let emailMatch = entry.match(/EMAIL[^:]*:(.*)/);
-        let addressMatch = entry.match(/ADR[^:]*:(.*)/);
-
-        let name = nameMatch ? decodeQuotedPrintable(nameMatch[1].trim()) : "Unknown";
-        let phone = phoneMatch ? phoneMatch[1].trim() : "";
-        let email = emailMatch ? emailMatch[1].trim() : "";
-        let address = addressMatch ? decodeQuotedPrintable(addressMatch[1].trim()) : "";
-
-        try {
-          const utf8Decoder = new TextDecoder("utf-8");
-          const encodedName = new Uint8Array([...name].map(c => c.charCodeAt(0)));
-          const encodedAddress = new Uint8Array([...address].map(c => c.charCodeAt(0)));
-          name = utf8Decoder.decode(encodedName);
-          address = utf8Decoder.decode(encodedAddress);
-        } catch (e) {
-          console.error("Text decoding error:", e);
-        }
-
-        people.push({ name, phone, email, address, areaId: "" });
-      }
-    });
-
-    return people;
-  };
-
-  const handleImportFromPhone = async () => {
-    if (!isContactPickerSupported) {
-      console.error("Contact Picker API is not supported.");
-      return;
-    }
-
-    const props = ['name', 'tel'];
-    const opts = { multiple: true };
-
-    try {
-      const contacts = await navigator.contacts.select(props, opts);
-      if (contacts.length === 0) return;
-
-      let importedCount = 0;
-      let currentNextCode = nextCode;
-      
-      for (const contact of contacts) {
-        const name = contact.name && contact.name.length > 0 ? contact.name[0] : "Unknown";
-        const phone = contact.tel && contact.tel.length > 0 ? contact.tel[0] : "";
-
-        if (phone) {
-          let personData = {
-            id: uuidv4(),
-            name: name,
-            phone: phone,
-            email: "",
-            address: "",
-            image: null,
-            areaId: "", 
-            code: null,
-          };
-          
-          if (isCodeSystemActive) {
-            personData.code = currentNextCode;
-            currentNextCode++;
-          }
-          await addPerson(personData);
-          importedCount++;
-        }
-      }
-      
-      if (isCodeSystemActive && currentNextCode > nextCode) {
-           const updatedCodeSetting = {
-              ...selectedSetting,
-              [PEOPLE_CODE_KEY]: currentNextCode,
-          };
-          saveSetting(updatedCodeSetting);
-      }
-      
-      console.log(`Successfully imported ${importedCount} contacts.`);
-      
-    } catch (ex) {
-      console.error("Error importing contacts:", ex);
-    }
-  };
-
-  const handleSearchInputChange = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1); 
-  };
-
-  const filteredPeople = people.filter((person) =>
-    person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (person.email && person.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    person.phone.includes(searchQuery) ||
-    (person.address && person.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (person.code && `P-${person.code}`.toLowerCase().includes(searchQuery.toLowerCase())) 
-  );
-
-  const indexOfLastPerson = currentPage * peoplePerPage;
-  const indexOfFirstPerson = indexOfLastPerson - peoplePerPage;
-  const currentPeople = filteredPeople.slice(indexOfFirstPerson, indexOfLastPerson);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const totalPages = Math.ceil(filteredPeople.length / peoplePerPage);
-  
-  const getAreaName = (areaId) => {
-    if (!areaId) return "N/A";
-    const area = areas.find(a => a.id === areaId);
-    return area ? area.name : "Unknown Area";
-  };
+  const totalPages = Math.ceil(filteredPeople.length / 10);
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-gray-50 min-h-screen">
+      
       <div className={`mb-4 flex ${language === "ur" ? "justify-end" : "justify-start"}`}>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 bg-gray-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-gray-600 transition duration-200"
-        >
-          {language === "ur" ? null : "🔙"}
-          <span>{languageData[language].back}</span>
-          {language === "ur" ? "🔙" : null}
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg shadow">
+           🔙 <span>{languageData[language].back}</span>
         </button>
       </div>
 
-      <h1 className={`text-2xl font-bold mb-2 ${language === "ur" ? "text-right" : "text-left"}`}>
+      <h1 className={`text-2xl font-bold mb-4 ${language === "ur" ? "text-right" : "text-left"}`}>
         {languageData[language].people_management}
       </h1>
       
-      {codeMessage && (
-        <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded-lg font-medium">
-            {codeMessage}
-        </div>
-      )}
+      {codeMessage && <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded-lg">{codeMessage}</div>}
 
       <div className={`mb-4 flex flex-wrap justify-between items-center gap-3 ${language === "ur" ? "flex-row-reverse" : ""}`}>
-        <span className="text-lg font-medium">
-          {languageData[language].total} {languageData[language].people} : {people.length}
+        <span className="text-lg font-semibold bg-white px-3 py-1 rounded shadow-sm">
+          Total: {people.length}
         </span>
-       
-        {/* CLEANUP GHOST RECORDS BUTTON */}
-        <button
-            onClick={handleCleanupGhosts}
-            className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded flex items-center gap-2 hover:bg-red-200 transition-colors"
-            title="Delete financial records of people who have been deleted"
-        >
-            <FaBroom /> Cleanup Ghost Records
-        </button>
+        <div className="flex gap-2 flex-wrap">
+            <button onClick={handleCleanupGhosts} className="bg-white text-red-600 border border-red-200 px-3 py-2 rounded hover:bg-red-50" title="Cleanup Ghost Records"><FaBroom /></button>
+            {selectedSetting.peopleAllcode !== true && (
+                <button onClick={handleGenerateCodes} className="bg-yellow-500 text-white px-4 py-2 rounded">Gen Codes</button>
+            )}
+            <button onClick={() => { setEditingPerson(null); setIsModalVisible(true); }} className="bg-blue-600 text-white px-5 py-2 rounded shadow">+ {languageData[language].add_person}</button>
+        </div>
+      </div>
 
-        {selectedSetting.peopleAllcode !== true && (
-             <button
-                onClick={handleGenerateCodes}
-                className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
-            >
-                Generate Codes
-            </button>
-        )}
-
-        <button
-          onClick={openModal}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {languageData[language].add_person}
+      <div className={`mb-6 flex flex-wrap items-center gap-2 p-3 bg-white rounded shadow-sm ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
+        <label className="inline-flex items-center cursor-pointer bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded hover:bg-green-100 transition">
+          <FaFileImport className="mr-2"/> VCF Import
+          <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" />
+        </label>
+        <a href="/customer.vcf" download="customer.vcf" className="bg-gray-50 text-gray-700 border border-gray-200 px-3 py-1.5 rounded hover:bg-gray-100 flex items-center">
+          <FaDownload className="mr-2"/> Demo VCF
+        </a>
+        <button onClick={handlePhoneImport} disabled={!isContactPickerSupported} className={`px-3 py-1.5 rounded flex items-center border ${isContactPickerSupported ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+          <FaAddressBook className="mr-2"/> Phone Import
         </button>
       </div>
       
-      <div className={`mb-4 flex justify-between items-center ${language === "ur" ? "flex-row-reverse" : ""}`}>
-      <input
-          type="text"
-          placeholder={`${languageData[language].search_placeholder} / Search by Code (e.g. P-1000)...`}
-          value={searchQuery}
-          onChange={handleSearchInputChange}
-          className="border py-2 px-3 rounded w-full md:w-1/3"
+      <div className={`mb-6 flex justify-between ${language === "ur" ? "flex-row-reverse" : ""}`}>
+        <input
+            type="text"
+            placeholder="Search name, phone, code..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="border border-gray-300 py-2 px-4 rounded-lg w-full md:w-1/3 shadow-sm"
+            dir={language === "ur" ? "rtl" : "ltr"}
         />
       </div>
-      
-      <div className={`mb-4 flex flex-wrap items-center gap-2 ${language === "ur" ? "flex-row-reverse text-right" : ""}`}>
-        <label className="inline-flex items-center">
-          <input
-            type="file"
-            accept=".vcf"
-            onChange={handleVcfFileUpload}
-            className="hidden"
-          />
-          <span className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-            {languageData[language].upload_person}
-          </span>
-        </label>
-        <span className="text-gray-500 text-sm">{languageData[language].upload_vcf}</span>
 
-        <a
-          href="/customer.vcf"
-          download="customer.vcf"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {languageData[language].download_demo}
-        </a>
-
-        <button
-          onClick={handleImportFromPhone}
-          disabled={!isContactPickerSupported}
-          className={`bg-purple-500 text-white px-4 py-2 rounded ${
-            isContactPickerSupported
-              ? 'hover:bg-purple-600'
-              : 'opacity-50 cursor-not-allowed'
-          }`}
-          title={isContactPickerSupported ? "Import from phone contacts" : "This feature is only available on supported mobile browsers (HTTPS)"}
-        >
-          {languageData[language].import_phone || "Import from Phone"}
-        </button>
-        
-        {isCodeSystemActive && (
-             <span className="text-sm font-semibold text-gray-700 ml-4 p-2 bg-gray-200 rounded">
-                Next Code: P-{nextCode}
-            </span>
-        )}
-      </div>
-
-      <div
-        className={`grid gap-4 w-full ${language === "ur" ? "text-right" : "text-left"}`}
-        style={{
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        }}
-        dir={language === "ur" ? "rtl" : "ltr"}
-      >
-        {currentPeople.map((person) => (
-          <div
-            key={person.id}
-            className="p-4 bg-white shadow rounded-lg flex flex-col items-center"
-          >
-            {person.image && (
-              <img
-                src={person.image}
-                alt={person.name}
-                className="w-20 h-20 rounded-full mb-4 object-cover"
-              />
-            )}
-            <h3 className="text-lg font-bold">{person.name}</h3>
-            {person.code && (
-                <p className="text-sm font-semibold text-blue-600 mb-2">Code: P-{person.code}</p>
-            )}
-            <p>{languageData[language].phone}: {person.phone}</p>
-            <p>{languageData[language].address}: {person.address}</p>
-            <p>{languageData[language].area}: {getAreaName(person.areaId)}</p>
-            
-            <div className={`flex space-x-2 mt-4 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
-              <button
-                onClick={() => initiateEdit(person)}
-                className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-              >
-                {languageData[language].edit}
-              </button>
-              <button
-                onClick={() => removePerson(person.id)}
-                className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-              >
-                {languageData[language].remove}
-              </button>
-            </div>
-          </div>
+      <div className={`grid gap-5 w-full ${language === "ur" ? "text-right" : "text-left"}`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} dir={language === "ur" ? "rtl" : "ltr"}>
+        {currentPeople.map(person => (
+            <PersonCard 
+                key={person.id}
+                person={person}
+                areas={areas}
+                languageData={languageData}
+                language={language}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+            />
         ))}
       </div>
 
-      <div className="flex justify-center mt-4">
-        <nav>
-          <ul className={`pagination flex space-x-2 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
-            <li className="page-item">
-              <button
-                onClick={() => paginate(currentPage - 1)}
-                className="page-link btn btn-secondary px-3 py-1 rounded"
-                disabled={currentPage === 1}
-              >
-                {languageData[language].previous || "Previous"}
-              </button>
-            </li>
-            <li className="page-item">
-                <span className="page-link px-3 py-1">
-                    {currentPage} / {totalPages}
-                </span>
-            </li>
-            <li className="page-item">
-              <button
-                onClick={() => paginate(currentPage + 1)}
-                className="page-link btn btn-secondary px-3 py-1 rounded"
-                disabled={currentPage === totalPages}
-              >
-                {languageData[language].next || "Next"}
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
-
-      {isModalVisible && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
-          <div className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto ${language === "ur" ? "text-right" : "text-left"}`}>
-            <h2 className="text-xl font-bold mb-4">
-              {isEditingMode ? languageData[language].edit_person : languageData[language].add_person}
-            </h2>
-            <form onSubmit={handleFormSubmission}>
-              <div className="grid grid-cols-1 gap-4">
-                
-                {isEditingMode && formData.code && (
-                    <div className="p-3 bg-gray-100 rounded-lg">
-                        <label className="block font-bold">People Code:</label>
-                        <input
-                            type="text"
-                            value={`P-${formData.code}`}
-                            readOnly
-                            className="w-full p-2 border rounded bg-gray-50 font-mono"
-                        />
-                    </div>
-                )}
-                
-                <div>
-                  <label className="block font-bold">{languageData[language].name} *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold">{languageData[language].email}</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold">{languageData[language].phone} *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold">{languageData[language].address} </label>
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block font-bold">{languageData[language].area}</label>
-                  <select
-                    name="areaId"
-                    value={formData.areaId}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="">{languageData[language].select_area || "Select Area"}</option>
-                    {areas.map(area => (
-                      <option key={area.id} value={area.id}>
-                        {area.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold">{languageData[language].image}</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelection}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-              <div className={`flex justify-end space-x-4 mt-4 ${language === "ur" ? "flex-row-reverse space-x-reverse" : ""}`}>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  {languageData[language].cancel}
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  {isEditingMode ? languageData[language].update : languageData[language].add}
-                </button>
-              </div>
-            </form>
-          </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-8">
+            <div className="flex gap-2">
+                <button disabled={currentPage===1} onClick={() => setCurrentPage(c => c-1)} className="px-3 py-1 bg-white border rounded disabled:opacity-50">Prev</button>
+                <span className="px-3 py-1 font-bold">{currentPage} / {totalPages}</span>
+                <button disabled={currentPage===totalPages} onClick={() => setCurrentPage(c => c+1)} className="px-3 py-1 bg-white border rounded disabled:opacity-50">Next</button>
+            </div>
         </div>
       )}
+
+      <PeopleFormModal isVisible={isModalVisible} onClose={() => setIsModalVisible(false)} onSuccess={handleModalSuccess} initialData={editingPerson} />
     </div>
   );
 };
