@@ -6,15 +6,23 @@ import { useAppContext } from "../Appfullcontext";
 import AddProductModal from "../components/element/AddProductModal";
 import { CalculateUserCredit } from "../Utils/CalculateUserCredit";
 
+// Import Smart Modal
+import PeopleFormModal from "../components/people/PeopleFormModal"; 
+
 const EditSale = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const context = useAppContext();
 
-    const people = context.peopleContext.people;
-    const allProducts = context.productContext.products;
+    // --- CRITICAL FIX: Universal Store Mapping ---
+    // 1. Map .data to variables
+    // 2. Add Safe Fallbacks || []
+    const people = context.peopleContext.data || [];
+    const allProducts = context.productContext.data || [];
+    const allSales = context.SaleContext.data || [];
+    
     const editSaleInContext = context.SaleContext.edit;
-    const allSales = context.SaleContext.Sales;
+    const editProductInContext = context.productContext.edit;
 
     const isPrint = useRef(false);
 
@@ -27,28 +35,38 @@ const EditSale = () => {
     const [amountPaid, setAmountPaid] = useState("0");
     const [credit, setCredit] = useState(0);
     const [discount, setDiscount] = useState(0);
+    
+    // Modal UI States
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedBatch, setSelectedBatch] = useState(null);
     const [selectedModalProduct, setSelectedModalProduct] = useState(null);
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(true);
-    const [userCreditData, setUserCreditData] = useState(null); // Added this state based on your code
+    const [userCreditData, setUserCreditData] = useState(null);
+    
+    // New Person Modal State
+    const [showPeopleModal, setShowPeopleModal] = useState(false);
+    
+    // Global Price Mode
+    const [globalPriceMode, setGlobalPriceMode] = useState('sell');
 
     useEffect(() => {
-        const saleToEdit = allSales.find(sale => sale.id === id);
-        if (saleToEdit) {
-            setOriginalSale(saleToEdit);
-            setSalesRefNo(saleToEdit.salesRefNo);
-            setSelectedPerson(saleToEdit.personId);
-            setSelectedProducts(saleToEdit.products);
-            setPaymentMode(saleToEdit.paymentMode);
-            setAmountPaid(saleToEdit.amountPaid);
-            setDiscount(saleToEdit.discount);
-            setCredit(saleToEdit.credit);
-        } else {
-            setMessage("Sale not found!");
+        if(allSales.length > 0) {
+            const saleToEdit = allSales.find(sale => sale.id === id);
+            if (saleToEdit) {
+                setOriginalSale(saleToEdit);
+                setSalesRefNo(saleToEdit.salesRefNo);
+                setSelectedPerson(saleToEdit.personId);
+                setSelectedProducts(saleToEdit.products || []);
+                setPaymentMode(saleToEdit.paymentMode);
+                setAmountPaid(saleToEdit.amountPaid);
+                setDiscount(saleToEdit.discount);
+                setCredit(saleToEdit.credit);
+            } else {
+                setMessage("Sale not found!");
+            }
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, [id, allSales]);
 
     useEffect(() => {
@@ -61,39 +79,61 @@ const EditSale = () => {
         handleCalculateCredit();
     }, [selectedProducts, amountPaid, discount]);
 
-    // UPDATED: handleAddProduct to match the new logic from NewSales
-    const handleAddProduct = (product, batch, quantity, chosenPrice, priceType) => {
+    // --- NEW: Handle Person Added from Modal ---
+    const handlePersonAdded = (newPerson) => {
+        setMessage(`Person Added: ${newPerson.name}`);
+        setSelectedPerson(newPerson.id); // Auto Select
+        setTimeout(() => setMessage(""), 3000);
+    };
+
+    // UPDATED: handleAddProduct (Universal Logic)
+    const handleAddProduct = (product, batch, userEnteredQty, basePrice, priceType, unitMode, conversionRate, unitName) => {
+        
+        // Calculate Display Price & Total Pieces
+        const totalPieces = unitMode === 'secondary' ? Number(userEnteredQty) * Number(conversionRate) : Number(userEnteredQty);
+        const displayPrice = unitMode === 'secondary' ? Number(basePrice) * Number(conversionRate) : Number(basePrice);
+
         const existingProduct = selectedProducts.find(
             p => p.id === product.id && p.batchCode === batch.batchCode
         );
+        
         if (!existingProduct && batch.quantity > 0) {
             setSelectedProducts(currentProducts => [
                 ...currentProducts,
                 {
                     ...product,
                     batchCode: batch.batchCode,
-                    SellQuantity: quantity,
+                    
+                    // DB Fields
+                    SellQuantity: totalPieces,
+                    purchasePrice: batch.purchasePrice,
+                    
+                    // UI Fields
+                    enteredQty: userEnteredQty,
+                    unitMode: unitMode || 'base',
+                    unitName: unitName || 'Pcs',
+                    conversionRate: conversionRate || 1,
+                    newSellPrice: displayPrice,
+                    
                     discount: 0,
                     sellPrice: batch.sellPrice,
                     wholeSalePrice: batch.wholeSalePrice,
-                    newSellPrice: chosenPrice,
                     priceUsedType: priceType,
-                    purchasePrice: batch.purchasePrice,
                     batchQuantity: batch.quantity
                 }
             ]);
         }
     };
 
-    // UPDATED: handleProductChange with functional setState for stability
     const handleProductChange = (id, batchCode, field, value) => {
         setSelectedProducts(currentProducts =>
             currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    if (field === "SellQuantity") {
-                        const maxQty = p.batchQuantity || 0;
-                        const newQty = Math.max(0, Math.min(Number(value), maxQty));
-                        return { ...p, [field]: newQty };
+                    if (field === "enteredQty") {
+                        const val = Number(value);
+                        const conv = p.conversionRate || 1;
+                        // Recalculate total pieces
+                        return { ...p, enteredQty: val, SellQuantity: val * conv };
                     }
                     return { ...p, [field]: value };
                 }
@@ -102,15 +142,26 @@ const EditSale = () => {
         );
     };
 
-    // UPDATED: handleSellingPriceChange to fix discount calculation
     const handleSellingPriceChange = (id, batchCode, value) => {
         setSelectedProducts(currentProducts =>
             currentProducts.map(p => {
                 if (p.id === id && p.batchCode === batchCode) {
-                    const newSellPrice = value;
-                    const basePrice = p.priceUsedType === 'wholesale' ? p.wholeSalePrice : p.sellPrice;
-                    let discountPercent = 100 - (Number(newSellPrice) * 100) / Number(basePrice);
-                    discountPercent = Math.max(0, discountPercent);
+                    const newSellPrice = Number(value);
+                    const type = p.priceUsedType || 'sell';
+                    
+                    // Base price logic needs to consider Unit Mode
+                    let basePrice = type === 'wholesale' ? Number(p.wholeSalePrice) : Number(p.sellPrice);
+                    if(p.unitMode === 'secondary') {
+                        basePrice = basePrice * (p.conversionRate || 1);
+                    }
+
+                    let discountPercent = 0;
+                    if(basePrice > 0) {
+                        discountPercent = ((basePrice - newSellPrice) / basePrice) * 100;
+                    }
+                    
+                    if(discountPercent < 0) discountPercent = 0;
+
                     return { ...p, newSellPrice: newSellPrice, discount: discountPercent.toFixed(2) };
                 }
                 return p;
@@ -125,7 +176,6 @@ const EditSale = () => {
     };
 
     const handleUpdateSale = async () => {
-        // This entire function's logic is already correct for PWA and remains unchanged.
         if (!originalSale) {
             setMessage("Original sale data is missing. Cannot update.");
             return;
@@ -138,19 +188,19 @@ const EditSale = () => {
             setMessage("Amount paid cannot be greater than total bill.");
             return;
         }
-        if (discount > calculateSubtotal()) {
-            setMessage("Discount cannot be greater than the subtotal.");
-            return;
-        }
-
+        
+        // Stock Restoration Logic (Revert Old, Deduct New)
+        // 1. Identify all involved products
         const affectedProductIds = new Set();
         originalSale.products.forEach(p => affectedProductIds.add(p.id));
         selectedProducts.forEach(p => affectedProductIds.add(p.id));
 
+        // 2. Get fresh copy of products from context
         const productsToProcess = JSON.parse(JSON.stringify(
             allProducts.filter(p => affectedProductIds.has(p.id))
         ));
 
+        // 3. Revert Original Sale (Add back stock)
         for (const originalProduct of originalSale.products) {
             const product = productsToProcess.find(p => p.id === originalProduct.id);
             if (product) {
@@ -161,6 +211,7 @@ const EditSale = () => {
             }
         }
 
+        // 4. Deduct New Sale (Subtract stock)
         for (const newProduct of selectedProducts) {
             const product = productsToProcess.find(p => p.id === newProduct.id);
             if (product) {
@@ -172,10 +223,12 @@ const EditSale = () => {
         }
 
         try {
+            // 5. Update Products in DB
             for (const product of productsToProcess) {
-                await context.productContext.edit(product.id, product);
+                await editProductInContext(product.id, product);
             }
 
+            // 6. Update Sale Record
             const updatedSaleData = {
                 ...originalSale,
                 personId: selectedPerson,
@@ -188,22 +241,32 @@ const EditSale = () => {
                 credit,
                 lastUpdated: new Date().toISOString()
             };
-            await context.SaleContext.edit(id, updatedSaleData);
+            await editSaleInContext(id, updatedSaleData);
 
-            alert("Sales updated successfully! (Data saved locally)");
+            alert("Sales updated successfully!");
             if (isPrint.current) {
                 return updatedSaleData;
             }
             navigate("/sales");
         } catch (error) {
-            console.error("Local update failed:", error);
-            setMessage("Failed to update sale locally. Please try again.");
+            console.error("Update failed:", error);
+            setMessage("Failed to update sale. Please try again.");
         }
     };
     
-    // --- All other helper functions and JSX remain the same ---
-    const validateSellingPrice = product => Number(product.newSellPrice) < Number(product.purchasePrice);
-    const calculateSubtotal = () => selectedProducts.reduce((total, p) => total + (Number(p.newSellPrice) * p.SellQuantity), 0);
+    // Helpers
+    const validateSellingPrice = product => {
+        const costPerPiece = Number(product.purchasePrice);
+        const totalCost = product.unitMode === 'secondary' ? costPerPiece * (product.conversionRate || 1) : costPerPiece;
+        return Number(product.newSellPrice) < totalCost;
+    };
+
+    const calculateSubtotal = () => {
+        return selectedProducts.reduce((total, product) => {
+            return Number(total) + (Number(product.newSellPrice) * Number(product.enteredQty));
+        }, 0);
+    };
+
     const calculateTotalPayment = () => Math.max(0, calculateSubtotal() - Number(discount)).toFixed(2);
     const handleAmountPaidChange = e => setAmountPaid(e.target.value);
     const amountPaidcheck = amountPaid === "" ? 0 : Number(amountPaid);
@@ -219,25 +282,32 @@ const EditSale = () => {
         isPrint.current = false;
     };
 
-    if (isLoading) {
-        return <div className="text-center p-10">Loading Sale Data...</div>;
-    }
-
-    if (!originalSale) {
-        return <div className="text-center p-10 text-red-500 font-bold">{message || "Could not find the sale to edit."}</div>;
-    }
+    if (isLoading) return <div className="text-center p-10">Loading Sale Data...</div>;
+    if (!originalSale) return <div className="text-center p-10 text-red-500 font-bold">{message || "Could not find the sale to edit."}</div>;
 
     return (
         <div className="container mx-auto p-4">
             <h2 className="text-2xl font-bold text-primary mb-6">Edit Sale</h2>
             {message && <div className="text-red-500 mb-4">{message}</div>}
+            
             <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1 space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-3 gap-4">
                         <div className="bg-white rounded-lg p-4 shadow">
                             <label className="text-sm font-semibold text-gray-600">Sales Reference:</label>
                             <input type="text" value={salesRefNo} readOnly className="input input-bordered w-full bg-gray-50"/>
                         </div>
+
+                        {/* Global Price Mode */}
+                        <div className="bg-white rounded-lg p-4 shadow flex flex-col justify-between">
+                            <label className="text-sm font-semibold text-gray-600 mb-2">Global Price Mode:</label>
+                            <div className="flex bg-gray-200 rounded-lg p-1">
+                                <button onClick={() => setGlobalPriceMode('sell')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${globalPriceMode === 'sell' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-300'}`}>Retailer</button>
+                                <button onClick={() => setGlobalPriceMode('wholesale')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${globalPriceMode === 'wholesale' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-300'}`}>Wholesaler</button>
+                            </div>
+                        </div>
+
+                        {/* Person Selection with + Button */}
                         <div className="bg-white rounded-lg p-4 shadow">
                             <div className="flex gap-2">
                                 <div className="flex-1">
@@ -246,13 +316,16 @@ const EditSale = () => {
                                         {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                 </div>
-                                <button type="button" className="btn btn-primary btn-sm h-10" onClick={() => navigate("/people")}>+ New</button>
+                                <button type="button" className="btn btn-primary btn-sm h-10" onClick={() => setShowPeopleModal(true)}>+ New</button>
                             </div>
                         </div>
                     </div>
+
                     <ProductSearch searchProduct={searchProduct} setSearchProduct={setSearchProduct} products={allProducts} handleOpenAddModal={handleOpenAddModal}/>
+                    
                     <SelectedProductsTable selectedProducts={selectedProducts} handleProductChange={handleProductChange} handleSellingPriceChange={handleSellingPriceChange} validateSellingPrice={validateSellingPrice} handleCancelProduct={handleCancelProduct}/>
                 </div>
+
                 <div className="lg:w-1/4 lg:min-w-[300px] w-full">
                     <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg p-6 shadow-lg lg:sticky lg:top-4">
                         <h3 className="text-2xl font-bold mb-6 text-blue-800">Payment Details</h3>
@@ -280,9 +353,26 @@ const EditSale = () => {
                     </div>
                 </div>
             </div>
-            {showAddModal && <AddProductModal product={selectedModalProduct} batch={selectedBatch} onClose={() => setShowAddModal(false)} onAdd={handleAddProduct}/>}
+
+            {showAddModal && (
+                <AddProductModal 
+                    product={selectedModalProduct} 
+                    batch={selectedBatch} 
+                    onClose={() => setShowAddModal(false)} 
+                    onAdd={handleAddProduct}
+                    defaultPriceMode={globalPriceMode}
+                />
+            )}
+
+            {/* Person Modal */}
+            <PeopleFormModal 
+                isVisible={showPeopleModal}
+                onClose={() => setShowPeopleModal(false)}
+                onSuccess={handlePersonAdded}
+            />
         </div>
     );
 };
 
 export default EditSale;
+

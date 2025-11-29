@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAppContext } from "../Appfullcontext";
 import { FaPrint, FaSave } from "react-icons/fa";
+import languageData from "../assets/languageData.json";
 
 const SalesView = () => {
     const context = useAppContext();
     
-    // --- CRITICAL FIX: Universal Store Mapping ---
-    // All Universal Stores return 'data'. 
-    // Accessing .Sales, .people, .settings etc will result in undefined.
+    // --- Universal Store Mapping ---
     const salesData = context?.SaleContext?.data || [];
     const people = context?.peopleContext?.data || [];
     const userAndBusinessDetail = context?.settingContext?.data || [];
@@ -20,6 +19,14 @@ const SalesView = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    
+    // --- 1. GET LANGUAGE FROM URL ---
+    const [searchParams] = useSearchParams();
+    const urlLang = searchParams.get('lang'); 
+    
+    const printLang = urlLang || context.language || 'en';
+    const t = languageData[printLang] || languageData['en'];
+    const isUrdu = printLang === 'ur';
 
     const [loading, setLoading] = useState(true);
 
@@ -32,14 +39,25 @@ const SalesView = () => {
     const [naqCount, setNaqCount] = useState(''); 
     const [saveMessage, setSaveMessage] = useState('');
 
+    // --- HELPER: Smart Number Formatting ---
+    // Rule: Integer -> No decimal. Float -> Max 2 decimal. Checks for NaN.
+    const formatNum = (value) => {
+        const num = parseFloat(value);
+        if (isNaN(num)) return "0";
+        
+        // Agar integer hai (e.g. 100), toh 100 return karo
+        if (Number.isInteger(num)) {
+            return num.toString();
+        }
+        
+        // Agar decimal hai, toh extra zeros hata kar max 2 digit (e.g. 10.50 -> 10.5)
+        return parseFloat(num.toFixed(2)).toString();
+    };
+
     useEffect(() => {
         if (salesData.length > 0) {
-            if (sale) {
-                setLoading(false);
-                setNaqCount(sale.naq || ''); 
-            } else {
-                setLoading(false); // Sale not found but data loaded
-            }
+            setLoading(false);
+            if (sale) setNaqCount(sale.naq || ''); 
         }
     }, [salesData, sale]);
 
@@ -48,24 +66,20 @@ const SalesView = () => {
             return { previousBalance: 0, netBalance: parseFloat(sale?.credit || 0) };
         }
         
-        // 1. Total Receivable (Sales + Manual Credits)
         const totalSalesCredit = salesData.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
         const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const totalReceivable = totalSalesCredit + manualCredit;
         
-        // 2. Total Reductions (Payments + Sales Returns)
         const manualPayments = submittedRecords.filter(r => r.personId === person.id && r.type === 'payment').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
         const sellReturnAdjustments = sellReturns.filter(r => r.peopleId === person.id || r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
         const totalReductions = manualPayments + sellReturnAdjustments;
         
         const netReceivable = totalReceivable - totalReductions;
         
-        // 3. Total Payable (Purchases - Purchase Returns)
         const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
         const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
         const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
         
-        // 4. Final Math
         const totalCurrentBalance = netReceivable - netPayable;
         const currentSaleCredit = parseFloat(sale.credit || 0);
         const prevBalance = totalCurrentBalance - currentSaleCredit;
@@ -95,22 +109,18 @@ const SalesView = () => {
     }, [isPrintMode, loading, sale, navigate]);
 
     const handlePrint = () => {
-        navigate(`/sales/view/${id}/print`);
+        if (isPrintMode) window.print();
+        else navigate(`/sales/view/${id}/print?lang=${printLang}`);
     };
 
     const handleSaveNaq = async () => {
         if (!sale) return;
-
         setSaveMessage('Saving...');
         try {
-            const updatedSaleData = {
-                ...sale,
-                naq: naqCount || '' 
-            };
+            const updatedSaleData = { ...sale, naq: naqCount || '' };
             await context.SaleContext.edit(sale.id, updatedSaleData);
             setSaveMessage('Naq Saved Successfully!');
         } catch (error) {
-            console.error("Failed to save Naq:", error);
             setSaveMessage('Error saving Naq.');
         } finally {
             setTimeout(() => setSaveMessage(''), 3000);
@@ -138,34 +148,47 @@ const SalesView = () => {
                     .print-container { 
                         width: 100%; 
                         margin: 0; 
-                        padding: 3px;
+                        padding: 1px;
                         box-shadow: none; 
                         color: #000;
+                        direction: ${isUrdu ? 'rtl' : 'ltr'} !important;
+                        text-align: ${isUrdu ? 'right' : 'left'} !important;
                     }
                     .no-print { 
                         display: none; 
                     }
                     .print-container, .print-container * {
-                        font-size: 14px !important; 
-                        font-weight: 700 !important; 
-                        line-height: 1.4 !important;
+                        font-family: 'Noto Nastaliq Urdu', 'Arial', sans-serif;
+                        font-size: 10px !important; 
+                        font-weight: 600 !important; 
+                        line-height: 1.1 !important;
                     }
                     .print-container h2 {
-                        font-size: 22px !important;
+                        font-size: 14px !important; 
+                        margin-bottom: 2px;
                     }
                     .print-container .grand-total, .print-container .net-balance {
-                        font-size: 18px !important;
+                        font-size: 12px !important;
                     }
                     .print-container .footer-text, .print-container .footer-text * {
-                        font-size: 14px !important; 
-                        font-weight: 700 !important;
+                        font-size: 9px !important; 
+                        font-weight: 500 !important;
                     }
                     hr {
-                        border-top: 2px dashed #000 !important;
+                        border-top: 1px dashed #000 !important;
+                        margin: 3px 0 !important;
                     }
-                    #navbar{
-                      display:none !important;
+                    .rtl-table th, .rtl-table td {
+                        text-align: right;
                     }
+                    .ltr-table th, .ltr-table td {
+                        text-align: left;
+                    }
+                    td, th {
+                        padding: 1px 2px; /* Thoda padding adjust kiya */
+                        vertical-align: top;
+                    }
+                    #navbar{ display:none !important; }
                     body * { visibility: hidden !important; }
                     .print-container, .print-container * { visibility: visible !important; }
                 }
@@ -173,6 +196,7 @@ const SalesView = () => {
 
             <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
                 
+                {/* --- UI Controls (Hidden in Print) --- */}
                 <div className="no-print mb-4 p-4 bg-white rounded-lg shadow-md max-w-md mx-auto">
                     <h3 className="text-lg font-bold mb-3 text-center">Update Naq (Bundles)</h3>
                     <div className="flex gap-2 items-center">
@@ -183,133 +207,131 @@ const SalesView = () => {
                             value={naqCount}
                             onChange={(e) => setNaqCount(e.target.value)}
                             className="input input-bordered w-full"
-                            placeholder="e.g. 5 ctn, 2 sapar" 
+                            placeholder="e.g. 5 ctn" 
                         />
                         <button onClick={handleSaveNaq} className="btn btn-success flex items-center gap-2">
                             <FaSave /> Save
                         </button>
                     </div>
-                    {saveMessage && (
-                        <p className={`text-center mt-2 ${saveMessage.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                            {saveMessage}
-                        </p>
-                    )}
+                    {saveMessage && <p className="text-center mt-2 text-green-500">{saveMessage}</p>}
                 </div>
 
                 <div className="no-print flex justify-end mb-4 max-w-md mx-auto">
                     <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full"><FaPrint /> Print Receipt</button>
                 </div>
 
-                <div className="print-container w-72 mx-auto p-3 bg-white text-black shadow-lg font-sans">
+                {/* --- RECEIPT CONTAINER --- */}
+                <div className="print-container w-72 mx-auto p-2 bg-white text-black shadow-lg font-sans">
                     {userAndBusinessDetail[0]?.business ? (
-                        <div className="text-center mb-2">
-                            <h2 className="text-xl font-bold">{userAndBusinessDetail[0].business.businessName}</h2>
-                            <p className="text-xs">{userAndBusinessDetail[0].business.email}</p>
-                            <p className="text-xs">{userAndBusinessDetail[0].business.phoneNo}</p>
+                        <div className="text-center mb-1">
+                            <h2 className="font-bold">{userAndBusinessDetail[0].business.businessName}</h2>
+                            <p>{userAndBusinessDetail[0].business.phoneNo}</p>
                         </div>
                     ) : (
                         <p className="text-center text-red-500">Business details not found</p>
                     )}
-                    <hr className="my-2 border-dashed border-gray-400" />
-                    <div className="text-xs">
-                        <div className="flex justify-between"><span>Ref No:</span> <span>{sale.salesRefNo}</span></div>
+                    <hr />
+                    
+                    {/* Header Info */}
+                    <div>
+                        <div className="flex justify-between"><span>{t.ref_no || "Ref No"}:</span> <span>{sale.salesRefNo}</span></div>
                         
                         {sale.naq && sale.naq !== '' && (
-                             <div className="flex justify-between"><span>Total Naq:</span> <span>{sale.naq}</span></div>
+                             <div className="flex justify-between"><span>{t.total_naq || "Total Naq"}:</span> <span>{sale.naq}</span></div>
                         )}
 
-                        {person && (<div className="flex justify-between"><span>Customer:</span> <span>{person.name}</span></div>)}
-                        <div className="flex justify-between"><span>Date:</span> <span>{new Date(sale.dateTime).toLocaleString()}</span></div>
+                        {person && (<div className="flex justify-between"><span>{t.customer_name || "Customer"}:</span> <span>{person.name}</span></div>)}
+                        <div className="flex justify-between"><span>{t.date || "Date"}:</span> <span>{new Date(sale.dateTime).toLocaleString()}</span></div>
                     </div>
-                    <hr className="my-2 border-dashed border-gray-400" />
-                    <table className="w-full text-xs mt-2">
+                    
+                    <hr />
+                    
+                    {/* Items Table */}
+                    {/* Layout Adjusted: Item width reduced to give space to Disc & Total */}
+                    <table className={`w-full mt-1 ${isUrdu ? 'rtl-table' : 'ltr-table'}`}>
                         <thead>
                             <tr className="border-b border-dashed border-gray-400">
-                                <th className="py-1 text-left font-semibold">Item</th>
-                                <th className="py-1 text-center font-semibold">Qty</th>
-                                <th className="py-1 text-right font-semibold">Rate</th>
-                                <th className="py-1 text-right font-semibold">Total</th>
+                                <th className="w-[35%]">{t.item || "Item"}</th>
+                                <th className="w-[15%] text-center">{t.qty || "Qty"}</th>
+                                <th className="w-[15%] text-right">{t.rate || "Rate"}</th>
+                                <th className="w-[10%] text-right">{t.discount || "disc" } </th> 
+                                <th className="w-[25%] text-right">{t.total || "Total"}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sale.products.length > 0 ? (
                                 sale.products.map((product, index) => {
-                                    // --- NEW LOGIC APPLIED HERE ---
-                                    
-                                    // 1. Qty Determination:
                                     const displayQty = product.enteredQty || product.SellQuantity;
-                                    
-                                    // 2. Rate Determination:
                                     const rate = parseFloat(product.newSellPrice || product.sellPrice);
-                                    
-                                    // 3. Unit Name:
                                     const unitLabel = product.unitName || '';
-
-                                    // 4. Row Total:
                                     const rowTotal = rate * parseFloat(displayQty);
+                                    const itemDiscount = parseFloat(product.discount || 0);
 
                                     return (
                                         <tr key={`${product.id}-${index}`}>
-                                            <td className="py-1">
-                                                {product.name}
-                                                {/* Display Unit Name if available */}
-                                                {unitLabel && <span className="text-[10px] font-bold ml-1">({unitLabel})</span>}
+                                            <td>
+                                                {isUrdu && product.nameInUrdu ? product.nameInUrdu : product.name}
+                                                {unitLabel && <span className="font-bold ml-1">({unitLabel})</span>}
                                             </td>
-                                            <td className="py-1 text-center">{displayQty}</td>
-                                            <td className="py-1 text-right">{rate.toFixed(2)}</td>
-                                            <td className="py-1 text-right">{rowTotal.toFixed(2)}</td>
+                                            <td className="text-center">{formatNum(displayQty)}</td>
+                                            <td className="text-right">{formatNum(rate)}</td>
+                                            <td className="text-right">{itemDiscount > 0 ? formatNum(itemDiscount) : '-'}</td>
+                                            <td className="text-right">{formatNum(rowTotal)}</td>
                                         </tr>
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="4" className="text-center py-2">No products</td></tr>
+                                <tr><td colSpan="5" className="text-center py-2">No products</td></tr>
                             )}
                         </tbody>
                     </table>
-                    <hr className="my-2 border-t-2 border-dashed border-gray-400" />
                     
-                    <div className="text-xs space-y-1">
-                        <div className="flex justify-between"><span className="font-semibold">Subtotal:</span><span>{currency} {subtotal.toFixed(2)}</span></div>
-                        {discount > 0 && (<div className="flex justify-between"><span className="font-semibold">Discount:</span><span>- {currency} {discount.toFixed(2)}</span></div>)}
-                        <div className="flex justify-between text-sm font-bold mt-1 grand-total"><span>Grand Total:</span><span>{currency} {totalBill.toFixed(2)}</span></div>
-                        <div className="flex justify-between"><span className="font-semibold">Amount Paid:</span><span>{currency} {amountPaid.toFixed(2)}</span></div>
+                    <hr className="border-t-2" />
+                    
+                    {/* Bill Summary */}
+                    <div className="space-y-0.5">
+                        <div className="flex justify-between"><span className="font-semibold">{t.subtotal || "Subtotal"}:</span><span>{currency} {formatNum(subtotal)}</span></div>
+                        {discount > 0 && (<div className="flex justify-between"><span className="font-semibold">{t.discount || "Discount"}:</span><span>- {currency} {formatNum(discount)}</span></div>)}
+                        <div className="flex justify-between font-bold mt-1 grand-total"><span>{t.grand_total || "Grand Total"}:</span><span>{currency} {formatNum(totalBill)}</span></div>
+                        <div className="flex justify-between"><span className="font-semibold">{t.amount_paid || "Paid"}:</span><span>{currency} {formatNum(amountPaid)}</span></div>
                     </div>
 
+                    {/* Customer Ledger Summary */}
                     {person && (
                         <>
-                            <hr className="my-2 border-t-2 border-dashed border-gray-400" />
-                            <div className="text-xs space-y-1">
-                                <h4 className="text-center font-bold mb-1 uppercase">Hisab ka Khulasa</h4>
+                            <hr className="border-t-2" />
+                            <div className="space-y-0.5">
+                                <h4 className="text-center font-bold mb-1 uppercase">{t.account_summary || "Account Summary"}</h4>
                                 
                                 {previousBalance > 0 && (
-                                    <div className="flex justify-between"><span className="font-semibold">Pichla Bqaya:</span><span>{currency} {previousBalance.toFixed(2)}</span></div>
+                                    <div className="flex justify-between"><span className="font-semibold">{t.previous_balance || "Prev Bal"}:</span><span>{currency} {formatNum(previousBalance)}</span></div>
                                 )}
                                 {previousBalance < 0 && (
-                                    <div className="flex justify-between"><span className="font-semibold">Aapka Advance:</span><span>{currency} {Math.abs(previousBalance).toFixed(2)}</span></div>
+                                    <div className="flex justify-between"><span className="font-semibold">{t.advance_balance || "Advance"}:</span><span>{currency} {formatNum(Math.abs(previousBalance))}</span></div>
                                 )}
 
-                                <div className="flex justify-between"><span className="font-semibold">Is Bill ka Bqaya:</span><span className="font-bold">{currency} {currentCredit.toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span className="font-semibold">{t.current_bill_balance || "Curr Due"}:</span><span className="font-bold">{currency} {formatNum(currentCredit)}</span></div>
                                 
-                                <hr className="my-1 border-dashed border-gray-400" />
+                                <hr />
                                 
+                                {/* Net Balance */}
                                 {netBalance > 0 && (
-                                    <div className="flex justify-between text-base font-bold net-balance"><span>Kul Bqaya:</span><span>{currency} {netBalance.toFixed(2)}</span></div>
+                                    <div className="flex justify-between font-bold net-balance"><span>{t.net_payable || "Total Due"}:</span><span>{currency} {formatNum(netBalance)}</span></div>
                                 )}
                                 {netBalance < 0 && (
-                                    <div className="flex justify-between text-base font-bold net-balance"><span>Kul Advance:</span><span>{currency} {Math.abs(netBalance).toFixed(2)}</span></div>
+                                    <div className="flex justify-between font-bold net-balance"><span>{t.net_advance || "Total Adv"}:</span><span>{currency} {formatNum(Math.abs(netBalance))}</span></div>
                                 )}
                                 {netBalance === 0 && (
-                                    <div className="flex justify-between text-base font-bold net-balance"><span>Hisab Barabar:</span><span>{currency} 0.00</span></div>
+                                    <div className="flex justify-between font-bold net-balance"><span>{t.balance_clear || "Clear"}:</span><span>{currency} 0</span></div>
                                 )}
                             </div>
                         </>
                     )}
 
-                    <hr className="my-3 border-dashed border-gray-400" />
-                    <div className="text-center text-[10px] text-gray-600 footer-text">
+                    <hr />
+                    <div className="text-center footer-text">
                         <p className="font-bold">Powered by: Business Bachao</p>
-                        <p>Developed by: Muhammad Hasnain Tariq</p>
-                        <p>Contact: 03314460028 (WhatsApp)</p>
+                        <p>Contact: 03314460028</p>
                     </div>
                 </div>
             </div>
@@ -318,4 +340,5 @@ const SalesView = () => {
 };
 
 export default SalesView;
+
 
