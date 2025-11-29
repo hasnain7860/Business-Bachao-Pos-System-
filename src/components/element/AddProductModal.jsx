@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from "../../Appfullcontext"; 
 
 const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) => {
   const context = useAppContext();
   const units = context.unitContext.units; 
+  
+  // Ref for auto-focus
+  const inputRef = useRef(null);
 
   const [quantity, setQuantity] = useState(1);
   const [selectedPriceType, setSelectedPriceType] = useState(defaultPriceMode || 'sell');
@@ -19,27 +22,80 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
     ? Math.floor(batch.quantity / conversionRate) 
     : batch.quantity;
 
-  // --- BUG FIX: Calculate price based on specific type, NOT current selection ---
   const getPriceByType = (type) => {
     const basePrice = type === 'sell' ? batch.sellPrice : batch.wholeSalePrice;
-    // Ensure we handle empty/undefined prices gracefully (fallback to 0)
     const safePrice = basePrice ? Number(basePrice) : 0;
     return unitMode === 'secondary' ? safePrice * conversionRate : safePrice;
   };
 
+  // Reset quantity when unit mode changes
   useEffect(() => {
     setQuantity(1);
   }, [unitMode]);
 
+  // Auto-focus logic: Focus and Select All text on mount
+  useEffect(() => {
+    if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+    }
+  }, []);
+
+  // Handle Input Change (Typing)
+  const handleQuantityChange = (e) => {
+    const val = e.target.value;
+
+    // 1. Allow empty string so user can clear the input
+    if (val === "") {
+        setQuantity("");
+        return;
+    }
+
+    // 2. Parse number
+    const numVal = parseInt(val, 10);
+    if (isNaN(numVal)) return;
+
+    // 3. Strict Max Limit Enforcement (as requested)
+    if (numVal > maxQtyAllowed) {
+        setQuantity(maxQtyAllowed);
+    } else {
+        setQuantity(numVal);
+    }
+  };
+
+  // Handle Keyboard Navigation (Arrow Keys + Enter)
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setQuantity(prev => {
+            const current = prev === "" ? 0 : Number(prev);
+            if (current >= maxQtyAllowed) return maxQtyAllowed;
+            return current + 1;
+        });
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setQuantity(prev => {
+            const current = prev === "" ? 0 : Number(prev);
+            if (current <= 1) return 1;
+            return current - 1;
+        });
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+    }
+  };
+
   const handleSubmit = () => {
-    if (quantity > 0 && quantity <= maxQtyAllowed) {
-      // Base price is always per piece for backend logic
+    // Validate before submitting (Convert empty string to 0 for check)
+    const finalQty = quantity === "" ? 0 : Number(quantity);
+
+    if (finalQty > 0 && finalQty <= maxQtyAllowed) {
       const basePricePerPiece = selectedPriceType === 'sell' ? batch.sellPrice : batch.wholeSalePrice;
       
       onAdd(
         product, 
         batch, 
-        quantity, 
+        finalQty, 
         basePricePerPiece, 
         selectedPriceType,
         unitMode, 
@@ -95,7 +151,6 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
           </label>
           <div className="flex rounded-lg shadow-md overflow-hidden border border-gray-200">
             
-            {/* RETAILER BUTTON */}
             <button 
               type="button"
               onClick={() => setSelectedPriceType('sell')}
@@ -104,11 +159,9 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
                   : 'bg-white hover:bg-gray-100 text-gray-600'}`}
             >
               <span className="text-xs block">Retailer</span>
-              {/* Fix: Hardcoded 'sell' ensures this button ALWAYS shows Retail Price */}
               <span className="text-xl">{getPriceByType('sell')}</span>
             </button>
 
-            {/* WHOLESALER BUTTON */}
             <button 
               type="button"
               onClick={() => setSelectedPriceType('wholesale')}
@@ -117,7 +170,6 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
                   : 'bg-white hover:bg-gray-100 text-gray-600 border-l'}`}
             >
               <span className="text-xs block">Wholesaler</span>
-              {/* Fix: Hardcoded 'wholesale' ensures this button ALWAYS shows Wholesale Price */}
               <span className="text-xl">{getPriceByType('wholesale')}</span>
             </button>
           </div>
@@ -130,26 +182,39 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
           <div className="flex items-center gap-4">
             <button 
               className="btn btn-square btn-sm btn-outline btn-error" 
-              onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+              onClick={() => setQuantity(prev => {
+                  const val = prev === "" ? 0 : Number(prev);
+                  return Math.max(1, val - 1);
+              })}
+              tabIndex="-1" // Prevent Tab focus
             > - </button>
+            
             <input
+              ref={inputRef}
               type="number"
               value={quantity}
-              onChange={(e) => setQuantity(Math.min(maxQtyAllowed, Math.max(1, Number(e.target.value))))}
+              onChange={handleQuantityChange}
+              onKeyDown={handleKeyDown}
               className="input input-bordered w-24 text-center font-bold text-lg"
               min="1"
               max={maxQtyAllowed}
+              placeholder="1"
             />
+            
             <button 
               className="btn btn-square btn-sm btn-outline btn-success" 
-              onClick={() => setQuantity(prev => Math.min(maxQtyAllowed, prev + 1))}
+              onClick={() => setQuantity(prev => {
+                  const val = prev === "" ? 0 : Number(prev);
+                  return Math.min(maxQtyAllowed, val + 1);
+              })}
+              tabIndex="-1" // Prevent Tab focus
             > + </button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">
              Available: {maxQtyAllowed} {unitMode === 'secondary' ? secUnitName : baseUnitName}
           </p>
-          {quantity > maxQtyAllowed && (
-            <p className="text-red-500 text-sm mt-2 font-medium">Exceeds available stock!</p>
+          {Number(quantity) === maxQtyAllowed && (
+            <p className="text-orange-500 text-xs mt-1 text-center font-bold">Max Stock Reached</p>
           )}
         </div>
 
@@ -158,7 +223,7 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
           <button 
             className="btn btn-primary"
             onClick={handleSubmit}
-            disabled={quantity > maxQtyAllowed || quantity < 1}
+            disabled={quantity === "" || quantity < 1 || quantity > maxQtyAllowed}
           >
             Add to Sale
           </button>
@@ -169,5 +234,4 @@ const AddProductModal = ({ product, batch, onAdd, onClose, defaultPriceMode }) =
 };
 
 export default AddProductModal;
-
 
