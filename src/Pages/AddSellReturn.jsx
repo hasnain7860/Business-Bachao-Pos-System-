@@ -1,42 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { FaSearch, FaTrash, FaPlus } from 'react-icons/fa';
+import { FaSearch, FaTrash, FaArrowLeft, FaHistory } from 'react-icons/fa';
 import { useAppContext } from '../Appfullcontext';
 import { v4 as uuidv4 } from 'uuid';
 import { CalculateUserCredit } from '../Utils/CalculateUserCredit';
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const AddSellReturn = () => {
   const context = useAppContext();
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // --- CRITICAL FIX: Universal Store Mapping ---
-  // Access .data, not specific names
+  // Data Contexts
   const salesData = context.SaleContext.data || [];
   const products = context.productContext.data || [];
   const peoples = context.peopleContext.data || [];
   const sellReturns = context.SellReturnContext.data || [];
+  const units = context.unitContext.data || []; // <--- NEW: Access Unit Data
   
   const addReturn = context.SellReturnContext.add;
   const updateProduct = context.productContext.edit;
 
+  // State
   const [salesRef, setSalesRef] = useState('');
   const [filteredSales, setFilteredSales] = useState([]);
-  const [addCustomProduct, setAddCustomProduct] = useState([])
+  const [addCustomProduct, setAddCustomProduct] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
   const [returnItems, setReturnItems] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
-  const [selectedPeople, setSelectedPeople] = useState('')
+  const [selectedPeople, setSelectedPeople] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   
+  // Payment States
   const [customerCredit, setCustomerCredit] = useState(0);
   const [cashReturn, setCashReturn] = useState(0);
   const [creditAdjustment, setCreditAdjustment] = useState(0);
 
-
+  // Load Sale by ID from URL
   useEffect(() => {
     if (id && salesData.length > 0) {
-      const data = salesData.find((sale) => sale.id === id)
+      const data = salesData.find((sale) => sale.id === id);
       if (data) {
         setSalesRef(data.salesRefNo);
         handleSaleSelect(data); 
@@ -44,14 +46,28 @@ const AddSellReturn = () => {
     }
   }, [id, salesData]);
 
-
+  // Load Customer Credit
   useEffect(() => {
     if (selectedPeople) {
       const { pendingCredit } = CalculateUserCredit(context, selectedPeople);
       setCustomerCredit(pendingCredit);
     }
-  }, [selectedPeople, context]); // Added context dependency
+  }, [selectedPeople, context]);
 
+  // Calculate Totals
+  useEffect(() => {
+    const total = returnItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+    setTotalAmount(total);
+    setCreditAdjustment(total); 
+    setCashReturn(0);
+  }, [returnItems]);
+
+  // --- HELPER: Get Unit Name by ID ---
+  const getUnitName = (unitId) => {
+    if (!unitId) return 'Unit';
+    const unit = units.find(u => u.id === unitId);
+    return unit ? unit.name : 'Unit';
+  };
 
   const handleSearch = (value) => {
     setSalesRef(value); 
@@ -77,53 +93,69 @@ const AddSellReturn = () => {
     }
   };
 
+  // --- CORE LOGIC: MAPPING ITEMS ---
   const handleSaleSelect = (sale) => {
     setSelectedSale(sale);
     
-    // Safety check for sale.products
     const safeProducts = Array.isArray(sale.products) ? sale.products : [];
 
     const mappedItems = safeProducts.map((item) => {
-      // 1. Calculate Remaining Qty (IN BASE UNITS - PIECES)
-      let remainingQtyInPieces = Number(item.SellQuantity || 0); 
+      // 1. Fetch Product Master for reliable Unit IDs
+      const productMaster = products.find(p => p.id === item.id);
+      
+      // Resolve Base Unit Name
+      // Priority: Product Master ID -> Sale Item ID -> 'Pcs'
+      const baseUnitId = productMaster?.unitId || item.unitId;
+      const baseUnitName = getUnitName(baseUnitId);
 
-      // Subtract items already returned
+      // Resolve Secondary Unit Name
+      const secondaryUnitId = productMaster?.secondaryUnitId || item.secondaryUnitId;
+      const secondaryUnitName = getUnitName(secondaryUnitId);
+      
+      const convRate = Number(item.conversionRate) || 1;
+      
+      // Logic: Only show secondary option if Conversion > 1 AND a valid secondary unit ID exists
+      const hasSecondaryUnit = convRate > 1 && secondaryUnitId;
+
+      // 2. Get Totals in BASE UNITS
+      const originalSoldQtyBase = Number(item.SellQuantity || 0); 
+
+      // 3. Calculate Previously Returned Qty (Normalized to Base Units)
+      let alreadyReturnedBase = 0;
       const relatedReturns = sellReturns.filter(r => r.salesRef === sale.salesRefNo);
       relatedReturns.forEach(returnDoc => {
         if(returnDoc.items && Array.isArray(returnDoc.items)){
-            returnDoc.items.forEach(returnItem => {
-               if (returnItem.id === item.id) {
-                 // Return Item quantity should be in Base Units in DB
-                 const retQty = Number(returnItem.quantity || 0); 
-                 remainingQtyInPieces -= retQty;
-               }
-            });
+            const matchedItem = returnDoc.items.find(rItem => rItem.id === item.id);
+            if (matchedItem) {
+                 alreadyReturnedBase += Number(matchedItem.quantity || 0); 
+            }
         }
       });
 
-      // 2. Determine Display Mode
-      const convRate = Number(item.conversionRate) || 1;
-      
-      // 3. Calculate Max Display Qty
-      const maxDisplayQty = remainingQtyInPieces / convRate; 
+      const remainingQtyBase = originalSoldQtyBase - alreadyReturnedBase;
+      const pricePerBase = Number(item.newSellPrice || item.sellPrice || 0);
 
       return {
         id: item.id,
         batchCode: item.batchCode,
         productName: item.name,
         
-        // Unit Info
-        unitMode: item.unitMode || 'base',
-        unitName: item.unitName || 'Pcs',
+        // Stock Logic
+        originalSoldQtyBase,
+        alreadyReturnedBase,
+        remainingQtyBase: remainingQtyBase < 0 ? 0 : remainingQtyBase,
+        
+        // Unit Conversion Logic
         conversionRate: convRate,
+        hasSecondaryUnit: hasSecondaryUnit, 
         
-        // Quantities
-        quantity: 0, 
-        maxDisplayQuantity: maxDisplayQty < 0 ? 0 : maxDisplayQty, // Prevent negative
+        currentUnitMode: 'base', // Default to base
+        baseUnitName: baseUnitName,
+        secondaryUnitName: secondaryUnitName,
         
-        // Price (Per Display Unit)
-        price: Number(item.newSellPrice || item.sellPrice || 0),
-        
+        // Input State
+        inputQty: '', 
+        pricePerBaseUnit: pricePerBase,
         total: 0,
       };
     });
@@ -137,49 +169,54 @@ const AddSellReturn = () => {
     }
   };
 
-  // Calculate totals
-  useEffect(() => {
-    const total = returnItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-    setTotalAmount(total);
-    
-    setCreditAdjustment(total); 
-    setCashReturn(0);
-    
-  }, [returnItems]);
-
-
+  // --- HANDLE MANUAL ADD ---
   const handleAddCustomProduct = (product, batch) => {
     const alreadyAdded = returnItems.some((item) => item.id === product.id && item.batchCode === batch.batchCode);
+    if (alreadyAdded) return alert("Item already added");
 
-    if (alreadyAdded) {
-      alert("This product is already added!");
-      return;
-    }
+    const convRate = Number(product.conversionRate || 1);
+    const secondaryUnitId = product.secondaryUnitId;
+    const hasSecondaryUnit = convRate > 1 && secondaryUnitId;
+
+    // Resolve Names from Context using IDs from Product Object
+    const baseUnitName = getUnitName(product.unitId);
+    const secondaryUnitName = getUnitName(secondaryUnitId);
 
     const newItem = {
       id: product.id,
       batchCode: batch.batchCode,
       productName: `${product.name} (Batch: ${batch.batchCode})`,
       
-      unitMode: 'base',
-      unitName: 'Pcs',
-      conversionRate: 1,
-
-      quantity: 1,
-      maxDisplayQuantity: Number.POSITIVE_INFINITY, 
+      originalSoldQtyBase: 999999,
+      alreadyReturnedBase: 0,
+      remainingQtyBase: 999999,
       
-      price: Number(batch.sellPrice || 0), 
-      total: Number(batch.sellPrice || 0) * 1,
+      conversionRate: convRate,
+      hasSecondaryUnit: hasSecondaryUnit,
+
+      currentUnitMode: 'base',
+      baseUnitName: baseUnitName,
+      secondaryUnitName: secondaryUnitName,
+
+      inputQty: 1,
+      pricePerBaseUnit: Number(batch.sellPrice || 0),
+      total: Number(batch.sellPrice || 0),
     };
 
     setReturnItems([...returnItems, newItem]);
-    setAddCustomProduct([])
+    setAddCustomProduct([]);
     setSelectedProduct('');
   };
 
-
-  const handleRemoveItem = (index) => {
-    const newItems = returnItems.filter((_, i) => i !== index);
+  // --- UI HANDLERS ---
+  const handleUnitChange = (index, newMode) => {
+    const newItems = [...returnItems];
+    const item = newItems[index];
+    
+    item.currentUnitMode = newMode;
+    item.inputQty = ''; 
+    item.total = 0;
+    
     setReturnItems(newItems);
   };
 
@@ -187,48 +224,80 @@ const AddSellReturn = () => {
     const newItems = [...returnItems];
     const item = newItems[index];
     
-    const val = value === "" ? "" : Number(value);
-    
-    item.quantity = val;
-    item.total = (Number(val) || 0) * item.price;
+    if (value === '') {
+        item.inputQty = '';
+        item.total = 0;
+        setReturnItems(newItems);
+        return;
+    }
+
+    const val = Number(value);
+    item.inputQty = val;
+
+    if (item.currentUnitMode === 'secondary') {
+        item.total = val * (item.pricePerBaseUnit * item.conversionRate);
+    } else {
+        item.total = val * item.pricePerBaseUnit;
+    }
     
     setReturnItems(newItems);
   };
 
-  // Validation Check
-  const isValid = returnItems.every(item => {
-      const qty = Number(item.quantity);
-      if(qty === 0 && returnItems.length > 1) return true; 
-      if(qty < 0) return false;
-      return qty <= (item.maxDisplayQuantity + 0.001);
-  });
-  
-  const activeItems = returnItems.filter(i => Number(i.quantity) > 0);
+  const handleRemoveItem = (index) => {
+    const newItems = returnItems.filter((_, i) => i !== index);
+    setReturnItems(newItems);
+  };
+
+  // --- VALIDATION & SUBMIT ---
+  const validateItem = (item) => {
+      const input = Number(item.inputQty || 0);
+      let quantityInBase = input;
+      
+      if (item.currentUnitMode === 'secondary') {
+          quantityInBase = input * item.conversionRate;
+      }
+
+      // Allow 0.001 tolerance for float math
+      if (quantityInBase > (item.remainingQtyBase + 0.001)) return false;
+      if (quantityInBase < 0) return false;
+      return true;
+  };
+
+  const isValid = returnItems.every(validateItem);
+  const activeItems = returnItems.filter(i => Number(i.inputQty) > 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!selectedPeople) return alert("Please select a person for the return");
-    if (activeItems.length === 0) return alert("Please enter return quantity for at least one item");
-    if (!isValid) return alert("Quantity exceeds refundable amount.");
+    if (!selectedPeople) return alert("Select Customer");
+    if (activeItems.length === 0) return alert("No items to return");
+    if (!isValid) return alert("Check quantities. You are returning more than available.");
     
     if (Math.abs((Number(creditAdjustment) + Number(cashReturn)) - totalAmount) > 1) {
-      alert("Credit adjustment and cash return must equal total return amount");
-      return;
+       return alert("Credit Adjustment + Cash Return must equal Total Refund Amount.");
     }
 
     const returnRefNo = `RET-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-    // Prepare Items for Storage (Base Units)
-    const processedItems = activeItems.map(i => ({
-          id: i.id,
-          batchCode: i.batchCode,
-          productName: i.productName,
-          displayQuantity: Number(i.quantity), 
-          unitName: i.unitName,
-          quantity: Number(i.quantity) * Number(i.conversionRate), 
-          total: Number(i.total)
-    }));
+    const processedItems = activeItems.map(i => {
+          let quantityInBase = Number(i.inputQty);
+          let unitNameUsed = i.baseUnitName;
+
+          if (i.currentUnitMode === 'secondary') {
+              quantityInBase = Number(i.inputQty) * Number(i.conversionRate);
+              unitNameUsed = i.secondaryUnitName;
+          }
+
+          return {
+              id: i.id,
+              batchCode: i.batchCode,
+              productName: i.productName,
+              displayQuantity: Number(i.inputQty), 
+              unitName: unitNameUsed,
+              quantity: quantityInBase, // STORE BASE UNITS
+              total: Number(i.total)
+          };
+    });
 
     const returnData = {
       id: uuidv4(),
@@ -237,7 +306,7 @@ const AddSellReturn = () => {
       peopleId: selectedPeople,
       items: processedItems, 
       totalAmount,
-      returnDate: new Date().toISOString(), // Standardize date format
+      returnDate: new Date().toISOString(),
       paymentDetails: {
         creditAdjustment: Number(creditAdjustment),
         cashReturn: Number(cashReturn),
@@ -246,7 +315,7 @@ const AddSellReturn = () => {
       }
     };
 
-    // Stock Update Logic
+    // Update Stock
     for (const returnItem of processedItems) {
       const product = products.find(p => p.id === returnItem.id);
       if (product) {
@@ -265,256 +334,318 @@ const AddSellReturn = () => {
     }
 
     await addReturn(returnData);
-    alert("Sales Return Processed Successfully");
+    alert("Return Processed Successfully");
     navigate(-1); 
   };
 
   return (
-    <div className="p-4 max-w-5xl mx-auto min-h-screen pb-20">
-      <div className="text-2xl font-bold mb-6 text-gray-800">Add Sales Return</div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Sales Reference Search */}
-        <div className="form-control relative">
-          <label className="label">
-            <span className="label-text font-semibold">Sales Reference Number</span>
-          </label>
-          <div className="input-group flex">
-            <input
-              type="text"
-              placeholder="Search sales ref..."
-              className="input input-bordered w-full"
-              value={salesRef}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            <button className="btn btn-square btn-primary">
-              <FaSearch />
-            </button>
+    <div className="min-h-screen bg-gray-50 pb-32">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b sticky top-0 z-20">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                 <button onClick={() => navigate(-1)} className="btn btn-ghost btn-circle btn-sm">
+                     <FaArrowLeft />
+                 </button>
+                 <h1 className="text-xl font-bold text-gray-800">Sales Return</h1>
+             </div>
+             {selectedSale && (
+                 <div className="badge badge-primary badge-outline font-mono">
+                     Ref: {selectedSale.salesRefNo}
+                 </div>
+             )}
           </div>
-          {filteredSales.length > 0 && (
-            <ul className="absolute top-full left-0 bg-white w-full rounded-box mt-1 shadow-xl max-h-60 overflow-y-auto z-50 border border-gray-200">
-              {filteredSales.map((sale) => (
-                <li key={sale.id} className="border-b last:border-b-0">
-                  <a className="block p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSaleSelect(sale)}>
-                    <div className="font-bold text-primary">{sale.salesRefNo}</div>
-                    <div className="text-xs text-gray-500">Bill: {sale.totalBill} | Date: {new Date(sale.dateTime).toLocaleDateString()}</div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Customer Selection */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-semibold">Customer</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            value={selectedPeople}
-            onChange={(e) => setSelectedPeople(e.target.value)}
-          >
-            <option value="">Select Customer</option>
-            {peoples.map((people) => (
-              <option key={people.id} value={people.id}>
-                {people.name}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      {/* Add Custom Product */}
-      {!selectedSale && (
-        <div className="card bg-base-100 shadow-sm border border-gray-200 mt-4 mb-8">
-          <div className="card-body p-4">
-            <h2 className="card-title text-base text-gray-700">Add Product Manually (Without Bill Ref)</h2>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search product name..."
-                className="input input-bordered w-full"
-                value={selectedProduct}
-                onChange={(e) => handleSearchProduct(e.target.value)}
-              />
-              {addCustomProduct.length > 0 && (
-                <ul className="absolute top-full left-0 bg-white w-full rounded-box mt-1 shadow-xl max-h-48 overflow-y-auto border border-gray-200 z-50">
-                  {addCustomProduct.map((product) => (
-                    product.batchCode && product.batchCode.length > 0 &&
-                    product.batchCode.map((batch) => (
-                      <li key={`${product.id}-${batch.batchCode}`} className="border-b last:border-b-0">
-                        <a className="block p-2 hover:bg-gray-100 cursor-pointer" onClick={() => handleAddCustomProduct(product, batch)}>
-                          <span className="font-semibold">{product.name}</span> 
-                          <span className="text-xs text-gray-500 ml-2">(Batch: {batch.batchCode})</span>
-                        </a>
-                      </li>
-                    ))
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Return Items Table */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg mb-8 border border-gray-200">
-        <table className="table w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="w-1/3">Product</th>
-              <th className="text-center">Unit</th>
-              <th className="text-center">Available</th>
-              <th className="text-center w-24">Return Qty</th>
-              <th className="text-right">Refund Rate</th>
-              <th className="text-right">Total</th>
-              <th className="text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {returnItems.map((item, index) => {
-               const isQtyInvalid = Number(item.quantity) > item.maxDisplayQuantity || Number(item.quantity) < 0;
-               
-               return (
-                <tr key={`${item.id}-${index}`} className="hover:bg-gray-50">
-                    <td>
-                        <div className="font-bold text-gray-800">{item.productName}</div>
-                        <div className="text-xs text-gray-500 badge badge-ghost badge-sm mt-1">{item.batchCode}</div>
-                    </td>
-                    
-                    <td className="text-center font-bold text-blue-600">
-                        {item.unitName}
-                    </td>
-
-                    <td className="text-center text-gray-600">
-                        {Number(item.maxDisplayQuantity).toFixed(2)}
-                    </td>
-
-                    <td className="text-center">
+      <div className="max-w-6xl mx-auto p-4">
+        {/* Search Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="card bg-white shadow-sm border border-gray-200">
+                <div className="card-body p-4">
+                    <label className="label pt-0"><span className="label-text font-bold text-gray-500">Find Bill</span></label>
+                    <div className="relative">
                         <input
-                            type="number"
-                            className={`input input-bordered w-24 input-sm text-center font-bold ${isQtyInvalid ? 'input-error text-red-600' : ''}`}
-                            value={item.quantity}
-                            onChange={(e) => handleQuantityChange(index, e.target.value)}
+                        type="text"
+                        placeholder="Scan or Enter Sale Ref No..."
+                        className="input input-bordered w-full font-mono text-gray-900"
+                        value={salesRef}
+                        onChange={(e) => handleSearch(e.target.value)}
                         />
-                    </td>
-                    
-                    <td className="text-right">
-                        {item.price.toFixed(2)}
-                    </td>
-                    
-                    <td className="text-right font-bold text-gray-800">
-                        {item.total.toFixed(2)}
-                    </td>
-                    
-                    <td className="text-center">
-                        <button
-                            className="btn btn-ghost btn-xs text-red-500 hover:bg-red-50"
-                            onClick={() => handleRemoveItem(index)}
-                        >
-                            <FaTrash />
-                        </button>
-                    </td>
-                </tr>
-               );
-            })}
-            {returnItems.length === 0 && (
-                <tr>
-                    <td colSpan="7" className="text-center py-8 text-gray-400">
-                        No items added. Search a Sales Reference or add manually.
-                    </td>
-                </tr>
-            )}
-          </tbody>
-          {returnItems.length > 0 && (
-            <tfoot className="bg-gray-50">
-                <tr>
-                <td colSpan="5" className="text-right font-bold text-lg pt-4">Total Refund Amount:</td>
-                <td colSpan="2" className="font-bold text-xl text-primary pt-4 pr-4">{totalAmount.toFixed(2)}</td>
-                </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* Return Payment Details */}
-      {returnItems.length > 0 && (
-          <div className="card bg-base-100 shadow-lg border border-gray-200">
-            <div className="card-body">
-            <h2 className="card-title text-gray-700 border-b pb-2 mb-4">Refund Settlement</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="form-control">
-                    <label className="label"><span className="label-text font-bold text-gray-600">Total Return Value</span></label>
-                    <div className="text-2xl font-bold text-gray-800 px-1">Rs. {totalAmount.toFixed(2)}</div>
-                </div>
-                
-                <div className="form-control">
-                    <label className="label"><span className="label-text font-semibold text-gray-600">Credit Adjustment (Udhaar Kaato)</span></label>
-                    <input
-                        type="number"
-                        value={creditAdjustment}
-                        onChange={(e) => {
-                            const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                            setCreditAdjustment(val);
-                            const numVal = Number(val);
-                            if(numVal <= totalAmount) {
-                                setCashReturn(totalAmount - numVal);
-                            }
-                        }}
-                        className="input input-bordered w-full font-bold text-blue-700"
-                    />
-                    <label className="label">
-                        <span className="label-text-alt text-gray-500">Decreases customer's due balance</span>
-                    </label>
-                </div>
-
-                <div className="form-control">
-                    <label className="label"><span className="label-text font-semibold text-gray-600">Cash Return (Nagad Wapis)</span></label>
-                    <input
-                        type="number"
-                        value={cashReturn}
-                        onChange={(e) => {
-                             const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                             setCashReturn(val);
-                             const numVal = Number(val);
-                             if(numVal <= totalAmount) {
-                                setCreditAdjustment(totalAmount - numVal);
-                             }
-                        }}
-                        className="input input-bordered w-full font-bold text-green-700"
-                    />
-                    <label className="label">
-                        <span className="label-text-alt text-gray-500">Cash given back to customer</span>
-                    </label>
+                        <div className="absolute right-2 top-2 text-gray-400"><FaSearch /></div>
+                        
+                        {filteredSales.length > 0 && (
+                            <ul className="absolute top-full left-0 bg-white w-full rounded-b-lg shadow-xl max-h-60 overflow-y-auto z-50 border border-gray-100">
+                            {filteredSales.map((sale) => (
+                                <li key={sale.id} className="border-b last:border-b-0">
+                                <button className="w-full text-left p-3 hover:bg-blue-50 transition-colors" onClick={() => handleSaleSelect(sale)}>
+                                    <div className="font-bold text-blue-600">{sale.salesRefNo}</div>
+                                    <div className="text-xs text-gray-500 flex justify-between">
+                                        <span>Rs. {sale.totalBill}</span>
+                                        <span>{new Date(sale.dateTime).toLocaleDateString()}</span>
+                                    </div>
+                                </button>
+                                </li>
+                            ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="alert alert-info mt-6 bg-blue-50 border-blue-100 text-blue-800 text-sm">
-                <div className="flex flex-col sm:flex-row w-full justify-between">
-                    <span><strong>Current Balance:</strong> {customerCredit.toFixed(2)}</span>
-                    <span><strong>New Balance:</strong> {(customerCredit - Number(creditAdjustment)).toFixed(2)}</span>
-                </div>
-            </div>
-            
-            <div className="mt-6">
-                {!isValid && <div className="text-red-500 text-sm mb-2 text-center font-bold bg-red-50 p-2 rounded">Cannot submit: Return quantity exceeds sold quantity.</div>}
-                
-                <button
-                className="btn btn-primary w-full btn-lg text-white shadow-md hover:shadow-lg transition-all"
-                onClick={handleSubmit}
-                disabled={!isValid || activeItems.length === 0}
-                >
-                Confirm Return & Update Stock
-                </button>
-            </div>
+            <div className="card bg-white shadow-sm border border-gray-200">
+                 <div className="card-body p-4">
+                    <label className="label pt-0"><span className="label-text font-bold text-gray-500">Customer</span></label>
+                    <select 
+                        className="select select-bordered w-full text-gray-900" 
+                        value={selectedPeople} 
+                        onChange={(e) => setSelectedPeople(e.target.value)}
+                    >
+                        <option value="">Select Customer</option>
+                        {peoples.map((people) => (
+                        <option key={people.id} value={people.id}>{people.name}</option>
+                        ))}
+                    </select>
+                 </div>
             </div>
         </div>
-      )}
+
+        {/* Manual Add (Only if no bill selected) */}
+        {!selectedSale && (
+             <div className="collapse collapse-arrow border border-base-300 bg-white mb-6">
+                <input type="checkbox" /> 
+                <div className="collapse-title text-sm font-medium text-gray-500">
+                    Cannot find bill? Add Product Manually
+                </div>
+                <div className="collapse-content"> 
+                     <div className="relative">
+                        <input 
+                            type="text" 
+                            placeholder="Search Product Name..." 
+                            className="input input-bordered w-full text-gray-900"
+                            value={selectedProduct} 
+                            onChange={(e) => handleSearchProduct(e.target.value)} 
+                        />
+                        {addCustomProduct.length > 0 && (
+                            <ul className="absolute top-full left-0 bg-white w-full rounded-box mt-1 shadow-lg border border-gray-200 z-50">
+                                {addCustomProduct.map((product) => (
+                                    product.batchCode?.map((batch) => (
+                                    <li key={`${product.id}-${batch.batchCode}`} className="border-b">
+                                        <button className="w-full text-left p-3 hover:bg-gray-50" onClick={() => handleAddCustomProduct(product, batch)}>
+                                            <div className="font-bold text-gray-800">{product.name}</div>
+                                            <div className="text-xs text-gray-500">Batch: {batch.batchCode} | Price: {batch.sellPrice}</div>
+                                        </button>
+                                    </li>
+                                    ))
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* ITEMS TABLE */}
+        <div className="card bg-white shadow-sm border border-gray-200 overflow-hidden mb-8">
+            <div className="overflow-x-auto">
+                <table className="table w-full">
+                <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+                    <tr>
+                    <th className="w-[30%]">Product Details</th>
+                    <th className="text-center">History (Base)</th>
+                    <th className="text-center">Return Qty</th>
+                    <th className="text-right">Return Amount</th>
+                    <th className="w-10"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {returnItems.map((item, index) => {
+                        const isSecondary = item.currentUnitMode === 'secondary';
+                        const currentReturnInBase = isSecondary ? (Number(item.inputQty) * item.conversionRate) : Number(item.inputQty);
+                        
+                        // Safety tolerance for floating point math
+                        const isError = currentReturnInBase > (item.remainingQtyBase + 0.001);
+                        
+                        return (
+                            <tr key={`${item.id}-${index}`} className="group hover:bg-gray-50 border-b last:border-0">
+                                {/* Product Info */}
+                                <td className="align-top py-3">
+                                    <div className="font-bold text-gray-900 text-base">{item.productName}</div>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                        <span className="badge badge-xs badge-ghost py-2">{item.batchCode}</span>
+                                        <span className="text-xs text-gray-500">Rate: {item.pricePerBaseUnit} / {item.baseUnitName}</span>
+                                    </div>
+                                    {item.hasSecondaryUnit && (
+                                        <div className="text-[10px] text-blue-600 font-medium mt-1">
+                                            1 {item.secondaryUnitName} = {item.conversionRate} {item.baseUnitName}
+                                        </div>
+                                    )}
+                                </td>
+
+                                {/* History / Remaining */}
+                                <td className="align-top py-3 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-[10px] text-gray-400">AVAILABLE TO RETURN</div>
+                                        <div className="font-mono text-xl font-bold text-green-700 leading-none mt-1">
+                                            {item.remainingQtyBase} 
+                                        </div>
+                                        <div className="text-[10px] text-gray-500 font-bold">{item.baseUnitName}</div>
+                                        
+                                        <div className="text-[10px] text-gray-400 mt-1">
+                                            Sold: {item.originalSoldQtyBase} | Ret: {item.alreadyReturnedBase}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {/* Input Section */}
+                                <td className="align-top py-3">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="join shadow-sm border border-gray-300 rounded-lg">
+                                            <input
+                                                type="number"
+                                                className={`join-item input input-sm w-20 text-center font-bold text-lg h-10 ${isError ? 'input-error text-red-600 bg-red-50' : 'text-gray-900 bg-white'}`}
+                                                placeholder="0"
+                                                value={item.inputQty}
+                                                onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                                min="0"
+                                            />
+                                            
+                                            {item.hasSecondaryUnit ? (
+                                                <select 
+                                                    className="join-item select select-sm bg-gray-100 text-gray-800 font-bold w-24 px-2 h-10 border-l border-gray-300 focus:outline-none"
+                                                    value={item.currentUnitMode}
+                                                    onChange={(e) => handleUnitChange(index, e.target.value)}
+                                                >
+                                                    <option value="base">{item.baseUnitName}</option>
+                                                    <option value="secondary">{item.secondaryUnitName}</option>
+                                                </select>
+                                            ) : (
+                                                <div className="join-item flex items-center justify-center bg-gray-100 px-3 text-xs font-bold text-gray-600 min-w-[3rem] h-10 border-l border-gray-300">
+                                                    {item.baseUnitName}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isError && (
+                                            <span className="text-[10px] text-red-600 font-bold animate-pulse">
+                                                Exceeds Limit ({Math.floor(item.remainingQtyBase / (isSecondary ? item.conversionRate : 1))} max)
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
+
+                                {/* Total Price */}
+                                <td className="align-top py-3 text-right">
+                                    <div className="font-bold text-gray-900 text-lg">
+                                        {item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </div>
+                                </td>
+
+                                {/* Delete */}
+                                <td className="align-middle text-center">
+                                    <button 
+                                        onClick={() => handleRemoveItem(index)}
+                                        className="btn btn-ghost btn-xs text-red-400 hover:bg-red-50 hover:text-red-600"
+                                    >
+                                        <FaTrash />
+                                    </button>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    
+                    {returnItems.length === 0 && (
+                        <tr>
+                            <td colSpan="5" className="text-center py-10 text-gray-400">
+                                <div className="flex flex-col items-center">
+                                    <FaHistory className="text-4xl mb-2 opacity-20" />
+                                    <p>No items added for return.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
+        </div>
+
+        {/* BOTTOM ACTION BAR - FIXED */}
+        {returnItems.length > 0 && (
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-3 z-40">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+                    
+                    {/* Totals */}
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-start">
+                        <div>
+                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Refund</div>
+                            <div className="text-2xl font-black text-primary leading-none">
+                                {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
+                        </div>
+                        
+                        {/* Inline Adjustments for Desktop */}
+                        <div className="hidden md:flex gap-2">
+                             <div className="form-control w-32">
+                                <label className="label py-0 h-4"><span className="label-text text-[9px] font-bold text-gray-500 uppercase">Credit Adj.</span></label>
+                                <input type="number" className="input input-bordered input-sm font-mono text-right" value={creditAdjustment} 
+                                    onChange={e => {
+                                        const val = parseFloat(e.target.value) || 0;
+                                        setCreditAdjustment(val);
+                                        if(val <= totalAmount) setCashReturn(totalAmount - val);
+                                    }} 
+                                />
+                             </div>
+                             <div className="form-control w-32">
+                                <label className="label py-0 h-4"><span className="label-text text-[9px] font-bold text-gray-500 uppercase">Cash Back</span></label>
+                                <input type="number" className="input input-bordered input-sm font-mono text-right" value={cashReturn} 
+                                    onChange={e => {
+                                        const val = parseFloat(e.target.value) || 0;
+                                        setCashReturn(val);
+                                        if(val <= totalAmount) setCreditAdjustment(totalAmount - val);
+                                    }} 
+                                />
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Only Adjustments */}
+                    <div className="grid grid-cols-2 gap-2 w-full md:hidden">
+                         <div className="form-control">
+                            <label className="label py-0 h-4"><span className="label-text text-[9px] font-bold text-gray-500">CREDIT ADJ.</span></label>
+                            <input type="number" className="input input-bordered input-sm w-full font-mono" value={creditAdjustment} 
+                                onChange={e => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setCreditAdjustment(val);
+                                    if(val <= totalAmount) setCashReturn(totalAmount - val);
+                                }} 
+                            />
+                         </div>
+                         <div className="form-control">
+                            <label className="label py-0 h-4"><span className="label-text text-[9px] font-bold text-gray-500">CASH BACK</span></label>
+                            <input type="number" className="input input-bordered input-sm w-full font-mono" value={cashReturn} 
+                                onChange={e => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setCashReturn(val);
+                                    if(val <= totalAmount) setCreditAdjustment(totalAmount - val);
+                                }} 
+                            />
+                         </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button 
+                        className="btn btn-primary w-full md:w-auto px-10 font-bold text-white shadow-lg uppercase tracking-wide"
+                        disabled={!isValid || activeItems.length === 0}
+                        onClick={handleSubmit}
+                    >
+                        Confirm Return
+                    </button>
+                </div>
+            </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default AddSellReturn;
+
 
