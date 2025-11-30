@@ -399,6 +399,18 @@ function App() {
                     }
                 />
                 <Route
+                    path="/purchases/edit/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                    <AdminOnlyRoute>
+                                <NewPurchases />
+                                    </AdminOnlyRoute>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/sales"
                     element={
                         <ProtectedRoute>

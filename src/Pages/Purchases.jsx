@@ -41,6 +41,9 @@ const Purchases = () => {
   const handlePurchaseReturn = (id) => {
     navigate(`/return/purchase_return/add/${id}`);
   };
+  const handlePurchaseEdit = (id) => {
+    navigate(`/purchases/edit/${id}`);
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm(languageData[language].areYouSureDelete || "Are you sure?")) {
@@ -100,6 +103,9 @@ const Purchases = () => {
                         <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-xl z-50 origin-top-right">
                           <button onClick={() => handlePurchaseReturn(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 flex items-center gap-2">
                              <FaEdit className="text-blue-500" /> {languageData[language].purchase_return}
+                          </button>
+                          <button onClick={() => handlePurchaseEdit(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 flex items-center gap-2">
+                             <FaEdit className="text-blue-500" /> {languageData[language].purchase_edit}
                           </button>
                           <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2">
                              <FaTrashAlt /> {languageData[language].delete}

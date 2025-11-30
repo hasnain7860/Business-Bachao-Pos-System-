@@ -62,7 +62,7 @@ const Navbar = () => {
             ]
         },
         { path: "/sales", labelKey: "sales", icon: FiClipboard, roles: ['Admin'] },
-        { path: "/Preorders", labelKey: "Preorders", icon: FiClipboard, roles: ['Admin','seller'] },
+        { path: "/Preorders", labelKey: "preorders", icon: FiClipboard, roles: ['Admin','seller'] },
         { path: "/purchases", labelKey: "purchases", icon: FiClipboard, roles: ['Admin'] },
         { path: "/report", labelKey: "reports", icon: FiClipboard, roles: ['Admin'] },
         { path: "/CreditManagement", labelKey: "credit_management", icon: FiClipboard, roles: ['Admin'] },
