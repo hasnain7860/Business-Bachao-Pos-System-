@@ -34,23 +34,23 @@ const SalesView = () => {
     const person = people.find((p) => p.id === (sale?.personId || sale?.customerId)) || null;
     const isPrintMode = location.pathname.includes("/print");
 
-    const currency = userAndBusinessDetail[0]?.business?.currency || 'Rs.';
+    // --- Safe Business Data Access ---
+    const businessInfo = userAndBusinessDetail[0]?.business || {};
+    const currency = businessInfo.currency || 'Rs.';
+    
+    // Smart Name Selection: Use Urdu Name if in Urdu Mode & Available, else English
+    const displayBusinessName = (isUrdu && businessInfo.businessNameUrdu) 
+        ? businessInfo.businessNameUrdu 
+        : (businessInfo.businessName || "My Business");
 
     const [naqCount, setNaqCount] = useState(''); 
     const [saveMessage, setSaveMessage] = useState('');
 
     // --- HELPER: Smart Number Formatting ---
-    // Rule: Integer -> No decimal. Float -> Max 2 decimal. Checks for NaN.
     const formatNum = (value) => {
         const num = parseFloat(value);
         if (isNaN(num)) return "0";
-        
-        // Agar integer hai (e.g. 100), toh 100 return karo
-        if (Number.isInteger(num)) {
-            return num.toString();
-        }
-        
-        // Agar decimal hai, toh extra zeros hata kar max 2 digit (e.g. 10.50 -> 10.5)
+        if (Number.isInteger(num)) return num.toString();
         return parseFloat(num.toFixed(2)).toString();
     };
 
@@ -140,6 +140,7 @@ const SalesView = () => {
         <>
             <style>{`
                 @media print {
+                    @page { margin: 0; padding: 0; }
                     body, html { 
                         width: 80mm; 
                         margin: 0;
@@ -148,46 +149,74 @@ const SalesView = () => {
                     .print-container { 
                         width: 100%; 
                         margin: 0; 
-                        padding: 1px;
+                        padding: 2px 5px;
                         box-shadow: none; 
                         color: #000;
                         direction: ${isUrdu ? 'rtl' : 'ltr'} !important;
                         text-align: ${isUrdu ? 'right' : 'left'} !important;
                     }
-                    .no-print { 
-                        display: none; 
-                    }
+                    .no-print { display: none; }
                     .print-container, .print-container * {
                         font-family: 'Noto Nastaliq Urdu', 'Arial', sans-serif;
                         font-size: 10px !important; 
                         font-weight: 600 !important; 
-                        line-height: 1.1 !important;
+                        line-height: 1.2 !important;
                     }
                     .print-container h2 {
-                        font-size: 14px !important; 
+                        font-size: 16px !important; 
+                        font-weight: 800 !important;
                         margin-bottom: 2px;
                     }
                     .print-container .grand-total, .print-container .net-balance {
                         font-size: 12px !important;
                     }
-                    .print-container .footer-text, .print-container .footer-text * {
-                        font-size: 9px !important; 
+                    .print-container .footer-notes {
+                        font-size: 9px !important;
                         font-weight: 500 !important;
+                        margin-top: 5px;
+                        border-top: 1px dotted #000;
+                        padding-top: 2px;
+                        text-align: center;
+                    }
+                    .print-container .footer-brand {
+                        font-size: 9px !important; 
+                        text-align: center;
+                        margin-top: 5px;
+                        border-top: 1px solid #000;
+                        padding-top: 2px;
                     }
                     hr {
-                        border-top: 1px dashed #000 !important;
+                        border-top: 1px solid #000 !important;
                         margin: 3px 0 !important;
                     }
-                    .rtl-table th, .rtl-table td {
-                        text-align: right;
-                    }
-                    .ltr-table th, .ltr-table td {
-                        text-align: left;
-                    }
+                    .rtl-table th, .rtl-table td { text-align: right; }
+                    .ltr-table th, .ltr-table td { text-align: left; }
+                    
+                    /* Table Styling */
+                    table { width: 100%; border-collapse: collapse; }
                     td, th {
-                        padding: 1px 2px; /* Thoda padding adjust kiya */
+                        padding: 3px 1px;
                         vertical-align: top;
                     }
+                    /* Line after each product as requested */
+                    .product-row {
+                        border-bottom: 1px dashed #777;
+                    }
+                    /* Remove border from last row */
+                    .product-row:last-child {
+                        border-bottom: none;
+                    }
+                    
+                    /* Logo styling for thermal print */
+                    .print-logo {
+                        width: 50px;
+                        height: 50px;
+                        object-fit: contain;
+                        margin: 0 auto 5px auto;
+                        display: block;
+                        filter: grayscale(100%) contrast(150%); /* High contrast for thermal */
+                    }
+
                     #navbar{ display:none !important; }
                     body * { visibility: hidden !important; }
                     .print-container, .print-container * { visibility: visible !important; }
@@ -222,17 +251,25 @@ const SalesView = () => {
 
                 {/* --- RECEIPT CONTAINER --- */}
                 <div className="print-container w-72 mx-auto p-2 bg-white text-black shadow-lg font-sans">
-                    {userAndBusinessDetail[0]?.business ? (
-                        <div className="text-center mb-1">
-                            <h2 className="font-bold">{userAndBusinessDetail[0].business.businessName}</h2>
-                            <p>{userAndBusinessDetail[0].business.phoneNo}</p>
-                        </div>
-                    ) : (
-                        <p className="text-center text-red-500">Business details not found</p>
+                    
+                    {/* LOGO ADDED HERE */}
+                    {businessInfo.logo && (
+                        <img src={businessInfo.logo} alt="Logo" className="print-logo" />
                     )}
+
+                    {/* Header: Business Info */}
+                    <div className="text-center mb-1">
+                        <h2 className="font-bold">{displayBusinessName}</h2>
+                        
+                        {/* Address & Phone */}
+                        {businessInfo.address && <p>{businessInfo.address}</p>}
+                        {businessInfo.phoneNo && <p>{businessInfo.phoneNo}</p>}
+                        {businessInfo.email && <p>{businessInfo.email}</p>}
+                    </div>
+                    
                     <hr />
                     
-                    {/* Header Info */}
+                    {/* Invoice Meta Data */}
                     <div>
                         <div className="flex justify-between"><span>{t.ref_no || "Ref No"}:</span> <span>{sale.salesRefNo}</span></div>
                         
@@ -246,15 +283,15 @@ const SalesView = () => {
                     
                     <hr />
                     
-                    {/* Items Table */}
-                    {/* Layout Adjusted: Item width reduced to give space to Disc & Total */}
-                    <table className={`w-full mt-1 ${isUrdu ? 'rtl-table' : 'ltr-table'}`}>
+                    {/* Items Table - DISCOUNT RESTORED */}
+                    <table className={`mt-1 ${isUrdu ? 'rtl-table' : 'ltr-table'}`}>
                         <thead>
-                            <tr className="border-b border-dashed border-gray-400">
-                                <th className="w-[35%]">{t.item || "Item"}</th>
-                                <th className="w-[15%] text-center">{t.qty || "Qty"}</th>
+                            <tr className="border-b border-black">
+                                <th className="w-[5%]">#</th> 
+                                <th className="w-[30%]">{t.item || "Item"}</th> {/* Reduced from 35 to 30 */}
+                                <th className="w-[12%] text-center">{t.qty || "Qty"}</th> {/* Reduced from 15 to 12 */}
                                 <th className="w-[15%] text-right">{t.rate || "Rate"}</th>
-                                <th className="w-[10%] text-right">{t.discount || "disc" } </th> 
+                                <th className="w-[13%] text-right text-[9px]">{t.discount || "Disc"}</th>  {/* RESTORED */}
                                 <th className="w-[25%] text-right">{t.total || "Total"}</th>
                             </tr>
                         </thead>
@@ -268,20 +305,21 @@ const SalesView = () => {
                                     const itemDiscount = parseFloat(product.discount || 0);
 
                                     return (
-                                        <tr key={`${product.id}-${index}`}>
+                                        <tr key={`${product.id}-${index}`} className="product-row">
+                                            <td>{index + 1}</td>
                                             <td>
                                                 {isUrdu && product.nameInUrdu ? product.nameInUrdu : product.name}
-                                                {unitLabel && <span className="font-bold ml-1">({unitLabel})</span>}
+                                                {unitLabel && <span className="font-bold ml-1 text-[8px]">({unitLabel})</span>}
                                             </td>
                                             <td className="text-center">{formatNum(displayQty)}</td>
                                             <td className="text-right">{formatNum(rate)}</td>
-                                            <td className="text-right">{itemDiscount > 0 ? formatNum(itemDiscount) : '-'}</td>
+                                            <td className="text-right">{itemDiscount > 0 ? formatNum(itemDiscount) : '-'}</td> {/* Data Added */}
                                             <td className="text-right">{formatNum(rowTotal)}</td>
                                         </tr>
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="5" className="text-center py-2">No products</td></tr>
+                                <tr><td colSpan="6" className="text-center py-2">No products</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -328,10 +366,16 @@ const SalesView = () => {
                         </>
                     )}
 
-                    <hr />
-                    <div className="text-center footer-text">
-                        <p className="font-bold">Powered by: Business Bachao</p>
-                        <p>Contact: 03314460028</p>
+                    {/* Footer Notes (Terms) */}
+                    {businessInfo.notes && (
+                        <div className="footer-notes">
+                            {businessInfo.notes}
+                        </div>
+                    )}
+
+                    {/* FIXED FOOTER SINGLE LINE */}
+                    <div className="footer-brand">
+                        <p className="font-bold">Business Bachao - 03314460028</p>
                     </div>
                 </div>
             </div>
@@ -340,5 +384,3 @@ const SalesView = () => {
 };
 
 export default SalesView;
-
-

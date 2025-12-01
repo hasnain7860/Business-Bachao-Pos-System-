@@ -4,7 +4,7 @@ import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
 import { useNavigate } from 'react-router-dom';
 
-// --- Change Password Modal ---
+// --- Change Password Modal (Unchanged) ---
 const ChangePasswordModal = ({ onClose, language, context }) => {
   const [passwords, setPasswords] = useState({
     oldPassword: '',
@@ -46,7 +46,6 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      // Ensure VITE_API_BASE_URL is defined or handle it
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
       const apiUrl = `${baseUrl}/api/change-password`;
 
@@ -132,17 +131,28 @@ const ChangePasswordModal = ({ onClose, language, context }) => {
   );
 };
 
-const InputField = ({ label, type, name, value, onChange, disabled, language }) => (
-  <div className={`flex flex-col sm:flex-row sm:items-center py-2 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
-    <label className="w-full sm:w-1/3 font-semibold mb-1 sm:mb-0">{label}:</label>
-    <input
-      type={type}
-      name={name}
-      value={value || ''}
-      onChange={onChange}
-      disabled={disabled}
-      className={`input input-bordered w-full sm:w-2/3 ${disabled ? 'bg-gray-100' : 'input-primary'}`}
-    />
+const InputField = ({ label, type, name, value, onChange, disabled, language, isTextArea = false }) => (
+  <div className={`flex flex-col sm:flex-row sm:items-start py-2 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
+    <label className="w-full sm:w-1/3 font-semibold mb-1 sm:mb-0 pt-2">{label}:</label>
+    {isTextArea ? (
+         <textarea
+         name={name}
+         value={value || ''}
+         onChange={onChange}
+         disabled={disabled}
+         rows="3"
+         className={`textarea textarea-bordered w-full sm:w-2/3 ${disabled ? 'bg-gray-100' : 'textarea-primary'}`}
+       />
+    ) : (
+        <input
+        type={type}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        disabled={disabled}
+        className={`input input-bordered w-full sm:w-2/3 ${disabled ? 'bg-gray-100' : 'input-primary'}`}
+        />
+    )}
   </div>
 );
 
@@ -152,16 +162,27 @@ const Settings = () => {
   const navigate = useNavigate();
 
   // --- CRITICAL FIX: Universal Store Mapping ---
-  // The store returns { data, add, edit, remove }. It DOES NOT return selectedSetting/saveSetting.
   const { data: settingsData, add: addSetting, edit: editSetting } = context.settingContext;
   
-  // Logic to get the single settings object from data array
-  const selectedSetting = (settingsData && settingsData.length > 0) ? settingsData[0] : {
+  // Default Structure including new Urdu Name and Notes
+  const defaultSetting = {
     user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '', logo: '' }
+    business: { 
+        businessName: '', 
+        businessNameUrdu: '', // NEW
+        phoneNo: '', 
+        email: '', 
+        address: '', 
+        currency: '', 
+        role: '', 
+        firebaseStorePass: '', 
+        logo: '',
+        notes: '' // NEW (For Footer/Terms)
+    }
   };
 
-  // Wrapper for save
+  const selectedSetting = (settingsData && settingsData.length > 0) ? settingsData[0] : defaultSetting;
+
   const saveSetting = async (updatedData) => {
     if (selectedSetting.id) {
       await editSetting(selectedSetting.id, updatedData);
@@ -173,10 +194,7 @@ const Settings = () => {
   const [isEditing, setIsEditing] = useState({ user: false, business: false });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   
-  const [formData, setFormData] = useState({
-    user: { name: '', phoneNo: '', email: '', signature: '' },
-    business: { businessName: '', phoneNo: '', email: '', address: '', currency: '', role: '', firebaseStorePass: '', logo: '' }
-  });
+  const [formData, setFormData] = useState(defaultSetting);
 
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -186,12 +204,10 @@ const Settings = () => {
       setFormData(prev => ({
         ...prev,
         ...currentData,
-        // Ensure user structure exists
         user: { ...prev.user, ...(currentData.user || {}), email: email || currentData.user?.email || '' },
         business: { ...prev.business, ...(currentData.business || {}) }
       }));
     } else if (email) {
-       // Init with email if no settings found
        setFormData(prev => ({ ...prev, user: { ...prev.user, email: email }}));
     }
   }, [settingsData, email]);
@@ -222,19 +238,30 @@ const Settings = () => {
         logout();
         navigate('/login', { replace: true });
     } else {
-        // Fallback if logout not in context
         localStorage.removeItem('userSession');
         window.location.href = '/login';
     }
   };
 
+  // --- LOGO LOGIC (Strict for Thermal Printers) ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.size <= 1048576 && file.type.startsWith('image/')) {
-      setSelectedFile(file);
-    } else {
-      alert('File must be an image and less than 1MB');
+    if (!file) return;
+
+    // 1. Strict Size Limit: 100KB (102400 bytes)
+    // Firestore documents are max 1MB. A 1MB logo will crash the settings fetch.
+    if (file.size > 102400) {
+      alert('File too big! For thermal printers, use a small logo (Max 100KB).');
+      return;
     }
+
+    // 2. Type Check
+    if (!file.type.startsWith('image/')) {
+        alert('File must be an image (PNG or JPG).');
+        return;
+    }
+
+    setSelectedFile(file);
   };
 
   const handleFileUpload = () => {
@@ -248,6 +275,7 @@ const Settings = () => {
         setFormData(updatedData);
         await saveSetting(updatedData);
         setSelectedFile(null);
+        alert("Logo uploaded successfully.");
       };
       reader.readAsDataURL(selectedFile);
     }
@@ -292,7 +320,27 @@ const Settings = () => {
       <div className="bg-white p-4 rounded-lg shadow-md mt-6">
         <h2 className="text-2xl font-bold mt-8 mb-4">{languageData[language]?.business_information || "Business Information"}</h2>
         <div className="space-y-4">
-          {['businessName', 'phoneNo', 'email', 'address', 'currency'].map((field, k) => (
+          <InputField
+              label={languageData[language]?.businessName || "Business Name (Eng)"}
+              type="text"
+              name="business.businessName"
+              value={formData.business?.businessName}
+              onChange={handleChange}
+              disabled={!isEditing.business}
+              language={language}
+          />
+          {/* URDU NAME */}
+          <InputField
+              label="Business Name (Urdu)"
+              type="text"
+              name="business.businessNameUrdu"
+              value={formData.business?.businessNameUrdu}
+              onChange={handleChange}
+              disabled={!isEditing.business}
+              language={language}
+          />
+
+          {['phoneNo', 'email', 'address', 'currency'].map((field, k) => (
             <InputField
               key={k}
               label={languageData[language]?.[field] || field}
@@ -304,6 +352,19 @@ const Settings = () => {
               language={language}
             />
           ))}
+
+          {/* NOTES FIELD */}
+          <InputField
+              label="Footer Notes / Terms"
+              type="text"
+              isTextArea={true}
+              name="business.notes"
+              value={formData.business?.notes}
+              onChange={handleChange}
+              disabled={!isEditing.business}
+              language={language}
+          />
+
           <button onClick={() => isEditing.business ? saveData('business') : toggleEdit('business')} className="btn btn-primary">
             {isEditing.business ? <FaSave /> : <FaEdit />}
             {isEditing.business ? (languageData[language]?.save || 'Save') : (languageData[language]?.edit || 'Edit')}
@@ -314,16 +375,32 @@ const Settings = () => {
       {/* Logo Upload */}
       <div className="bg-white p-4 rounded-lg shadow-md mt-6">
         <h2 className="text-2xl font-bold mb-4">{languageData[language]?.logo || "Logo"}</h2>
+        
+        {/* LOGO INSTRUCTIONS */}
+        <div className="alert alert-info shadow-sm mb-4">
+            <div>
+                <span className="text-xs sm:text-sm">
+                    <strong>For 80mm Thermal Printer:</strong><br/>
+                    1. Use Black & White image only.<br/>
+                    2. Max width: 400px (Keep it small).<br/>
+                    3. Max file size: 100KB.<br/>
+                    <em className="text-xs">Large colored images will print poorly and slow down the app.</em>
+                </span>
+            </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <input type="file" onChange={handleFileChange} className="input input-bordered w-full max-w-xs" />
+          <input type="file" onChange={handleFileChange} accept="image/*" className="input input-bordered w-full max-w-xs" />
           <button onClick={handleFileUpload} className="btn btn-primary w-full sm:w-auto" disabled={!selectedFile}>
             <FaUpload /> {languageData[language]?.upload || "Upload"}
           </button>
         </div>
+        
         {formData.business?.logo && (
           <div className="mt-4">
-            <img src={formData.business.logo} alt="Business Logo" className="w-32 h-32 object-cover rounded-md border" />
-            <button onClick={handleDeleteLogo} className="btn btn-error mt-2">
+            <p className="text-sm text-gray-500 mb-1">Current Logo Preview:</p>
+            <img src={formData.business.logo} alt="Business Logo" className="w-32 h-auto object-contain border p-2 bg-white" />
+            <button onClick={handleDeleteLogo} className="btn btn-error btn-sm mt-2">
               <FaTrashAlt /> {languageData[language]?.delete || "Delete"}
             </button>
           </div>
