@@ -21,13 +21,18 @@ const SelectedProductsTable = ({
             </tr>
           </thead>
           <tbody>
-            {selectedProducts.map((product, i) => {
+            {/* CRITICAL CHANGE: 
+              We create a copy of the array with [...selectedProducts] and then .reverse() it.
+              This ensures the last item added (at the end of the array) shows up at the top of the table.
+            */}
+            {[...selectedProducts].reverse().map((product, i) => {
               
               // Logic to check if stock is low based on Pieces
               const remainingStock = product.batchQuantity - product.SellQuantity;
               
               return (
               <tr key={`${product.id}-${product.batchCode}`} className="hover:bg-blue-50 transition-colors">
+                  {/* Row number is generated based on the reversed index, so the top item is always '1' */}
                   <td className="font-medium text-gray-700 text-xs md:text-sm px-2">{i+1}</td>
                   
                   {/* Product Name + Unit Indicator */}
