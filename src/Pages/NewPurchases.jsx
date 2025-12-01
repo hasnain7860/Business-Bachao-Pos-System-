@@ -90,11 +90,17 @@ const NewPurchases = () => {
     const handleConfirmAdd = (newProductRow) => {
         // newProductRow is already sanitized by Modal
         newProductRow.purchaseRefNo = `PURCHASE-${Math.floor(100000 + Math.random() * 900000)}`;
-        setSelectedProducts([...selectedProducts, newProductRow]);
+        
+        // LOGICAL FIX: 
+        // Pehle hum [...selectedProducts, newProductRow] kar rahe thay (Add to End)
+        // Ab hum [newProductRow, ...selectedProducts] kar rahe hain (Add to Top)
+        setSelectedProducts([newProductRow, ...selectedProducts]);
+        
         setIsModalOpen(false);
     };
 
     const handleUpdateTableProduct = (index, field, value) => {
+        // Since state order matches table order now, Index logic works perfectly directly
         const newProducts = [...selectedProducts];
         const p = newProducts[index];
 
@@ -320,5 +326,4 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
-
 
