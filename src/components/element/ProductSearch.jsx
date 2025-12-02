@@ -5,6 +5,7 @@ const ProductSearch = ({
   searchProduct,
   setSearchProduct,
   products,
+  inputRef,
   handleOpenAddModal,
   isPreorder = false,
   isPurchase = false
@@ -117,6 +118,7 @@ const ProductSearch = ({
         </label>
         <div className="relative">
             <input
+            ref={inputRef}
                 type="text"
                 value={searchProduct}
                 onChange={(e) => setSearchProduct(e.target.value)}

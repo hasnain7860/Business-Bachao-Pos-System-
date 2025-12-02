@@ -26,7 +26,11 @@ const NewSales = () => {
     const editProduct = productContext.edit;
     const editPreorder = preordersContext.edit; 
 
+    // Ref for printing
     const isPrint = useRef(false);
+    
+    // NEW: Ref for Search Input Focus
+    const searchInputRef = useRef(null);
 
     const [salesRefNo, setSalesRefNo] = useState("");
     const [selectedPerson, setSelectedPerson] = useState("");
@@ -134,6 +138,22 @@ const NewSales = () => {
              }
              return currentProducts; 
         });
+
+        // --- NEW LOGIC START ---
+        // 1. Clear the search bar
+        setSearchProduct("");
+        
+        // 2. Close Modal (Ensure modal closes)
+        setShowAddModal(false);
+
+        // 3. Auto Focus back to Search Input
+        // Using setTimeout to ensure the modal unmounts/closes before we try to focus
+        setTimeout(() => {
+            if (searchInputRef.current) {
+                searchInputRef.current.focus();
+            }
+        }, 100);
+        // --- NEW LOGIC END ---
     };
 
     const handleProductChange = (id, batchCode, field, value) => {
@@ -331,7 +351,14 @@ const NewSales = () => {
                         </div>
                     </div>
 
-                    <ProductSearch searchProduct={searchProduct} setSearchProduct={setSearchProduct} products={products} handleOpenAddModal={handleOpenAddModal} />
+                    {/* Passed inputRef to ProductSearch */}
+                    <ProductSearch 
+                        searchProduct={searchProduct} 
+                        setSearchProduct={setSearchProduct} 
+                        products={products} 
+                        handleOpenAddModal={handleOpenAddModal} 
+                        inputRef={searchInputRef}
+                    />
 
                     <SelectedProductsTable
                         selectedProducts={selectedProducts}
@@ -401,5 +428,4 @@ const NewSales = () => {
 };
 
 export default NewSales;
-
 
