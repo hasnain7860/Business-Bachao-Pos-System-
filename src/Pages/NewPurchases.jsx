@@ -9,6 +9,8 @@ import ProductSearch from "../components/element/ProductSearch.jsx";
 import AddProductModal from '../components/purchase/AddProductModal.jsx';
 import PurchaseTable from '../components/purchase/PurchaseTable.jsx';
 import PurchaseSummary from '../components/purchase/PurchaseSummary.jsx';
+// Import Smart Modal (Same as Sales)
+import PeopleFormModal from "../components/people/PeopleFormModal"; 
 
 const NewPurchases = () => {
     const { id } = useParams(); 
@@ -28,6 +30,7 @@ const NewPurchases = () => {
 
     // States
     const [selectedPeople, setselectedPeople] = useState('');
+    const [searchPerson, setSearchPerson] = useState(""); // Added for search functionality
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [productSearch, setProductSearch] = useState('');
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -39,9 +42,11 @@ const NewPurchases = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalProductData, setModalProductData] = useState({ product: null, batch: null });
     
+    // People Modal State
+    const [showPeopleModal, setShowPeopleModal] = useState(false);
+
     // --- LOAD DATA FOR EDIT (FIXED: RE-HYDRATE NAMES) ---
     useEffect(() => {
-        // Wait for units to load as well
         if (isEditMode && purchases.length > 0 && units.length > 0) {
             const purchaseToEdit = purchases.find(p => String(p.id) === String(id));
             if (purchaseToEdit) {
@@ -50,9 +55,7 @@ const NewPurchases = () => {
                 setPaymentMode(purchaseToEdit.paymentMode || 'Cash');
                 setTotalPayment(purchaseToEdit.totalPayment || 0);
                 
-                // IMPORTANT FIX: Re-attach Unit Names from IDs
                 const hydratedProducts = (purchaseToEdit.products || []).map(p => {
-                    // Find actual names from Unit Context using saved IDs
                     const bUnit = units.find(u => u.id === p.baseUnitId);
                     const sUnit = units.find(u => u.id === p.secondaryUnitId);
 
@@ -66,7 +69,7 @@ const NewPurchases = () => {
                 setSelectedProducts(hydratedProducts);
             }
         }
-    }, [id, purchases, isEditMode, units]); // Added units to dependency
+    }, [id, purchases, isEditMode, units]);
 
     // --- CALCULATIONS ---
     const calculateTotalBill = () => selectedProducts.reduce((total, p) => total + Number(p.total || 0), 0);
@@ -78,6 +81,14 @@ const NewPurchases = () => {
     }, [selectedProducts, totalPayment]);
 
     // --- HANDLERS ---
+    
+    // Handle new person added via Modal
+    const handlePersonAdded = (newPerson) => {
+        setselectedPeople(newPerson.id); 
+        setSearchPerson("");
+        setShowPeopleModal(false);
+    };
+
     const handleOpenAddModal = (product, batch = null) => {
         const exists = selectedProducts.find(p => p.id === product.id);
         if (exists) { alert('Product already in table. Edit it there.'); return; }
@@ -88,19 +99,12 @@ const NewPurchases = () => {
     };
 
     const handleConfirmAdd = (newProductRow) => {
-        // newProductRow is already sanitized by Modal
         newProductRow.purchaseRefNo = `PURCHASE-${Math.floor(100000 + Math.random() * 900000)}`;
-        
-        // LOGICAL FIX: 
-        // Pehle hum [...selectedProducts, newProductRow] kar rahe thay (Add to End)
-        // Ab hum [newProductRow, ...selectedProducts] kar rahe hain (Add to Top)
         setSelectedProducts([newProductRow, ...selectedProducts]);
-        
         setIsModalOpen(false);
     };
 
     const handleUpdateTableProduct = (index, field, value) => {
-        // Since state order matches table order now, Index logic works perfectly directly
         const newProducts = [...selectedProducts];
         const p = newProducts[index];
 
@@ -119,7 +123,6 @@ const NewPurchases = () => {
         } 
         else p[field] = value;
 
-        // Recalculate
         p.total = (p.enteredQty || 0) * (p.enteredPurchasePrice || 0);
         
         if (p.unitMode === 'secondary') {
@@ -140,7 +143,6 @@ const NewPurchases = () => {
         const totalBill = calculateTotalBill();
         const autoInitDate = new Date(0).toISOString();
 
-        // 1. REVERT STOCK IF EDITING
         if (isEditMode) {
             const oldPurchase = purchases.find(p => String(p.id) === String(id));
             if (oldPurchase && oldPurchase.products) {
@@ -157,7 +159,6 @@ const NewPurchases = () => {
             }
         }
 
-        // 2. ADD NEW STOCK
         for (const product of selectedProducts) {
             const existingProduct = products.find((p) => p.id === product.id);
             if (existingProduct) {
@@ -166,17 +167,13 @@ const NewPurchases = () => {
 
                 if (existingBatchIndex !== -1) {
                     const existingBatch = batches[existingBatchIndex];
-                    
-                    // Sanitize Update
                     existingBatch.purchasePrice = Number(product.purchasePrice || 0);
                     existingBatch.sellPrice = Number(product.sellPrice || 0);
                     existingBatch.wholeSalePrice = Number(product.wholeSalePrice || 0);
                     existingBatch.retailPrice = Number(product.retailPrice || 0);
                     existingBatch.expirationDate = product.expirationDate || "";
-                    
                     existingBatch.quantity = Number(existingBatch.quantity || 0) + Number(product.quantity || 0);
                 } else {
-                    // Create New Batch
                     batches.push({
                         batchCode: product.batchCode || "BATCH-ERR",
                         expirationDate: product.expirationDate || "",
@@ -194,35 +191,25 @@ const NewPurchases = () => {
             }
         }
 
-        // 3. CLEAN & SAVE PURCHASE RECORD (Deep Clean)
         const cleanedProducts = selectedProducts.map(p => ({
             id: p.id,
             name: p.name,
             companyId: p.companyId || null,
-            
-            // IDs
             baseUnitId: p.baseUnitId || null,
             secondaryUnitId: p.secondaryUnitId || null,
             transactionUnitId: p.transactionUnitId || p.baseUnitId || null,
-            
-            // Logic
             hasSecondary: Boolean(p.hasSecondary),
             conversionRate: Number(p.conversionRate) || 1,
             unitMode: p.unitMode || 'base',
-            
-            // Values
             enteredQty: Number(p.enteredQty || 0),
             enteredPurchasePrice: Number(p.enteredPurchasePrice || 0),
-            
             quantity: Number(p.quantity || 0),
             purchasePrice: Number(p.purchasePrice || 0),
             batchCode: p.batchCode || "",
-            
             sellPrice: Number(p.sellPrice || 0),
             wholeSalePrice: Number(p.wholeSalePrice || 0),
             retailPrice: Number(p.retailPrice || 0),
             expirationDate: p.expirationDate || "",
-            
             total: Number(p.total || 0)
         }));
 
@@ -270,19 +257,67 @@ const NewPurchases = () => {
                 units={units}
             />
 
+            {/* People Form Modal (Hidden by default) */}
+            <PeopleFormModal 
+                isVisible={showPeopleModal}
+                onClose={() => setShowPeopleModal(false)}
+                onSuccess={handlePersonAdded}
+            />
+
             <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1 min-w-0 space-y-3 sm:space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                        
+                        {/* UPDATED: Supplier Search Section */}
                         <div className="bg-white rounded-lg p-3 sm:p-4 shadow">
                             <label className="text-xs sm:text-sm font-semibold text-gray-600">Supplier *:</label>
                             <div className="flex gap-2">
-                                <select className="select select-bordered w-full text-xs sm:text-sm bg-white" value={selectedPeople} onChange={(e) => setselectedPeople(e.target.value)}>
-                                    <option value="" disabled>Select a Supplier</option>
-                                    {peoples.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-                                </select>
-                                <button className="btn btn-primary btn-sm hidden sm:flex" onClick={() => navigate("/people")}><AiOutlinePlus /> New</button>
+                                <div className="flex-1">
+                                    {selectedPeople ? (
+                                        // Selected View
+                                        <div className="flex flex-col gap-2">
+                                             <select className="select select-bordered w-full text-xs sm:text-sm bg-white" value={selectedPeople} onChange={e => setselectedPeople(e.target.value)}>
+                                                <option value={selectedPeople}>{peoples.find(p => p.id === selectedPeople)?.name || "Selected Person"}</option>
+                                            </select>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => { setselectedPeople(""); setSearchPerson(""); }} 
+                                                className="btn btn-xs sm:btn-sm btn-ghost text-red-500 self-start"
+                                            >
+                                                Change Supplier
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        // Search View
+                                        <div className="relative w-full">
+                                            <input 
+                                                type="text" 
+                                                value={searchPerson} 
+                                                onChange={e => setSearchPerson(e.target.value)} 
+                                                placeholder="Search Supplier" 
+                                                className="input input-bordered w-full text-xs sm:text-sm" 
+                                            />
+                                            {searchPerson && (
+                                                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                    {peoples.filter(p => p.name.toLowerCase().includes(searchPerson.toLowerCase())).map(person => (
+                                                        <div key={person.id} className="p-2 hover:bg-gray-100 cursor-pointer text-sm" onClick={() => { setselectedPeople(person.id); setSearchPerson(""); }}>
+                                                            {person.name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <button 
+                                    className="btn btn-primary btn-sm h-10" 
+                                    onClick={() => setShowPeopleModal(true)}
+                                >
+                                    <AiOutlinePlus /> New
+                                </button>
                             </div>
                         </div>
+
                         <div className="bg-white rounded-lg p-4 shadow">
                             <label className="text-sm font-semibold text-gray-600">Purchase Date:</label>
                             <input type="date" value={currentDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setCurrentDate(e.target.value)} className="input input-bordered w-full bg-white"/>
@@ -326,4 +361,3 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
-
