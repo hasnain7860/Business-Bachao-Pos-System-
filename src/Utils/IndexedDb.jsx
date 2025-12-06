@@ -34,15 +34,37 @@ export const LOCAL_STORE = {
   syncTimes: 'syncTimes',
 }
 
-// --- BROADCAST CHANNEL HELPER (The New Logic) ---
-// Context pass karne ki zaroorat nahi. Bas channel pe message bhejo.
+// --- HELPER: DATA SANITIZER (THE FIX) ---
+// Recursively removes undefined and null, replacing them with empty strings.
+// This prevents Firebase crashes (undefined) and unintended deletions (null).
+const cleanPayload = (data) => {
+  if (data === undefined || data === null) {
+    return "";
+  }
+  
+  if (Array.isArray(data)) {
+    return data.map(item => cleanPayload(item));
+  }
+  
+  if (typeof data === 'object' && data !== null) {
+    const cleaned = {};
+    Object.keys(data).forEach(key => {
+      cleaned[key] = cleanPayload(data[key]);
+    });
+    return cleaned;
+  }
+  
+  return data;
+};
+
+// --- BROADCAST CHANNEL HELPER ---
 const broadcastUpdate = debounce((storeName) => {
   const channelName = `${storeName}_sync_channel`;
   const channel = new BroadcastChannel(channelName);
   channel.postMessage('update');
   channel.close();
   console.log(`📢 Broadcast sent: ${storeName} updated.`);
-}, 500); // 500ms debounce taake 100 items load hone par 100 baar render na ho
+}, 500);
 
 
 // --- EXISTING UTILS ---
@@ -74,11 +96,22 @@ export const processPendingQueries = async () => {
 
   for (const query of allPendingQueries) {
     const { id, storeName, item, action } = query;
-    const itemRef = ref(clientDatabase, `${storeName}/${action === 'delete' ? item : item.id}`);
+    
+    // SAFETY CHECK: Ensure item ID exists, otherwise skip to prevent crash
+    const itemId = item?.id || item; 
+    if (!itemId) {
+      console.error(`Invalid item in pending query ID: ${id}. Removing malformed query.`);
+      await db.delete('pendingQuery', id);
+      continue;
+    }
+
+    const itemRef = ref(clientDatabase, `${storeName}/${action === 'delete' ? itemId : itemId}`);
 
     try {
       if (action === 'add' || action === 'update') {
-        await set(itemRef, item);
+        // SANITIZE HERE: Before sending to Firebase to prevent stuck loop
+        const validItem = cleanPayload(item);
+        await set(itemRef, validItem);
       } else if (action === 'delete') {
         const deleteitem = {
           id: uuidv4(),
@@ -86,8 +119,9 @@ export const processPendingQueries = async () => {
           deletedItemId: item,
           deletedAt: Date.now(),
         }
+        // Sanitize delete record too, just in case
         const deleteItemRef = ref(clientDatabase, `deletedStore/${deleteitem.id}`);  
-        await set(deleteItemRef, deleteitem);
+        await set(deleteItemRef, cleanPayload(deleteitem));
         await remove(itemRef);
       }
 
@@ -95,6 +129,8 @@ export const processPendingQueries = async () => {
       console.log(`Successfully processed ${action} action for store: ${storeName}`);
     } catch (error) {
       console.error(`Error processing ${action} for store: ${storeName}`, error);
+      // Optional: If error is strictly about data format, you might want to delete the query
+      // so the loop doesn't get stuck forever. But for network errors, keep it.
     }
   }
 
@@ -122,11 +158,15 @@ export const getDB = async () => {
 
 export const addItem = async (storeName, item, firebaseEvent = false) => {
   const db = await getDB();
-  const existingItem = await db.get(storeName, item.id);
+  
+  // SANITIZE INPUT: Ensure no undefined/null gets into IndexedDB
+  const cleanItem = cleanPayload(item);
+  
+  const existingItem = await db.get(storeName, cleanItem.id);
   const timestamp = Date.now();
 
   if (!existingItem) {
-    const newItem = { ...item, updatedAt: timestamp, id: String(item.id) };
+    const newItem = { ...cleanItem, updatedAt: timestamp, id: String(cleanItem.id) };
     await db.add(storeName, newItem);
     
     if (!firebaseEvent) {
@@ -137,20 +177,29 @@ export const addItem = async (storeName, item, firebaseEvent = false) => {
 
 export const addPendingQuery = async (storeName, item, action) => {
   const db = await getDB();
+  // SANITIZE INPUT: Double check before adding to queue
+  const cleanItem = cleanPayload(item);
+
   const pendingQuery = {
     id: uuidv4(),
     storeName: storeName,
-    item: item,
+    item: cleanItem,
     action: action,
   };
   await db.add("pendingQuery", pendingQuery);
 };
 
-export const putItem = async (storeName, item , firebaseEvent = false ) => {
+export const putItem = async (storeName, item, firebaseEvent = false) => {
   const db = await getDB();
+  
+  // SANITIZE INPUT: Ensure no undefined/null gets into IndexedDB during update
+  const cleanItem = cleanPayload(item);
+  
   const timestamp = Date.now(); 
-  const updatedItem = { ...item, updatedAt: timestamp ,id: String(item.id) };
+  const updatedItem = { ...cleanItem, updatedAt: timestamp, id: String(cleanItem.id) };
+  
   await db.put(storeName, updatedItem);
+  
   if(!firebaseEvent){
     await addPendingQuery(storeName, updatedItem, 'update');
   }
@@ -178,7 +227,9 @@ export const setItems = async (storeName, items) => {
   const tx = db.transaction(storeName, 'readwrite');
   try {
     for (const item of items) {
-      const fixedItem = { ...item, id: String(item.id) };
+      // SANITIZE INPUT: Clean data coming from bulk sets (e.g. initial sync)
+      const cleanItem = cleanPayload(item);
+      const fixedItem = { ...cleanItem, id: String(cleanItem.id) };
       await tx.store.put(fixedItem);
     }
     await tx.done;
@@ -214,8 +265,7 @@ export const setLastSyncTime = async (storeName, timestamp) => {
   }
 };
 
-// --- LISTEN FOR CHANGES (Updated) ---
-// Note: Removed 'context' parameter because we use BroadcastChannel now
+// --- LISTEN FOR CHANGES ---
 export const listenForChanges = async (storeName) => {
   if (!clientDatabase) return;
 
@@ -228,15 +278,16 @@ export const listenForChanges = async (storeName) => {
     if (snapshot.exists()) {
       const allData = snapshot.val();
       const timestamp = Date.now();
+      
       const itemsArray = Object.keys(allData).map(key => ({
         id: key,
-        ...allData[key],
+        ...cleanPayload(allData[key]), // Clean incoming data
         updatedAt: allData[key].updatedAt || timestamp,
       }));
 
       await setItems(storeName, itemsArray);
       await setLastSyncTime(storeName, timestamp);
-      broadcastUpdate(storeName); // Trigger UI Refresh
+      broadcastUpdate(storeName);
     }
   }
 
@@ -244,29 +295,30 @@ export const listenForChanges = async (storeName) => {
   const queryRef = query(itemsRef, orderByChild("updatedAt"), startAt(lastSyncUpdateTime || 0));
 
   onChildAdded(queryRef, async (snapshot) => {
-    const addedItem = { id: snapshot.key, ...snapshot.val() };
+    const val = cleanPayload(snapshot.val()); // Clean incoming data
+    const addedItem = { id: snapshot.key, ...val };
     
     if(storeName === 'deletedStore'){
       await deleteItem(addedItem.storeName, addedItem.deletedItemId, true);
-      broadcastUpdate(addedItem.storeName); // Refresh the store where item was deleted
+      broadcastUpdate(addedItem.storeName);
     } else {
       await addItem(storeName, addedItem, true);
       await setLastSyncTime(storeName, Date.now());
-      broadcastUpdate(storeName); // Refresh UI
+      broadcastUpdate(storeName);
     }
   });
 
   onChildChanged(queryRef, async (snapshot) => {
-    const updatedItem = { id: snapshot.key, ...snapshot.val() };
+    const val = cleanPayload(snapshot.val()); // Clean incoming data
+    const updatedItem = { id: snapshot.key, ...val };
     await putItem(storeName, updatedItem, true);
     await setLastSyncTime(storeName, Date.now());
-    broadcastUpdate(storeName); // Refresh UI
+    broadcastUpdate(storeName);
   });
 
   onChildRemoved(itemsRef, async (snapshot) => {
     const deletedItemId = snapshot.key;
     await deleteItem(storeName, deletedItemId, true);
-    broadcastUpdate(storeName); // Refresh UI
+    broadcastUpdate(storeName);
   });
 };
-

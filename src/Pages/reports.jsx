@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../Appfullcontext';
-import { FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt, FaHandHoldingUsd } from 'react-icons/fa';
 import languageData from '../assets/languageData.json';
 
 // --- REPORTS COMPONENTS ---
@@ -12,19 +12,23 @@ import CollectionSheet from '../components/Reports/CollectionSheet';
 import CustomerCompanyReport from '../components/Reports/CustomerCompanyReport'; 
 import PreorderAreaReport from '../components/Reports/PreorderAreaReport';
 import InventoryReport from '../components/Reports/InventoryReport';
+// NEW IMPORT:
+import DailyReceivedReport from '../components/Reports/DailyReceivedReport';
 
 const Reports = () => {
     const context = useAppContext();
     
     // --- CRASH PROOFING: Language ---
-    // If context is not ready or language is missing, fallback to 'en'
     const safeLanguage = context.language && languageData[context.language] ? context.language : 'en';
-    const t = languageData[safeLanguage]; // 't' is a common convention for 'translation'
+    const t = languageData[safeLanguage];
 
-    const [activeReport, setActiveReport] = useState('collection_sheet');
+    // Default report ab 'Daily Received' kar di hai taake samne nazar aye
+    const [activeReport, setActiveReport] = useState('daily_received');
 
     const renderActiveReport = () => {
         switch (activeReport) {
+            case 'daily_received':
+                return <DailyReceivedReport />; // <--- New Report Logic
             case 'collection_sheet':
                 return <CollectionSheet />;
             case 'customer_company':
@@ -51,6 +55,9 @@ const Reports = () => {
     };
 
     const reportButtons = [
+        // New Button Added at the TOP
+        { key: 'daily_received', label: 'Daily Collection (Wasooli)', icon: <FaHandHoldingUsd /> },
+        
         { key: 'collection_sheet', label: t.collection_sheet || 'Collection Sheet', icon: <FaFileInvoice /> },
         { key: 'customer_company', label: t.customer_company_report || 'Cust/Co. Report', icon: <FaTruckLoading /> },
         { key: 'preorder_area', label: t.preorder_area_report || 'Preorder Report', icon: <FaMapMarkerAlt /> },
@@ -66,17 +73,12 @@ const Reports = () => {
             {/* --- PRINT STYLES --- */}
             <style>{`
                 @media print {
-                    /* Hide everything by default */
                     body * {
                         visibility: hidden !important;
                     }
-
-                    /* Only show the print container and its children */
                     .print-area, .print-area * {
                         visibility: visible !important;
                     }
-
-                    /* Position the print area to fill the page */
                     .print-area {
                         position: absolute !important;
                         left: 0 !important;
@@ -87,12 +89,10 @@ const Reports = () => {
                         box-shadow: none !important;
                         background-color: white !important;
                     }
-
                     @page {
                         size: A4;
                         margin: 10mm;
                     }
-
                     .no-print {
                         display: none !important;
                     }
