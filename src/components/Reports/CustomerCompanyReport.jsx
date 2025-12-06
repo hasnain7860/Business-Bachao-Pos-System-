@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../Appfullcontext';
 import { FaPrint, FaFilter } from 'react-icons/fa';
 import languageData from '../../assets/languageData.json';
@@ -8,12 +8,11 @@ const CustomerCompanyReport = () => {
     const { language } = context;
 
     // --- CRITICAL FIX: Universal Store Mapping ---
-    // 1. All stores return 'data'
-    // 2. Added Safe Fallbacks || []
     const allSales = context.SaleContext.data || [];
     const allPeoples = context.peopleContext.data || [];
     const allProducts = context.productContext.data || [];
     const allCompanies = context.companyContext.data || []; 
+    const allAreas = context.areasContext?.data || []; // Added Areas Context
 
     const settingsData = context.settingContext.data || [];
     const userAndBusinessDetail = settingsData[0] || {};
@@ -22,8 +21,9 @@ const CustomerCompanyReport = () => {
     const businessName = userAndBusinessDetail?.business?.businessName ?? 'Business Bachao';
 
     // --- Filters State ---
+    const [selectedArea, setSelectedArea] = useState('all'); // New Area State
     const [selectedCustomer, setSelectedCustomer] = useState('all');
-    const [selectedCompany, setSelectedCompany] = useState('all'); // Stores Company ID now
+    const [selectedCompany, setSelectedCompany] = useState('all');
     const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
     
@@ -31,11 +31,20 @@ const CustomerCompanyReport = () => {
     const [showFilters, setShowFilters] = useState(true);
 
     // --- Memos ---
+    
+    // Filter Customers based on selected Area (Optional but good UX)
     const customers = useMemo(() => {
-        return [...allPeoples].sort((a,b) => a.name.localeCompare(b.name));
-    }, [allPeoples]);
+        let peoples = [...allPeoples];
+        
+        // If an area is selected, only show customers from that area in the dropdown
+        if (selectedArea !== 'all') {
+            peoples = peoples.filter(p => p.areaId === selectedArea);
+        }
 
-    // Unique Companies (ID & Name)
+        return peoples.sort((a,b) => a.name.localeCompare(b.name));
+    }, [allPeoples, selectedArea]);
+
+    // Unique Companies
     const uniqueCompanies = useMemo(() => {
         const companyIds = new Set(allProducts.map(p => p.companyId).filter(Boolean));
         
@@ -61,18 +70,28 @@ const CustomerCompanyReport = () => {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        const salesInRange = allSales.filter(sale => {
+        // 1. Filter by Date
+        let filteredSales = allSales.filter(sale => {
             const saleDate = new Date(sale.dateTime);
             return saleDate >= start && saleDate <= end;
         });
 
-        let salesFilteredByCustomer = salesInRange;
+        // 2. Filter by Area (New Logic)
+        if (selectedArea !== 'all') {
+            filteredSales = filteredSales.filter(sale => {
+                const person = allPeoples.find(p => p.id === sale.personId);
+                return person && person.areaId === selectedArea;
+            });
+        }
+
+        // 3. Filter by Specific Customer
         if (selectedCustomer !== 'all') {
-            salesFilteredByCustomer = salesInRange.filter(sale => sale.personId === selectedCustomer);
+            filteredSales = filteredSales.filter(sale => sale.personId === selectedCustomer);
         }
 
         const finalProductList = [];
-        salesFilteredByCustomer.forEach(sale => {
+        
+        filteredSales.forEach(sale => {
             const customer = allPeoples.find(p => p.id === sale.personId);
             const customerName = customer ? customer.name : (languageData[language]?.walking_customer || 'Walking Customer');
             
@@ -84,25 +103,22 @@ const CustomerCompanyReport = () => {
                     const mainProduct = allProducts.find(p => p.id === productInSale.id);
                     const productCompanyId = mainProduct ? mainProduct.companyId : 'N/A';
                     
-                    // Match Filter
+                    // 4. Filter by Company
                     if (selectedCompany === 'all' || productCompanyId === selectedCompany) {
                         
                         // Logic for Quantity & Cost
-                        // Note: 'SellQuantity' is Base Units in new system
                         const quantity = parseFloat(productInSale.SellQuantity) || 0;
                         
-                        // Calculate Revenue (Line Total)
+                        // Calculate Revenue
                         let totalSale = 0;
                         if (productInSale.enteredQty && productInSale.newSellPrice) {
-                             // New System: Display Qty * Unit Price
                              totalSale = parseFloat(productInSale.enteredQty) * parseFloat(productInSale.newSellPrice);
                         } else {
-                             // Old System Fallback
                              const salePrice = parseFloat(productInSale.newSellPrice || productInSale.sellPrice) || 0;
                              totalSale = quantity * salePrice;
                         }
 
-                        // Calculate Cost (Base Qty * Base Cost)
+                        // Calculate Cost
                         const purchasePrice = parseFloat(productInSale.purchasePrice) || 0; 
                         const totalCost = quantity * purchasePrice;
                         
@@ -115,7 +131,7 @@ const CustomerCompanyReport = () => {
                             companyName: getCompanyName(productCompanyId),
                             customerName: customerName,
                             saleDate: new Date(sale.dateTime).toLocaleDateString(),
-                            quantity: quantity, // Showing Base Quantity (Pieces)
+                            quantity: quantity,
                             totalSale,
                             totalProfit,
                         });
@@ -137,6 +153,8 @@ const CustomerCompanyReport = () => {
     
     const handlePrint = () => window.print();
 
+    // Helper for display names
+    const areaName = selectedArea === 'all' ? 'All Areas' : allAreas.find(a => a.id === selectedArea)?.name;
     const customerName = selectedCustomer === 'all' ? (languageData[language]?.all_customers || 'All Customers') : customers.find(c => c.id === selectedCustomer)?.name;
     const companyName = selectedCompany === 'all' ? (languageData[language]?.all_companies || 'All Companies') : allCompanies.find(c => c.id === selectedCompany)?.name;
 
@@ -145,8 +163,28 @@ const CustomerCompanyReport = () => {
             {/* --- Filters (Hidden on Print) --- */}
             <div className={`no-print p-4 border rounded-lg bg-gray-50 ${showFilters ? '' : 'hidden'}`}>
                 <h3 className="text-xl font-semibold mb-4">{languageData[language]?.customer_company_report || 'Customer/Company Report'}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                     
+                    {/* 1. AREA FILTER */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Area</label>
+                        <select
+                            value={selectedArea}
+                            onChange={e => {
+                                setSelectedArea(e.target.value);
+                                setSelectedCustomer('all'); // Reset customer when area changes
+                            }}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
+                        >
+                            <option value="all">All Areas</option>
+                            {allAreas.map(area => (
+                                <option key={area.id} value={area.id}>{area.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 2. CUSTOMER FILTER */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">{languageData[language]?.customer || 'Customer'}</label>
                         <select
@@ -159,8 +197,9 @@ const CustomerCompanyReport = () => {
                         </select>
                     </div>
 
+                    {/* 3. COMPANY FILTER */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">{languageData[language]?.company_brand || 'Company (Brand)'}</label>
+                        <label className="block text-sm font-medium text-gray-700">{languageData[language]?.company_brand || 'Company'}</label>
                         <select
                             value={selectedCompany}
                             onChange={e => setSelectedCompany(e.target.value)}
@@ -171,6 +210,7 @@ const CustomerCompanyReport = () => {
                         </select>
                     </div>
 
+                    {/* 4. DATE RANGE */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">{languageData[language]?.start_date || 'Start Date'}</label>
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"/>
@@ -182,7 +222,7 @@ const CustomerCompanyReport = () => {
 
                     <button 
                         onClick={handleGenerateReport} 
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10"
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold h-10 w-full"
                     >
                         {languageData[language]?.generate || 'Generate'}
                     </button>
@@ -203,15 +243,19 @@ const CustomerCompanyReport = () => {
 
                     <div className="print-header hidden print:block mb-4">
                         <h2 className="text-2xl font-bold">{businessName}</h2>
-                        <h3 className="text-xl">{languageData[language]?.customer_company_report || 'Customer/Company Report'}</h3>
-                        <p>{languageData[language]?.customer || 'Customer'}: {customerName}</p>
-                        <p>{languageData[language]?.company_brand || 'Company'}: {companyName}</p>
-                        <p>{languageData[language]?.date_range || 'Date Range'}: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
+                        <h3 className="text-xl uppercase tracking-wide text-gray-600 mb-2">{languageData[language]?.customer_company_report || 'Customer/Company Report'}</h3>
+                        
+                        <div className="grid grid-cols-2 gap-x-8 text-sm border-b border-black pb-2">
+                            <p><span className="font-bold">Area:</span> {areaName}</p>
+                            <p><span className="font-bold">{languageData[language]?.date_range || 'Date Range'}:</span> {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</p>
+                            <p><span className="font-bold">{languageData[language]?.customer || 'Customer'}:</span> {customerName}</p>
+                            <p><span className="font-bold">{languageData[language]?.company_brand || 'Company'}:</span> {companyName}</p>
+                        </div>
                     </div>
 
                     {reportData.data.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full border-collapse border border-gray-300">
+                            <table className="min-w-full border-collapse border border-gray-300 text-sm">
                                 <thead className="bg-gray-100">
                                     <tr>
                                         <th className="py-2 px-3 border border-gray-300 text-left">{languageData[language]?.date || 'Date'}</th>
@@ -226,25 +270,25 @@ const CustomerCompanyReport = () => {
                                 <tbody>
                                     {reportData.data.map((item, index) => (
                                         <tr key={index} className="border-b hover:bg-gray-50">
-                                            <td className="py-2 px-3 border border-gray-300">{item.saleDate}</td>
+                                            <td className="py-2 px-3 border border-gray-300 whitespace-nowrap">{item.saleDate}</td>
                                             <td className="py-2 px-3 border border-gray-300">{item.customerName}</td>
                                             <td className="py-2 px-3 border border-gray-300 font-medium">{item.name}</td>
                                             <td className="py-2 px-3 border border-gray-300">{item.companyName}</td>
                                             <td className="py-2 px-3 border border-gray-300 text-right font-bold">{item.quantity}</td>
-                                            <td className="py-2 px-3 border border-gray-300 text-right font-semibold">{currency} {item.totalSale.toFixed(2)}</td>
+                                            <td className="py-2 px-3 border border-gray-300 text-right font-semibold">{currency} {item.totalSale.toLocaleString()}</td>
                                             <td className={`py-2 px-3 border border-gray-300 text-right font-bold ${item.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {currency} {item.totalProfit.toFixed(2)}
+                                                {currency} {item.totalProfit.toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot className="bg-gray-100 font-bold">
                                     <tr>
-                                        <td colSpan="4" className="py-3 px-3 border border-gray-300 text-right">{languageData[language]?.totals || 'Totals'}:</td>
+                                        <td colSpan="4" className="py-3 px-3 border border-gray-300 text-right uppercase">{languageData[language]?.totals || 'Totals'}:</td>
                                         <td className="py-3 px-3 border border-gray-300 text-right">{reportData.summary.totalQuantity}</td>
-                                        <td className="py-3 px-3 border border-gray-300 text-right">{currency} {reportData.summary.totalSale.toFixed(2)}</td>
+                                        <td className="py-3 px-3 border border-gray-300 text-right">{currency} {reportData.summary.totalSale.toLocaleString()}</td>
                                         <td className={`py-3 px-3 border border-gray-300 text-right ${reportData.summary.totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                            {currency} {reportData.summary.totalProfit.toFixed(2)}
+                                            {currency} {reportData.summary.totalProfit.toLocaleString()}
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -256,8 +300,8 @@ const CustomerCompanyReport = () => {
                         </div>
                     )}
                     
-                    <div className="print-footer mt-4 font-bold text-right hidden print:block">
-                        {languageData[language]?.total_profit || 'Total Profit'}: {currency} {reportData.summary.totalProfit.toFixed(2)}
+                    <div className="print-footer mt-4 font-bold text-right hidden print:block text-xl border-t-2 border-black pt-2">
+                        {languageData[language]?.total_profit || 'Total Profit'}: {currency} {reportData.summary.totalProfit.toLocaleString()}
                     </div>
                 </div>
             )}
