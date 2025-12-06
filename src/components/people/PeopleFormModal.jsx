@@ -15,18 +15,13 @@ const PeopleFormModal = ({
   const context = useAppContext();
   const { peopleContext, areasContext, language, settingContext } = context;
   
-  // --- CRITICAL FIX: Universal Store Mapping ---
-  // Pehle ye direct functions thay, ab ye store object hain
+  // Universal Store Mapping
   const { add: addPerson, edit: editPerson } = peopleContext;
-  
-  // Area Context ab { data: [...] } hai, direct array nahi
   const { data: areas } = areasContext; 
 
-  // Setting Context ab raw CRUD hai. Hamein logic yahan handle karni padegi.
   const { data: settingsData, add: addSetting, edit: editSetting } = settingContext;
-  const selectedSetting = settingsData[0] || {}; // Assume first item is the setting
+  const selectedSetting = settingsData[0] || {}; 
 
-  // Wrapper helper to handle settings update
   const saveSetting = async (newSettings) => {
     if (selectedSetting.id) {
       await editSetting(selectedSetting.id, newSettings);
@@ -42,6 +37,7 @@ const PeopleFormModal = ({
   const defaultState = {
     id: null,
     name: "",
+    nameUrdu: "", // Added Urdu Name
     email: "",
     phone: "",
     address: "",
@@ -58,6 +54,7 @@ const PeopleFormModal = ({
       if (initialData) {
         setFormData({
             ...initialData,
+            nameUrdu: initialData.nameUrdu || "", // Load existing Urdu name
             areaId: initialData.areaId || "",
             code: initialData.code || null
         });
@@ -163,9 +160,27 @@ const PeopleFormModal = ({
                  </div>
             )}
 
+            {/* Name English */}
             <div>
               <label className="block font-bold text-sm mb-1">{languageData[language].name} <span className="text-red-500">*</span></label>
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded" placeholder="Enter full name" />
+            </div>
+
+            {/* Name Urdu - Optional */}
+            <div>
+              <label className="block font-bold text-sm mb-1">
+                 {language === 'ur' ? 'نام (اردو)' : 'Name (Urdu)'} 
+                 <span className="text-gray-400 text-xs font-normal ml-2">(Optional)</span>
+              </label>
+              <input 
+                type="text" 
+                name="nameUrdu" 
+                value={formData.nameUrdu} 
+                onChange={handleInputChange} 
+                className="w-full p-2 border border-gray-300 rounded text-right font-serif" 
+                placeholder="اردو نام درج کریں"
+                dir="rtl"
+              />
             </div>
 
             <div>

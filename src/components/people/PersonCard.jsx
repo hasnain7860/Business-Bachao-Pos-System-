@@ -38,7 +38,15 @@ const PersonCard = ({
 
         {/* Info Section */}
         <div className={`flex-grow ${language === "ur" ? "text-right" : "text-left"}`}>
-          <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{person.name}</h3>
+          <div className="mb-2">
+            <h3 className="font-bold text-lg text-gray-800 leading-tight">{person.name}</h3>
+            {/* Show Urdu name if exists */}
+            {person.nameUrdu && (
+                <div className="text-gray-500 font-serif text-md mt-0.5 leading-tight" dir="rtl">
+                    {person.nameUrdu}
+                </div>
+            )}
+          </div>
           
           <div className="text-sm text-gray-500 space-y-1">
             <div className={`flex items-center gap-2 ${language === "ur" ? "flex-row-reverse" : ""}`}>

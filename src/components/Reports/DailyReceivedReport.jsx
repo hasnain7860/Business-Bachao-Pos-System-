@@ -26,7 +26,7 @@ const DailyReceivedReport = () => {
         // 2. Filter Transactions
         const filtered = transactions.filter(record => {
             // Rule 1: Hamein sirf wo record chahiye jo 'credit' hain (Janhon ne paisa diya)
-            if (record.type !== 'credit') return false;
+            if (record.type !== 'payment') return false;
 
             // Rule 2: Date match honi chahiye
             if (record.date !== selectedDate) return false;
