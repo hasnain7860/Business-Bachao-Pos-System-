@@ -30,7 +30,7 @@ const NewPurchases = () => {
 
     // States
     const [selectedPeople, setselectedPeople] = useState('');
-    const [searchPerson, setSearchPerson] = useState(""); // Added for search functionality
+    const [searchPerson, setSearchPerson] = useState(""); 
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [productSearch, setProductSearch] = useState('');
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -45,7 +45,7 @@ const NewPurchases = () => {
     // People Modal State
     const [showPeopleModal, setShowPeopleModal] = useState(false);
 
-    // --- LOAD DATA FOR EDIT (FIXED: RE-HYDRATE NAMES) ---
+    // --- LOAD DATA FOR EDIT ---
     useEffect(() => {
         if (isEditMode && purchases.length > 0 && units.length > 0) {
             const purchaseToEdit = purchases.find(p => String(p.id) === String(id));
@@ -82,7 +82,6 @@ const NewPurchases = () => {
 
     // --- HANDLERS ---
     
-    // Handle new person added via Modal
     const handlePersonAdded = (newPerson) => {
         setselectedPeople(newPerson.id); 
         setSearchPerson("");
@@ -140,9 +139,57 @@ const NewPurchases = () => {
         if (!selectedPeople) return alert("Select Supplier");
         if (selectedProducts.length === 0) return alert("Add Products");
 
+        // ---------------------------------------------------------
+        // START: NEW SAFETY CHECK (Prevents Negative Stock)
+        // ---------------------------------------------------------
+        if (isEditMode) {
+            const oldPurchase = purchases.find(p => String(p.id) === String(id));
+            if (oldPurchase) {
+                for (const newProd of selectedProducts) {
+                    // Check if this product was in the old purchase
+                    const oldProd = oldPurchase.products?.find(p => p.id === newProd.id && p.batchCode === newProd.batchCode);
+                    
+                    if (oldProd) {
+                        const dbProd = products.find(p => p.id === newProd.id);
+                        const dbBatch = dbProd?.batchCode?.find(b => b.batchCode === newProd.batchCode);
+                        
+                        if (dbBatch) {
+                            const currentStock = Number(dbBatch.quantity || 0);
+                            const oldQty = Number(oldProd.quantity || 0);
+                            const newQty = Number(newProd.quantity || 0);
+                            
+                            // Calculate net change: (New - Old)
+                            // Example: 50 (New) - 100 (Old) = -50 (Reducing stock by 50)
+                            const netChange = newQty - oldQty;
+                            
+                            // If reducing stock, check if current stock can handle it
+                            if (netChange < 0) {
+                                // If current stock is 20, and we want to reduce by 50, result is -30.
+                                if (currentStock + netChange < 0) {
+                                    alert(
+                                        `CRITICAL ERROR: Cannot update "${newProd.name}".\n\n` +
+                                        `You are reducing quantity from ${oldQty} to ${newQty}.\n` +
+                                        `This requires removing ${Math.abs(netChange)} items from stock.\n` +
+                                        `But Current Stock is only ${currentStock}.\n\n` +
+                                        `Reason: These items have likely been SOLD already.\n` +
+                                        `Fix: Please perform a Sales Return or Stock Adjustment instead.`
+                                    );
+                                    return; // STOP THE SAVE PROCESS
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // ---------------------------------------------------------
+        // END: SAFETY CHECK
+        // ---------------------------------------------------------
+
         const totalBill = calculateTotalBill();
         const autoInitDate = new Date(0).toISOString();
 
+        // 1. Revert Old Quantities (Only if Validation passed)
         if (isEditMode) {
             const oldPurchase = purchases.find(p => String(p.id) === String(id));
             if (oldPurchase && oldPurchase.products) {
@@ -159,6 +206,7 @@ const NewPurchases = () => {
             }
         }
 
+        // 2. Add New Quantities
         for (const product of selectedProducts) {
             const existingProduct = products.find((p) => p.id === product.id);
             if (existingProduct) {
@@ -257,7 +305,6 @@ const NewPurchases = () => {
                 units={units}
             />
 
-            {/* People Form Modal (Hidden by default) */}
             <PeopleFormModal 
                 isVisible={showPeopleModal}
                 onClose={() => setShowPeopleModal(false)}
@@ -268,13 +315,11 @@ const NewPurchases = () => {
                 <div className="flex-1 min-w-0 space-y-3 sm:space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                         
-                        {/* UPDATED: Supplier Search Section */}
                         <div className="bg-white rounded-lg p-3 sm:p-4 shadow">
                             <label className="text-xs sm:text-sm font-semibold text-gray-600">Supplier *:</label>
                             <div className="flex gap-2">
                                 <div className="flex-1">
                                     {selectedPeople ? (
-                                        // Selected View
                                         <div className="flex flex-col gap-2">
                                              <select className="select select-bordered w-full text-xs sm:text-sm bg-white" value={selectedPeople} onChange={e => setselectedPeople(e.target.value)}>
                                                 <option value={selectedPeople}>{peoples.find(p => p.id === selectedPeople)?.name || "Selected Person"}</option>
@@ -288,7 +333,6 @@ const NewPurchases = () => {
                                             </button>
                                         </div>
                                     ) : (
-                                        // Search View
                                         <div className="relative w-full">
                                             <input 
                                                 type="text" 
@@ -361,3 +405,4 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
+
