@@ -1,19 +1,20 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAppContext } from "../Appfullcontext";
-import { FaPrint, FaSave } from "react-icons/fa";
+import { FaPrint } from "react-icons/fa";
 import languageData from "../assets/languageData.json";
 
-const SalesView = () => {
+const PurchaseView = () => {
     const context = useAppContext();
     
-    // --- Universal Store Mapping ---
-    const salesData = context?.SaleContext?.data || [];
+    // --- Data Contexts ---
+    const purchaseData = context?.purchaseContext?.data || [];
     const people = context?.peopleContext?.data || [];
+    const units = context?.unitContext?.data || []; // Needed for unit names
     const userAndBusinessDetail = context?.settingContext?.data || [];
-    const allPurchases = context?.purchaseContext?.data || [];
+    
+    // For Ledger Calculation
     const submittedRecords = context?.creditManagementContext?.data || [];
-    const sellReturns = context?.SellReturnContext?.data || [];
     const purchaseReturns = context?.purchaseReturnContext?.data || [];
 
     const { id } = useParams();
@@ -30,21 +31,18 @@ const SalesView = () => {
 
     const [loading, setLoading] = useState(true);
 
-    const sale = salesData.find((sale) => sale.id === id) || null;
-    const person = people.find((p) => p.id === (sale?.personId || sale?.customerId)) || null;
+    const purchase = purchaseData.find((p) => String(p.id) === String(id)) || null;
+    const supplier = people.find((p) => p.id === purchase?.personId) || null;
     const isPrintMode = location.pathname.includes("/print");
 
     // --- Safe Business Data Access ---
     const businessInfo = userAndBusinessDetail[0]?.business || {};
     const currency = businessInfo.currency || 'Rs.';
     
-    // Smart Name Selection: Use Urdu Name if in Urdu Mode & Available, else English
+    // Smart Name Selection
     const displayBusinessName = (isUrdu && businessInfo.businessNameUrdu) 
         ? businessInfo.businessNameUrdu 
         : (businessInfo.businessName || "My Business");
-
-    const [naqCount, setNaqCount] = useState(''); 
-    const [saveMessage, setSaveMessage] = useState('');
 
     // --- HELPER: Smart Number Formatting ---
     const formatNum = (value) => {
@@ -54,57 +52,69 @@ const SalesView = () => {
         return parseFloat(num.toFixed(2)).toString();
     };
 
-    // --- CUSTOMER NAME LOGIC (URDU PRIORITY) ---
-    // If nameInUrdu exists and is not empty, use it. Otherwise use English name.
-    const displayCustomerName = useMemo(() => {
-        if (!person) return t.walking_customer || "Walking Customer";
-        if (person.nameInUrdu && person.nameInUrdu.trim() !== '') {
-            return person.nameInUrdu;
+    // --- SUPPLIER NAME LOGIC ---
+    const displaySupplierName = useMemo(() => {
+        if (!supplier) return t.unknown_supplier || "Unknown Supplier";
+        if (isUrdu && supplier.nameInUrdu && supplier.nameInUrdu.trim() !== '') {
+            return supplier.nameInUrdu;
         }
-        return person.name;
-    }, [person, t]);
+        return supplier.name;
+    }, [supplier, t, isUrdu]);
 
     useEffect(() => {
-        if (salesData.length > 0) {
+        if (purchaseData.length > 0) {
             setLoading(false);
-            if (sale) setNaqCount(sale.naq || ''); 
         }
-    }, [salesData, sale]);
+    }, [purchaseData]);
 
+    // --- LEDGER LOGIC (PAYABLE TO SUPPLIER) ---
     const { previousBalance, netBalance } = useMemo(() => {
-        if (!person || !sale) {
-            return { previousBalance: 0, netBalance: parseFloat(sale?.credit || 0) };
+        if (!supplier || !purchase) {
+            return { previousBalance: 0, netBalance: parseFloat(purchase?.credit || 0) };
         }
         
-        const totalSalesCredit = salesData.filter(s => s.personId === person.id).reduce((acc, s) => acc + (parseFloat(s.credit) || 0), 0);
-        const manualCredit = submittedRecords.filter(r => r.personId === person.id && r.type === 'credit').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
-        const totalReceivable = totalSalesCredit + manualCredit;
+        // 1. Total Credit (What we owe them from ALL purchases)
+        const totalPurchaseCredit = purchaseData
+            .filter(p => p.personId === supplier.id)
+            .reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
+            
+        // 2. Manual Credits (If any manual adjustments exist in ledger)
+        // In creditManagement, usually 'credit' means we gave credit to customer. 
+        // For suppliers, 'credit' usually means we owe them more.
+        const manualPayable = submittedRecords
+            .filter(r => r.personId === supplier.id && r.type === 'credit')
+            .reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+
+        const totalPayable = totalPurchaseCredit + manualPayable;
         
-        const manualPayments = submittedRecords.filter(r => r.personId === person.id && r.type === 'payment').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
-        const sellReturnAdjustments = sellReturns.filter(r => r.peopleId === person.id || r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
-        const totalReductions = manualPayments + sellReturnAdjustments;
+        // 3. Payments (What we paid them)
+        const manualPayments = submittedRecords
+            .filter(r => r.personId === supplier.id && r.type === 'payment')
+            .reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+
+        // 4. Returns (What we sent back, reducing what we owe)
+        const returnAdjustments = purchaseReturns
+            .filter(r => r.people === supplier.id)
+            .reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
         
-        const netReceivable = totalReceivable - totalReductions;
+        const totalReductions = manualPayments + returnAdjustments;
         
-        const totalPurchaseCredit = allPurchases.filter(p => p.personId === person.id).reduce((acc, p) => acc + (parseFloat(p.credit) || 0), 0);
-        const purchaseReturnAdjustments = purchaseReturns.filter(r => r.people === person.id).reduce((acc, r) => acc + (r.paymentDetails?.creditAdjustment || 0), 0);
-        const netPayable = totalPurchaseCredit - purchaseReturnAdjustments;
-        
-        const totalCurrentBalance = netReceivable - netPayable;
-        const currentSaleCredit = parseFloat(sale.credit || 0);
-        const prevBalance = totalCurrentBalance - currentSaleCredit;
+        // Final Math
+        const currentTotalBalance = totalPayable - totalReductions; // Positive means we owe them
+        const currentBillCredit = parseFloat(purchase.credit || 0);
+        const prevBalance = currentTotalBalance - currentBillCredit;
         
         return { 
             previousBalance: prevBalance, 
-            netBalance: totalCurrentBalance
+            netBalance: currentTotalBalance
         };
-    }, [id, person, sale, salesData, allPurchases, submittedRecords, sellReturns, purchaseReturns]);
+    }, [id, supplier, purchase, purchaseData, submittedRecords, purchaseReturns]);
 
 
     useEffect(() => {
-        if (isPrintMode && !loading && sale) {
+        if (isPrintMode && !loading && purchase) {
             const originalTitle = document.title;
-            document.title = `Sale - ${sale?.salesRefNo}`;
+            document.title = `Purchase - ${purchase?.purchaseRefNo}`;
             const handleAfterPrint = () => {
                 document.title = originalTitle;
                 navigate(-1);
@@ -116,35 +126,26 @@ const SalesView = () => {
                 document.title = originalTitle;
             };
         }
-    }, [isPrintMode, loading, sale, navigate]);
+    }, [isPrintMode, loading, purchase, navigate]);
 
     const handlePrint = () => {
         if (isPrintMode) window.print();
-        else navigate(`/sales/view/${id}/print?lang=${printLang}`);
+        else navigate(`/purchases/view/${id}/print?lang=${printLang}`);
     };
 
-    const handleSaveNaq = async () => {
-        if (!sale) return;
-        setSaveMessage('Saving...');
-        try {
-            const updatedSaleData = { ...sale, naq: naqCount || '' };
-            await context.SaleContext.edit(sale.id, updatedSaleData);
-            setSaveMessage('Naq Saved Successfully!');
-        } catch (error) {
-            setSaveMessage('Error saving Naq.');
-        } finally {
-            setTimeout(() => setSaveMessage(''), 3000);
-        }
+    // Helper to get Unit Name safely
+    const getUnitName = (unitId) => {
+        if (!unitId) return "";
+        const u = units.find(unit => unit.id === unitId);
+        return u ? u.name : "";
     };
 
-    if (loading) return <div className="text-center text-lg p-10">Loading Receipt...</div>;
-    if (!sale) return <div className="text-center text-red-500 text-lg p-10">Sale not found</div>;
+    if (loading) return <div className="text-center text-lg p-10">Loading Purchase...</div>;
+    if (!purchase) return <div className="text-center text-red-500 text-lg p-10">Purchase not found</div>;
 
-    const discount = parseFloat(sale.discount || 0);
-    const subtotal = parseFloat(sale.subtotal || (parseFloat(sale.totalBill || 0) + discount));
-    const totalBill = parseFloat(sale.totalBill || 0);
-    const amountPaid = parseFloat(sale.amountPaid || 0);
-    const currentCredit = parseFloat(sale.credit || 0);
+    const totalBill = parseFloat(purchase.totalBill || 0);
+    const amountPaid = parseFloat(purchase.totalPayment || 0);
+    const currentCredit = parseFloat(purchase.credit || 0);
 
     return (
         <>
@@ -168,7 +169,7 @@ const SalesView = () => {
                     .no-print { display: none; }
                     .print-container, .print-container * {
                         font-family: 'Noto Nastaliq Urdu', 'Arial', sans-serif;
-                        font-size: 11px !important; /* Slightly increased base font */
+                        font-size: 11px !important;
                         font-weight: 600 !important; 
                         line-height: 1.1 !important;
                     }
@@ -177,24 +178,14 @@ const SalesView = () => {
                         font-weight: 800 !important;
                         margin-bottom: 2px;
                     }
-                    /* Custom big customer name */
                     .customer-name-big {
                         font-size: 16px !important; 
                         font-weight: 900 !important;
                         display: block;
                         margin-top: 2px;
                     }
-
                     .print-container .grand-total, .print-container .net-balance {
                         font-size: 13px !important;
-                    }
-                    .print-container .footer-notes {
-                        font-size: 9px !important;
-                        font-weight: 500 !important;
-                        margin-top: 5px;
-                        border-top: 1px dotted #000;
-                        padding-top: 2px;
-                        text-align: center;
                     }
                     .print-container .footer-brand {
                         font-size: 9px !important; 
@@ -210,20 +201,10 @@ const SalesView = () => {
                     .rtl-table th, .rtl-table td { text-align: right; }
                     .ltr-table th, .ltr-table td { text-align: left; }
                     
-                    /* Table Styling */
                     table { width: 100%; border-collapse: collapse; }
-                    td, th {
-                        padding: 3px 1px;
-                        vertical-align: top;
-                    }
-                    /* Line after each product as requested */
-                    .product-row {
-                        border-bottom: 1px dashed #777;
-                    }
-                    /* Remove border from last row */
-                    .product-row:last-child {
-                        border-bottom: none;
-                    }
+                    td, th { padding: 3px 1px; vertical-align: top; }
+                    .product-row { border-bottom: 1px dashed #777; }
+                    .product-row:last-child { border-bottom: none; }
                     
                     .print-logo {
                         width: 50px;
@@ -242,28 +223,10 @@ const SalesView = () => {
 
             <div className={`p-4 ${!isPrintMode ? 'bg-gray-100' : ''}`}>
                 
-                {/* --- UI Controls (Hidden in Print) --- */}
-                <div className="no-print mb-4 p-4 bg-white rounded-lg shadow-md max-w-md mx-auto">
-                    <h3 className="text-lg font-bold mb-3 text-center">Update Naq (Bundles)</h3>
-                    <div className="flex gap-2 items-center">
-                        <label htmlFor="naqInput" className="font-semibold whitespace-nowrap">Total Naq:</label>
-                        <input
-                            type="text" 
-                            id="naqInput"
-                            value={naqCount}
-                            onChange={(e) => setNaqCount(e.target.value)}
-                            className="input input-bordered w-full"
-                            placeholder="e.g. 5 ctn" 
-                        />
-                        <button onClick={handleSaveNaq} className="btn btn-success flex items-center gap-2">
-                            <FaSave /> Save
-                        </button>
-                    </div>
-                    {saveMessage && <p className="text-center mt-2 text-green-500">{saveMessage}</p>}
-                </div>
-
                 <div className="no-print flex justify-end mb-4 max-w-md mx-auto">
-                    <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full"><FaPrint /> Print Receipt</button>
+                    <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2 w-full">
+                        <FaPrint /> Print Receipt
+                    </button>
                 </div>
 
                 {/* --- RECEIPT CONTAINER --- */}
@@ -282,64 +245,68 @@ const SalesView = () => {
                     
                     <hr />
                     
-                    {/* Invoice Meta Data & BIG CUSTOMER NAME */}
+                    {/* Invoice Meta Data */}
                     <div>
                         <div className="flex justify-between">
-                            <span>{t.ref_no || "Ref"}: {sale.salesRefNo}</span>
-                            <span>{new Date(sale.dateTime).toLocaleDateString()}</span>
+                            <span>{t.ref_no || "Ref"}: {purchase.purchaseRefNo}</span>
+                            <span>{new Date(purchase.date).toLocaleDateString()}</span>
                         </div>
                         
-                        {/* CUSTOMER NAME - BIGGER & URDU LOGIC */}
-                        {person && (
+                        {/* SUPPLIER NAME */}
+                        {supplier && (
                             <div className="mt-1 mb-1 border-b border-gray-300 pb-1">
-                                <span className="text-[9px]">{t.customer_name || "Customer"}:</span>
-                                <span className="customer-name-big">{displayCustomerName}</span>
+                                <span className="text-[9px]">{t.supplier_name || "Supplier"}:</span>
+                                <span className="customer-name-big">{displaySupplierName}</span>
                             </div>
                         )}
                     </div>
                     
-                    {/* Items Table - ADJUSTED WIDTHS FOR 80MM */}
+                    {/* Items Table */}
                     <table className={`mt-1 ${isUrdu ? 'rtl-table' : 'ltr-table'}`}>
                         <thead>
                             <tr className="border-b border-black text-[10px]">
                                 <th className="w-[5%]">#</th> 
-                                {/* 1. Increased Item Name Width */}
-                                <th className="w-[40%] text-left">{t.item || "Item"}</th> 
-                                {/* 2. Unit moved to Qty column, slightly wider */}
-                                <th className="w-[15%] text-center">{t.qty || "Qty"}</th> 
-                                <th className="w-[15%] text-right">{t.rate || "Rate"}</th>
-                                <th className="w-[10%] text-right text-[9px]">{t.discount || "Dis"}</th>
+                                <th className="w-[45%] text-left">{t.item || "Item"}</th> 
+                                <th className="w-[20%] text-center">{t.qty || "Qty"}</th> 
+                                <th className="w-[15%] text-right">{t.rate || "Cost"}</th>
                                 <th className="w-[15%] text-right">{t.total || "Total"}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {sale.products.length > 0 ? (
-                                sale.products.map((product, index) => {
-                                    const displayQty = product.enteredQty || product.SellQuantity;
-                                    const rate = parseFloat(product.newSellPrice || product.sellPrice);
-                                    const unitLabel = product.unitName || ''; // Unit available here
-                                    const rowTotal = rate * parseFloat(displayQty);
-                                    const itemDiscount = parseFloat(product.discount || 0);
+                            {purchase.products.length > 0 ? (
+                                purchase.products.map((product, index) => {
+                                    // Use 'enteredQty' and 'enteredPurchasePrice' if available to match input exactly
+                                    // Otherwise fallback to raw quantity/purchasePrice
+                                    const displayQty = product.enteredQty || product.quantity;
+                                    const rate = product.enteredPurchasePrice || product.purchasePrice;
+                                    
+                                    // Determine Unit Name (Base vs Secondary)
+                                    // If unitMode exists, check it. Else fallback to transactionUnitId.
+                                    let unitLabel = "";
+                                    if(product.unitMode === 'secondary' || product.transactionUnitId === product.secondaryUnitId) {
+                                        unitLabel = product.secUnitName || getUnitName(product.secondaryUnitId);
+                                    } else {
+                                        unitLabel = product.baseUnitName || getUnitName(product.baseUnitId);
+                                    }
+
+                                    const rowTotal = parseFloat(product.total || (rate * displayQty));
 
                                     return (
                                         <tr key={`${product.id}-${index}`} className="product-row">
                                             <td>{index + 1}</td>
                                             <td className="font-bold leading-tight pr-1">
-                                                {/* Only Name here, allow wrapping */}
                                                 {isUrdu && product.nameInUrdu ? product.nameInUrdu : product.name}
                                             </td>
                                             <td className="text-center whitespace-nowrap">
-                                                {/* Unit displayed next to Qty */}
                                                 {formatNum(displayQty)} <span className="text-[9px] font-normal">{unitLabel}</span>
                                             </td>
                                             <td className="text-right">{formatNum(rate)}</td>
-                                            <td className="text-right">{itemDiscount > 0 ? formatNum(itemDiscount) : '-'}</td>
                                             <td className="text-right">{formatNum(rowTotal)}</td>
                                         </tr>
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="6" className="text-center py-2">No products</td></tr>
+                                <tr><td colSpan="5" className="text-center py-2">No products</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -348,17 +315,14 @@ const SalesView = () => {
                     
                     {/* Bill Summary */}
                     <div className="space-y-0.5">
-                        <div className="flex justify-between"><span className="font-semibold">{t.subtotal || "Subtotal"}:</span><span>{currency} {formatNum(subtotal)}</span></div>
-                        {discount > 0 && (<div className="flex justify-between"><span className="font-semibold">{t.discount || "Discount"}:</span><span>- {currency} {formatNum(discount)}</span></div>)}
-                        <div className="flex justify-between font-bold mt-1 grand-total"><span>{t.grand_total || "Grand Total"}:</span><span>{currency} {formatNum(totalBill)}</span></div>
-                        
-                        {sale.naq && sale.naq !== '' && (
-                             <div className="flex justify-between font-bold border-t border-dotted mt-1 pt-1"><span>{t.total_naq || "Total Naq"}:</span> <span>{sale.naq}</span></div>
-                        )}
+                        <div className="flex justify-between font-bold mt-1 grand-total">
+                            <span>{t.grand_total || "Total Amount"}:</span>
+                            <span>{currency} {formatNum(totalBill)}</span>
+                        </div>
                     </div>
 
-                    {/* Customer Ledger Summary */}
-                    {person && (
+                    {/* Supplier Ledger Summary */}
+                    {supplier && (
                         <>
                             <hr className="border-t-2 mt-2" />
                             <div className="space-y-0.5">
@@ -366,19 +330,19 @@ const SalesView = () => {
                                 
                                 {previousBalance !== 0 && (
                                     <div className="flex justify-between">
-                                        <span className="font-semibold">{previousBalance > 0 ? (t.previous_balance || "Prev Bal") : (t.advance_balance || "Prev Adv")}:</span>
+                                        <span className="font-semibold">{previousBalance > 0 ? (t.previous_balance || "Prev Payable") : (t.advance_balance || "Prev Adv")}:</span>
                                         <span>{currency} {formatNum(Math.abs(previousBalance))}</span>
                                     </div>
                                 )}
 
                                 <div className="flex justify-between"><span className="font-semibold">{t.current_bill_balance || "Curr Bill"}:</span><span className="font-bold">{currency} {formatNum(currentCredit)}</span></div>
-                                <div className="flex justify-between"><span className="font-semibold">{t.received || "Paid"}:</span><span>{currency} {formatNum(amountPaid)}</span></div>
+                                <div className="flex justify-between"><span className="font-semibold">{t.paid || "Paid Now"}:</span><span>{currency} {formatNum(amountPaid)}</span></div>
                                 
                                 <hr />
                                 
                                 {/* Net Balance */}
                                 {netBalance > 0 && (
-                                    <div className="flex justify-between font-bold net-balance"><span>{t.net_payable || "Total Due"}:</span><span>{currency} {formatNum(netBalance)}</span></div>
+                                    <div className="flex justify-between font-bold net-balance"><span>{t.net_payable || "Total Payable"}:</span><span>{currency} {formatNum(netBalance)}</span></div>
                                 )}
                                 {netBalance < 0 && (
                                     <div className="flex justify-between font-bold net-balance"><span>{t.net_advance || "Total Adv"}:</span><span>{currency} {formatNum(Math.abs(netBalance))}</span></div>
@@ -388,13 +352,6 @@ const SalesView = () => {
                                 )}
                             </div>
                         </>
-                    )}
-
-                    {/* Footer Notes (Terms) */}
-                    {businessInfo.notes && (
-                        <div className="footer-notes">
-                            {businessInfo.notes}
-                        </div>
                     )}
 
                     {/* FIXED FOOTER */}
@@ -407,5 +364,4 @@ const SalesView = () => {
     );
 };
 
-export default SalesView;
-
+export default PurchaseView;

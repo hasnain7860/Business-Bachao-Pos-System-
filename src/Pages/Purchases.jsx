@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaEdit, FaTrashAlt, FaEllipsisV } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaEllipsisV, FaEye, FaPrint } from 'react-icons/fa'; // Added FaEye and FaPrint
 import { useAppContext } from '../Appfullcontext';
 import languageData from "../assets/languageData.json";
 
@@ -8,11 +8,7 @@ const Purchases = () => {
   const navigate = useNavigate();
   const context = useAppContext();
   
-  // --- CRITICAL FIX: Universal Store Mapping ---
-  // 1. 'purchases' -> 'data'
-  // 2. 'people' -> 'data'
-  // 3. 'delete' -> 'remove'
-  // 4. 'settings' -> 'data'
+  // --- Universal Store Mapping ---
   const purchasesData = context.purchaseContext.data || [];
   const handleDeletePurchase = context.purchaseContext.remove;
   const peoples = context.peopleContext.data || [];
@@ -99,14 +95,42 @@ const Purchases = () => {
                       <button onClick={() => toggleMenu(index)} className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200">
                         <FaEllipsisV className="text-gray-600" />
                       </button>
+                      
+                      {/* --- ACTION MENU --- */}
                       {menuOpen === index && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-xl z-50 origin-top-right">
+                        <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-xl z-50 origin-top-right">
+                          
+                          {/* 1. EDIT & RETURN */}
                           <button onClick={() => handlePurchaseReturn(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 flex items-center gap-2">
                              <FaEdit className="text-blue-500" /> {languageData[language].purchase_return}
                           </button>
                           <button onClick={() => handlePurchaseEdit(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 flex items-center gap-2">
                              <FaEdit className="text-blue-500" /> {languageData[language].purchase_edit}
                           </button>
+                          
+                          <hr className="my-1 border-gray-200" />
+
+                          {/* 2. VIEWS (Eng/Urdu) */}
+                          <button onClick={() => navigate(`/purchases/view/${purchase.id}?lang=en`)} className="w-full text-left px-4 py-2 hover:bg-green-50 text-gray-700 flex items-center gap-2">
+                              <FaEye className="text-green-600" /> View (English)
+                          </button>
+                          <button onClick={() => navigate(`/purchases/view/${purchase.id}?lang=ur`)} className="w-full text-left px-4 py-2 hover:bg-green-50 text-gray-700 flex items-center gap-2 font-noto-nastaliq">
+                              <FaEye className="text-green-600" /> View (Urdu)
+                          </button>
+
+                          <hr className="my-1 border-gray-200" />
+
+                          {/* 3. PRINTS (Eng/Urdu) */}
+                          <button onClick={() => navigate(`/purchases/view/${purchase.id}/print?lang=en`)} className="w-full text-left px-4 py-2 hover:bg-purple-50 text-gray-700 flex items-center gap-2">
+                              <FaPrint className="text-purple-600" /> Print (English)
+                          </button>
+                          <button onClick={() => navigate(`/purchases/view/${purchase.id}/print?lang=ur`)} className="w-full text-left px-4 py-2 hover:bg-purple-50 text-gray-700 flex items-center gap-2 font-noto-nastaliq">
+                              <FaPrint className="text-purple-600" /> Print (Urdu)
+                          </button>
+
+                          <hr className="my-1 border-gray-200" />
+
+                          {/* 4. DELETE */}
                           <button onClick={() => handleDelete(purchase.id)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2">
                              <FaTrashAlt /> {languageData[language].delete}
                           </button>
@@ -131,4 +155,3 @@ const Purchases = () => {
 };
 
 export default Purchases;
-

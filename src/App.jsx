@@ -44,6 +44,7 @@ import DamageList from './Pages/DamageList.jsx'
 
 import ProductUploadPage from "./Pages/ProductUploadPage";
 import PurchaseReturn from "./Pages/PurchaseReturn.jsx";
+import PurchaseView from "./Pages/PurchaseView.jsx";
 import SellReturn from "./Pages/SellReturn.jsx";
 import AddSellReturn from "./Pages/AddSellReturn.jsx";
 import PreorderView from "./Pages/PreorderView.jsx";
@@ -405,6 +406,30 @@ function App() {
                             <Layout>
                                     <AdminOnlyRoute>
                                 <NewPurchases />
+                                    </AdminOnlyRoute>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/purchases/view/:id/print"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                    <AdminOnlyRoute>
+                                <PurchaseView />
+                                    </AdminOnlyRoute>
+                            </Layout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/purchases/view/:id"
+                    element={
+                        <ProtectedRoute>
+                            <Layout>
+                                    <AdminOnlyRoute>
+                                <PurchaseView />
                                     </AdminOnlyRoute>
                             </Layout>
                         </ProtectedRoute>
