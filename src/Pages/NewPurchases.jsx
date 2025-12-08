@@ -366,15 +366,26 @@ const NewPurchases = () => {
                                                 placeholder="Search Supplier" 
                                                 className="input input-bordered w-full text-xs sm:text-sm" 
                                             />
-                                            {searchPerson && (
-                                                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                    {peoples.filter(p => p.name.toLowerCase().includes(searchPerson.toLowerCase())).map(person => (
-                                                        <div key={person.id} className="p-2 hover:bg-gray-100 cursor-pointer text-sm" onClick={() => { setselectedPeople(person.id); setSearchPerson(""); }}>
-                                                            {person.name}
-                                                        </div>
-                                                    ))}
+                                    {searchPerson && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-2xl max-h-80 overflow-y-auto">
+                                            {peoples.filter(p => p.name.toLowerCase().includes(searchPerson.toLowerCase())).length > 0 ? (
+                                                peoples.filter(p => p.name.toLowerCase().includes(searchPerson.toLowerCase())).map(person => (
+                                                    <div 
+                                                        key={person.id} 
+                                                        className="p-4 border-b border-gray-100 hover:bg-blue-50 cursor-pointer text-lg font-medium text-gray-800" 
+                                                        onClick={() => { setselectedPeople(person.id); setSearchPerson(""); }}
+                                                    >
+                                                        {person.name}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="p-4 text-center text-gray-500 text-base">
+                                                    No supplier found
                                                 </div>
                                             )}
+                                        </div>
+                                    )}
+
                                         </div>
                                     )}
                                 </div>

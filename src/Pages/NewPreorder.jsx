@@ -376,18 +376,29 @@ const NewPreorder = () => {
                                                     className="input input-bordered w-full"
                                                 />
                                                 {searchPerson && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                        {people
-                                                            .filter(person =>
+                                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-2xl max-h-80 overflow-y-auto">
+                                                        {people.filter(person =>
                                                                 person.name.toLowerCase().includes(searchPerson.toLowerCase())
-                                                            )
-                                                            .map(person => (
-                                                                <div key={person.id} className="p-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setSelectedPerson(person.id); setSearchPerson(""); }}>
-                                                                    <span>{person.name}</span>
+                                                            ).length > 0 ? (
+                                                                people.filter(person =>
+                                                                    person.name.toLowerCase().includes(searchPerson.toLowerCase())
+                                                                ).map(person => (
+                                                                    <div 
+                                                                        key={person.id} 
+                                                                        className="p-4 border-b border-gray-100 hover:bg-blue-50 cursor-pointer text-lg font-medium text-gray-800" 
+                                                                        onClick={() => { setSelectedPerson(person.id); setSearchPerson(""); }}
+                                                                    >
+                                                                        <span>{person.name}</span>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <div className="p-4 text-center text-gray-500 text-base">
+                                                                    No person found
                                                                 </div>
-                                                            ))}
+                                                            )}
                                                     </div>
                                                 )}
+
                                             </div>
                                         )}
                                         {selectedPerson && !isEditing && (
