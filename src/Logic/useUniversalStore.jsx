@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { addItem, getItems, deleteItem as deleteFromDB, putItem } from '../Utils/IndexedDb.jsx';
-
+import { useState, useEffect, useCallback } from 'react';
+import { getItems, addItem, putItem, deleteItem as deleteFromDB } from '../Utils/IndexedDb.jsx';
+import { v4 as uuidv4 } from 'uuid';
 /**
  * Universal Hook for CRUD + Live Sync
  * @param {string} storeName - The name of the IndexedDB store
@@ -9,15 +9,13 @@ const useUniversalStore = (storeName) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Channel name consistent hona chahiye
+  // Channel name consistent across tabs
   const channelName = `${storeName}_sync_channel`;
 
   // 1. Data load function
   const loadData = useCallback(async () => {
     try {
-      // setLoading(true); // Optional: Agar UI flicker kare to isay comment out rakho
       const storedItems = await getItems(storeName);
-      // Sirf tab update karo agar data actually change hua ho (Simple check)
       setData(storedItems || []);
     } catch (error) {
       console.error(`Error loading ${storeName}:`, error);
@@ -26,31 +24,20 @@ const useUniversalStore = (storeName) => {
     }
   }, [storeName]);
 
-  // 2. Sync Listener (THE CRITICAL PART)
+  // 2. Sync Listener
   useEffect(() => {
-    // Initial Load
     loadData();
-
-    // Channel Open Karo
     const channel = new BroadcastChannel(channelName);
-
-    // Message Suno
     channel.onmessage = (event) => {
       if (event.data === 'update') {
-        // console.log(`🔄 Sync Triggered for: ${storeName}`); // Debugging ke liye
         loadData();
       }
     };
-
-    // CLEANUP (Ye line hatayi to App Crash karegi long run mein)
-    return () => {
-      channel.close();
-    };
+    return () => channel.close();
   }, [loadData, channelName]);
 
   // 3. Sender Helper
   const notifyTabs = () => {
-    // Sender instance alag hota hai, isay khol ke message bhej ke band karna safe hai
     const channel = new BroadcastChannel(channelName);
     channel.postMessage('update');
     channel.close();
@@ -59,25 +46,48 @@ const useUniversalStore = (storeName) => {
   // --- ACTIONS ---
 
   const add = async (newItem) => {
-    // Optimistic Update (Foran UI update)
-    setData((prev) => [...prev, newItem]); 
+    // BRUTAL FIX: Never allow an item without an ID into the state.
+    // If the DB generates IDs, Optimistic UI fails because we don't know the ID yet.
+    // We generate a client-side ID (timestamp + random) to guarantee uniqueness.
+    const id = newItem.id || uuidv4();
+    const itemWithId = { ...newItem, id };
+
+    // Optimistic Update: Now safe because we have an ID
+    setData((prev) => [...prev, itemWithId]); 
     
-    await addItem(storeName, newItem);
-    notifyTabs(); // Sabko batao
+    try {
+      await addItem(storeName, itemWithId);
+      notifyTabs();
+    } catch (error) {
+      console.error(`Failed to add to ${storeName}`, error);
+      // Revert optimistic update on failure if necessary (advanced handling)
+      loadData(); 
+    }
   };
 
   const edit = async (id, updatedItem) => {
+    if (!id) {
+      console.error("Cannot edit item without an ID");
+      return;
+    }
+
     const itemWithId = { ...updatedItem, id };
     
     setData((prev) => 
       prev.map((item) => (item.id === id ? itemWithId : item))
     );
 
-    await putItem(storeName, itemWithId);
-    notifyTabs();
+    try {
+      await putItem(storeName, itemWithId);
+      notifyTabs();
+    } catch (error) {
+       console.error(`Failed to edit ${storeName}`, error);
+       loadData();
+    }
   };
 
   const remove = async (id) => {
+    if (!id) return;
     setData((prev) => prev.filter((item) => item.id !== id));
     await deleteFromDB(storeName, id);
     notifyTabs();
@@ -94,5 +104,4 @@ const useUniversalStore = (storeName) => {
 };
 
 export default useUniversalStore;
-
 

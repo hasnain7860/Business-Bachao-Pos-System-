@@ -161,15 +161,14 @@ const Settings = () => {
   const { language, logout, email } = context;
   const navigate = useNavigate();
 
-  // --- CRITICAL FIX: Universal Store Mapping ---
+  // --- Universal Store Mapping ---
   const { data: settingsData, add: addSetting, edit: editSetting } = context.settingContext;
   
-  // Default Structure including new Urdu Name and Notes
   const defaultSetting = {
     user: { name: '', phoneNo: '', email: '', signature: '' },
     business: { 
         businessName: '', 
-        businessNameUrdu: '', // NEW
+        businessNameUrdu: '', 
         phoneNo: '', 
         email: '', 
         address: '', 
@@ -177,35 +176,28 @@ const Settings = () => {
         role: '', 
         firebaseStorePass: '', 
         logo: '',
-        notes: '' // NEW (For Footer/Terms)
+        notes: '' 
     }
   };
 
+  // Safe selection of data
   const selectedSetting = (settingsData && settingsData.length > 0) ? settingsData[0] : defaultSetting;
 
-  const saveSetting = async (updatedData) => {
-    if (selectedSetting.id) {
-      await editSetting(selectedSetting.id, updatedData);
-    } else {
-      await addSetting(updatedData);
-    }
-  };
-
+  const [formData, setFormData] = useState(defaultSetting);
   const [isEditing, setIsEditing] = useState({ user: false, business: false });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  
-  const [formData, setFormData] = useState(defaultSetting);
-
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // Sync state with DB data when it loads
   useEffect(() => {
     if (settingsData && settingsData.length > 0) {
       const currentData = settingsData[0];
       setFormData(prev => ({
         ...prev,
         ...currentData,
-        user: { ...prev.user, ...(currentData.user || {}), email: email || currentData.user?.email || '' },
-        business: { ...prev.business, ...(currentData.business || {}) }
+        // Ensure nested objects exist to prevent crashes
+        user: { ...defaultSetting.user, ...(currentData.user || {}), email: email || currentData.user?.email || '' },
+        business: { ...defaultSetting.business, ...(currentData.business || {}) }
       }));
     } else if (email) {
        setFormData(prev => ({ ...prev, user: { ...prev.user, email: email }}));
@@ -228,6 +220,20 @@ const Settings = () => {
     setIsEditing((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
+  const saveSetting = async (updatedData) => {
+    // Explicit ID Check to prevent "Failed to execute 'get'" errors
+    if (selectedSetting.id) {
+        console.log("Updating existing setting:", selectedSetting.id);
+        await editSetting(selectedSetting.id, updatedData);
+    } else {
+        console.log("Creating new setting");
+        // Ensure we don't accidentally send an undefined ID
+        const dataToSave = { ...updatedData };
+        if (!dataToSave.id) delete dataToSave.id; 
+        await addSetting(dataToSave);
+    }
+  };
+
   const saveData = async (type) => {
     await saveSetting(formData);
     setIsEditing((prev) => ({ ...prev, [type]: false }));
@@ -243,19 +249,16 @@ const Settings = () => {
     }
   };
 
-  // --- LOGO LOGIC (Strict for Thermal Printers) ---
+  // --- LOGO LOGIC ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 1. Strict Size Limit: 100KB (102400 bytes)
-    // Firestore documents are max 1MB. A 1MB logo will crash the settings fetch.
     if (file.size > 102400) {
-      alert('File too big! For thermal printers, use a small logo (Max 100KB).');
+      alert('File too big! Max 100KB for thermal printers.');
       return;
     }
 
-    // 2. Type Check
     if (!file.type.startsWith('image/')) {
         alert('File must be an image (PNG or JPG).');
         return;
@@ -329,7 +332,6 @@ const Settings = () => {
               disabled={!isEditing.business}
               language={language}
           />
-          {/* URDU NAME */}
           <InputField
               label="Business Name (Urdu)"
               type="text"
@@ -353,7 +355,6 @@ const Settings = () => {
             />
           ))}
 
-          {/* NOTES FIELD */}
           <InputField
               label="Footer Notes / Terms"
               type="text"
@@ -376,15 +377,13 @@ const Settings = () => {
       <div className="bg-white p-4 rounded-lg shadow-md mt-6">
         <h2 className="text-2xl font-bold mb-4">{languageData[language]?.logo || "Logo"}</h2>
         
-        {/* LOGO INSTRUCTIONS */}
         <div className="alert alert-info shadow-sm mb-4">
             <div>
                 <span className="text-xs sm:text-sm">
                     <strong>For 80mm Thermal Printer:</strong><br/>
                     1. Use Black & White image only.<br/>
-                    2. Max width: 400px (Keep it small).<br/>
+                    2. Max width: 400px.<br/>
                     3. Max file size: 100KB.<br/>
-                    <em className="text-xs">Large colored images will print poorly and slow down the app.</em>
                 </span>
             </div>
         </div>

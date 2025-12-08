@@ -9,7 +9,6 @@ import ProductSearch from "../components/element/ProductSearch.jsx";
 import AddProductModal from '../components/purchase/AddProductModal.jsx';
 import PurchaseTable from '../components/purchase/PurchaseTable.jsx';
 import PurchaseSummary from '../components/purchase/PurchaseSummary.jsx';
-// Import Smart Modal (Same as Sales)
 import PeopleFormModal from "../components/people/PeopleFormModal"; 
 
 const NewPurchases = () => {
@@ -135,110 +134,136 @@ const NewPurchases = () => {
         setSelectedProducts(newProducts);
     };
 
+    // ==========================================
+    //  THE FIX: ROBUST SAVE LOGIC
+    // ==========================================
     const handleSave = async () => {
         if (!selectedPeople) return alert("Select Supplier");
         if (selectedProducts.length === 0) return alert("Add Products");
 
-        // ---------------------------------------------------------
-        // START: NEW SAFETY CHECK (Prevents Negative Stock)
-        // ---------------------------------------------------------
-        if (isEditMode) {
-            const oldPurchase = purchases.find(p => String(p.id) === String(id));
-            if (oldPurchase) {
-                for (const newProd of selectedProducts) {
-                    // Check if this product was in the old purchase
-                    const oldProd = oldPurchase.products?.find(p => p.id === newProd.id && p.batchCode === newProd.batchCode);
-                    
-                    if (oldProd) {
-                        const dbProd = products.find(p => p.id === newProd.id);
-                        const dbBatch = dbProd?.batchCode?.find(b => b.batchCode === newProd.batchCode);
-                        
-                        if (dbBatch) {
-                            const currentStock = Number(dbBatch.quantity || 0);
-                            const oldQty = Number(oldProd.quantity || 0);
-                            const newQty = Number(newProd.quantity || 0);
-                            
-                            // Calculate net change: (New - Old)
-                            // Example: 50 (New) - 100 (Old) = -50 (Reducing stock by 50)
-                            const netChange = newQty - oldQty;
-                            
-                            // If reducing stock, check if current stock can handle it
-                            if (netChange < 0) {
-                                // If current stock is 20, and we want to reduce by 50, result is -30.
-                                if (currentStock + netChange < 0) {
-                                    alert(
-                                        `CRITICAL ERROR: Cannot update "${newProd.name}".\n\n` +
-                                        `You are reducing quantity from ${oldQty} to ${newQty}.\n` +
-                                        `This requires removing ${Math.abs(netChange)} items from stock.\n` +
-                                        `But Current Stock is only ${currentStock}.\n\n` +
-                                        `Reason: These items have likely been SOLD already.\n` +
-                                        `Fix: Please perform a Sales Return or Stock Adjustment instead.`
-                                    );
-                                    return; // STOP THE SAVE PROCESS
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // ---------------------------------------------------------
-        // END: SAFETY CHECK
-        // ---------------------------------------------------------
-
-        const totalBill = calculateTotalBill();
         const autoInitDate = new Date(0).toISOString();
 
-        // 1. Revert Old Quantities (Only if Validation passed)
+        // 1. CALCULATE NET IMPACT (THE DELTA SYSTEM)
+        // We create a map of changes: { "productId|batchCode": netQuantityChange }
+        const stockAdjustments = {};
+
+        const addAdjustment = (prodId, batchCode, qty) => {
+            const key = `${prodId}|${batchCode}`;
+            stockAdjustments[key] = (stockAdjustments[key] || 0) + Number(qty);
+        };
+
+        // A. If Edit Mode: Subtract the OLD quantities (Reversing old purchase effect)
         if (isEditMode) {
             const oldPurchase = purchases.find(p => String(p.id) === String(id));
             if (oldPurchase && oldPurchase.products) {
-                for (const oldP of oldPurchase.products) {
-                    const prodInDb = products.find(p => p.id === oldP.id);
-                    if (prodInDb && prodInDb.batchCode) {
-                        const batchIndex = prodInDb.batchCode.findIndex(b => b.batchCode === oldP.batchCode);
-                        if (batchIndex !== -1) {
-                            prodInDb.batchCode[batchIndex].quantity = Number(prodInDb.batchCode[batchIndex].quantity || 0) - Number(oldP.quantity || 0);
-                            await updateProduct(prodInDb.id, { ...prodInDb });
-                        }
+                oldPurchase.products.forEach(p => {
+                    // We treat this as a negative change (removing the old record)
+                    addAdjustment(p.id, p.batchCode, -Number(p.quantity || 0));
+                });
+            }
+        }
+
+        // B. Add the NEW quantities (Applying new purchase effect)
+        selectedProducts.forEach(p => {
+            // We treat this as a positive change
+            addAdjustment(p.id, p.batchCode, Number(p.quantity || 0));
+        });
+
+        // 2. PREDICTIVE VALIDATION (Prevent Negative Stock)
+        // Before we touch the DB, we verify if the math works.
+        for (const [key, changeAmount] of Object.entries(stockAdjustments)) {
+            if (changeAmount === 0) continue; // No net change
+
+            const [prodId, batchCode] = key.split('|');
+            const dbProduct = products.find(p => p.id === prodId);
+
+            if (!dbProduct) {
+                alert(`Error: Product ID ${prodId} not found in database.`);
+                return;
+            }
+
+            const dbBatch = dbProduct.batchCode?.find(b => b.batchCode === batchCode);
+            const currentStock = Number(dbBatch?.quantity || 0);
+
+            // THE SYSTEM CHECK:
+            // Current Stock + (New - Old) must be >= 0
+            const predictedStock = currentStock + changeAmount;
+
+            if (predictedStock < 0) {
+                alert(
+                    `⛔ OPERATION BLOCKED: Stock Protection System\n\n` +
+                    `Product: "${dbProduct.name}"\n` +
+                    `Batch: ${batchCode}\n` +
+                    `Current Stock: ${currentStock}\n` +
+                    `Net Change Requested: ${changeAmount}\n` +
+                    `Resulting Stock: ${predictedStock} (NEGATIVE)\n\n` +
+                    `REASON: You have already SOLD these items.\n` +
+                    `You cannot reduce a purchase quantity below what has already been consumed.`
+                );
+                return; // STOP EXECUTION HERE
+            }
+        }
+
+        // 3. EXECUTION: Apply the Deltas to Database
+        // We iterate by Product ID to minimize database writes
+        const uniqueProdIds = [...new Set(Object.keys(stockAdjustments).map(k => k.split('|')[0]))];
+
+        for (const prodId of uniqueProdIds) {
+            const dbProduct = products.find(p => p.id === prodId);
+            if (!dbProduct) continue;
+
+            let batches = dbProduct.batchCode ? [...dbProduct.batchCode] : [];
+            let isModified = false;
+
+            // Apply all adjustments for this product
+            for (const [key, changeAmount] of Object.entries(stockAdjustments)) {
+                const [pId, bCode] = key.split('|');
+                if (pId !== prodId) continue;
+                if (changeAmount === 0) continue;
+
+                const batchIndex = batches.findIndex(b => b.batchCode === bCode);
+
+                if (batchIndex !== -1) {
+                    // Update EXISTING batch
+                    batches[batchIndex].quantity = Number(batches[batchIndex].quantity || 0) + changeAmount;
+                    
+                    // If this adjustment came from a NEW/EDITED entry in the table, update prices too
+                    const tableEntry = selectedProducts.find(p => p.id === prodId && p.batchCode === bCode);
+                    if (tableEntry) {
+                        batches[batchIndex].purchasePrice = Number(tableEntry.purchasePrice);
+                        batches[batchIndex].sellPrice = Number(tableEntry.sellPrice);
+                        batches[batchIndex].wholeSalePrice = Number(tableEntry.wholeSalePrice);
+                        batches[batchIndex].retailPrice = Number(tableEntry.retailPrice);
+                        batches[batchIndex].expirationDate = tableEntry.expirationDate || batches[batchIndex].expirationDate;
+                    }
+                    isModified = true;
+                } else if (changeAmount > 0) {
+                    // Create NEW batch (Only if adding stock, usually happens on New Purchase)
+                    const tableEntry = selectedProducts.find(p => p.id === prodId && p.batchCode === bCode);
+                    if (tableEntry) {
+                        batches.push({
+                            batchCode: bCode,
+                            expirationDate: tableEntry.expirationDate || "",
+                            purchasePrice: Number(tableEntry.purchasePrice || 0),
+                            sellPrice: Number(tableEntry.sellPrice || 0),
+                            wholeSalePrice: Number(tableEntry.wholeSalePrice || 0),
+                            retailPrice: Number(tableEntry.retailPrice || 0),
+                            quantity: changeAmount, // Initial quantity is the adjustment
+                            openingStock: 0,
+                            openingStockDate: autoInitDate,
+                            damageQuantity: 0
+                        });
+                        isModified = true;
                     }
                 }
             }
-        }
 
-        // 2. Add New Quantities
-        for (const product of selectedProducts) {
-            const existingProduct = products.find((p) => p.id === product.id);
-            if (existingProduct) {
-                let batches = existingProduct.batchCode ? [...existingProduct.batchCode] : [];
-                const existingBatchIndex = batches.findIndex(b => b.batchCode === product.batchCode);
-
-                if (existingBatchIndex !== -1) {
-                    const existingBatch = batches[existingBatchIndex];
-                    existingBatch.purchasePrice = Number(product.purchasePrice || 0);
-                    existingBatch.sellPrice = Number(product.sellPrice || 0);
-                    existingBatch.wholeSalePrice = Number(product.wholeSalePrice || 0);
-                    existingBatch.retailPrice = Number(product.retailPrice || 0);
-                    existingBatch.expirationDate = product.expirationDate || "";
-                    existingBatch.quantity = Number(existingBatch.quantity || 0) + Number(product.quantity || 0);
-                } else {
-                    batches.push({
-                        batchCode: product.batchCode || "BATCH-ERR",
-                        expirationDate: product.expirationDate || "",
-                        purchasePrice: Number(product.purchasePrice || 0),
-                        sellPrice: Number(product.sellPrice || 0),
-                        wholeSalePrice: Number(product.wholeSalePrice || 0),
-                        retailPrice: Number(product.retailPrice || 0),
-                        quantity: Number(product.quantity || 0),
-                        openingStock: 0,
-                        openingStockDate: autoInitDate,
-                        damageQuantity: 0
-                    });
-                }
-                await updateProduct(product.id, { ...existingProduct, batchCode: batches });
+            if (isModified) {
+                await updateProduct(prodId, { ...dbProduct, batchCode: batches });
             }
         }
 
+        // 4. SAVE PURCHASE RECORD
         const cleanedProducts = selectedProducts.map(p => ({
             id: p.id,
             name: p.name,
@@ -272,7 +297,7 @@ const NewPurchases = () => {
             products: cleanedProducts, 
             totalPayment: totalPayment === '' ? 0 : Number(totalPayment),
             credit: Number(credit || 0),
-            totalBill: Number(totalBill || 0),
+            totalBill: Number(calculateTotalBill() || 0),
         };
 
         try {
@@ -405,4 +430,3 @@ const NewPurchases = () => {
 };
 
 export default NewPurchases;
-
