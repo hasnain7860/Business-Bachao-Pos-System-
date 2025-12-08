@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AiOutlineDown,
   AiOutlineRight,
@@ -17,6 +17,10 @@ import { MdInventory } from "react-icons/md";
 import Cookies from 'js-cookie';
 // Language data for translations
 import languageData from "../../assets/languageData.json";
+
+// --- VERSION IMPORT ---
+// Yeh file automatically banti hai jab tum "npm run bump:patch" chalate ho
+import appVersion from "../../assets/version.json"; 
 
 import Syncauto from "../Syncauto.jsx";
 import { clearAllStores }  from '../../Logic/ClearAllStores.jsx'
@@ -210,8 +214,11 @@ const Navbar = () => {
                             </button>
                         </li>
                     </ul>
-                    <div className="text-base pb-20 pl-5">
-                        version 10.0.0
+                    
+                    {/* --- DYNAMIC VERSION DISPLAY --- */}
+                    <div className="text-xs text-gray-400 pb-20 pl-5 font-mono">
+                        <p>v{appVersion.version}</p>
+                        <p className="opacity-75">{appVersion.buildDate}</p>
                     </div>
                 </div>
             </div>
@@ -220,4 +227,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
 
