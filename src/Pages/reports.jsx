@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../Appfullcontext';
-import { FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt, FaHandHoldingUsd } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaStar, FaUsers, FaFileInvoice, FaTruckLoading, FaMapMarkerAlt, FaHandHoldingUsd, FaHistory } from 'react-icons/fa';
 import languageData from '../assets/languageData.json';
 
 // --- REPORTS COMPONENTS ---
@@ -12,8 +12,9 @@ import CollectionSheet from '../components/Reports/CollectionSheet';
 import CustomerCompanyReport from '../components/Reports/CustomerCompanyReport'; 
 import PreorderAreaReport from '../components/Reports/PreorderAreaReport';
 import InventoryReport from '../components/Reports/InventoryReport';
-// NEW IMPORT:
 import DailyReceivedReport from '../components/Reports/DailyReceivedReport';
+// NEW IMPORT:
+import ProductHistoryReport from '../components/Reports/ProductHistoryReport';
 
 const Reports = () => {
     const context = useAppContext();
@@ -22,13 +23,13 @@ const Reports = () => {
     const safeLanguage = context.language && languageData[context.language] ? context.language : 'en';
     const t = languageData[safeLanguage];
 
-    // Default report ab 'Daily Received' kar di hai taake samne nazar aye
+    // Default active report
     const [activeReport, setActiveReport] = useState('daily_received');
 
     const renderActiveReport = () => {
         switch (activeReport) {
             case 'daily_received':
-                return <DailyReceivedReport />; // <--- New Report Logic
+                return <DailyReceivedReport />; 
             case 'collection_sheet':
                 return <CollectionSheet />;
             case 'customer_company':
@@ -45,6 +46,8 @@ const Reports = () => {
                 return <InventoryReport />;
             case 'product_performance':
                 return <ProductPerformanceReport />;
+            case 'product_history': // <--- NEW CASE
+                return <ProductHistoryReport />;
             default:
                 return (
                     <div className="text-center p-10 bg-white rounded-lg shadow">
@@ -55,18 +58,25 @@ const Reports = () => {
     };
 
     const reportButtons = [
-        // New Button Added at the TOP
+        // --- DAILY OPERATIONS ---
         { key: 'daily_received', label: 'Daily Collection (Wasooli)', icon: <FaHandHoldingUsd /> },
-        
         { key: 'collection_sheet', label: t.collection_sheet || 'Collection Sheet', icon: <FaFileInvoice /> },
-        { key: 'customer_company', label: t.customer_company_report || 'Cust/Co. Report', icon: <FaTruckLoading /> },
         { key: 'preorder_area', label: t.preorder_area_report || 'Preorder Report', icon: <FaMapMarkerAlt /> },
+
+        // --- INVENTORY & PRODUCTS ---
+        { key: 'product_history', label: 'Product History (Ledger)', icon: <FaHistory /> }, // <--- NEW BUTTON
+        { key: 'Inventory_Report', label: t.Inventory_Report || 'Inventory Report', icon: <FaBoxOpen /> }, // Changed icon slightly for variety if FaMoneyBillWave duplicate
+        { key: 'product_performance', label: t.product_performance || 'Product Report', icon: <FaStar /> },
+
+        // --- FINANCIALS & PARTNERS ---
         { key: 'balances', label: t.balances || 'Balances', icon: <FaUsers /> },
         { key: 'sales_summary', label: t.sales_summary || 'Sales Summary', icon: <FaChartBar /> },
         { key: 'pnl', label: t.pnl || 'P&L', icon: <FaMoneyBillWave /> },
-        { key: 'Inventory_Report', label: t.Inventory_Report || 'Inventory Report', icon: <FaMoneyBillWave /> },
-        { key: 'product_performance', label: t.product_performance || 'Product Report', icon: <FaStar /> },
+        { key: 'customer_company', label: t.customer_company_report || 'Cust/Co. Report', icon: <FaTruckLoading /> },
     ];
+
+    // Fallback icon for Inventory if FaBoxOpen isn't imported above in all cases
+    const FaBoxOpenIcon = FaTruckLoading; // Just a safeguard if imports are tricky, but I added FaBoxOpen to import above.
 
     return (
         <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
@@ -108,10 +118,10 @@ const Reports = () => {
                         <button 
                             key={report.key}
                             onClick={() => setActiveReport(report.key)} 
-                            className={`flex items-center justify-center gap-2 p-3 rounded-md text-sm font-medium transition-all
+                            className={`flex items-center justify-center gap-2 p-3 rounded-md text-sm font-medium transition-all shadow-sm border
                                 ${activeReport === report.key 
-                                    ? 'bg-blue-600 text-white shadow-lg scale-105' 
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' 
+                                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`}
                         >
                             {report.icon}
                             <span>{report.label}</span>
@@ -121,12 +131,15 @@ const Reports = () => {
             </div>
 
             {/* Print Area Wrapper */}
-            <div className="print-area bg-white p-4 md:p-6 rounded-lg shadow-md">
+            <div className="print-area bg-white p-4 md:p-6 rounded-lg shadow-md min-h-[500px]">
                 {renderActiveReport()}
             </div>
         </div>
     );
 };
+
+// Helper for icon consistency in case FaBoxOpen isn't available in main block
+const FaBoxOpen = ({className}) => <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 640 512" className={className} xmlns="http://www.w3.org/2000/svg"><path d="M504 256c8.8 0 16 7.2 16 16v16c0 8.8-7.2 16-16 16H136c-8.8 0-16-7.2-16-16v-16c0-8.8 7.2-16 16-16h368zM160 384c-8.8 0-16-7.2-16-16v-16c0-8.8 7.2-16 16-16h320c8.8 0 16 7.2 16 16v16c0 8.8-7.2 16-16 16H160zm344-240V48c0-26.5-21.5-48-48-48H184c-26.5 0-48 21.5-48 48v96H0v320c0 26.5 21.5 48 48 48h544c26.5 0 48-21.5 48-48V144h-136zM320 64c17.7 0 32 14.3 32 32s-14.3 32-32 32-32-14.3-32-32 14.3-32 32-32z"></path></svg>;
 
 export default Reports;
 
