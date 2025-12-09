@@ -11,19 +11,20 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const context = useAppContext();
 
-  // --- CRITICAL FIX: Universal Store Mapping ---
-  // Universal Store returns 'data', NOT specific names like 'companies' or 'units'
   const companies = context.companyContext.data || [];
   const units = context.unitContext.data || [];
-  const products = context.productContext.data || []; // Load products safely
+  const products = context.productContext.data || []; 
   
   const addProduct = context.productContext.add;
   const updateProduct = context.productContext.edit;
 
   // State for product details
   const [selectedCompany, setSelectedCompany] = useState("");
-  const [selectedUnit, setSelectedUnit] = useState(""); // Base Unit (e.g., Pcs)
+  const [selectedUnit, setSelectedUnit] = useState(""); 
   
+  // --- New Field: Alert Quantity ---
+  const [alertQuantity, setAlertQuantity] = useState(""); 
+
   // --- Secondary Unit Logic ---
   const [hasSecondaryUnit, setHasSecondaryUnit] = useState(false); 
   const [selectedSecondaryUnit, setSelectedSecondaryUnit] = useState(""); 
@@ -48,7 +49,6 @@ const AddProduct = () => {
 
   useEffect(() => {
     if (id) {
-      // FIX: Use the safe 'products' array defined above
       const product = products.find((p) => p.id == id);
 
       if (product) {
@@ -58,6 +58,9 @@ const AddProduct = () => {
         setSelectedUnit(product.unitId || "");
         setBarcode(product.barcode || "");
         
+        // Load Alert Quantity
+        setAlertQuantity(product.alertQuantity || "");
+
         // --- Check for Secondary Unit Data ---
         if (product.secondaryUnitId && product.conversionRate) {
             setHasSecondaryUnit(true);
@@ -90,7 +93,7 @@ const AddProduct = () => {
       const newBatchCode = `BATCH-${String(nextBatchNumber).padStart(3, '0')}`;
       setBatchCode(newBatchCode);
     }
-  }, [id, isCopy, products, batches.length]); // Added 'products' to dependency
+  }, [id, isCopy, products, batches.length]);
 
   useEffect(() => {
     if (selectedBatch) {
@@ -107,9 +110,15 @@ const AddProduct = () => {
   }, [selectedBatch, batches]);
 
   const handleAddNewBatch = () => {
-    if (!purchasePrice || !sellPrice || !wholeSalePrice || !quantity) {
+    if (!purchasePrice || !sellPrice || !wholeSalePrice || quantity === "") {
       alert("Please fill all the required fields");
       return;
+    }
+
+    // --- CHECK 1: Prevent Negative Quantity ---
+    if (Number(quantity) < 0) {
+        alert("Quantity cannot be negative (Less than 0).");
+        return;
     }
 
     const batchData = {
@@ -166,17 +175,16 @@ const AddProduct = () => {
       return;
     }
 
+    // --- CHECK 2: Prevent Negative Quantity on Save ---
+    if (quantity !== "" && Number(quantity) < 0) {
+        alert("Quantity cannot be negative.");
+        return;
+    }
+
     const existingBatch = edit ? batches.find(b => b.batchCode === selectedBatch) : null;
 
-    // Handle current batch input (if user typed something but didn't click "Add Batch")
-    // Only if we are in Add mode or Editing specific batch
     let updatedBatches = [...batches];
     
-    // If user entered data in the inputs but didn't add it to the list yet, 
-    // we should consider adding/updating it before saving.
-    // However, for simplicity and consistency with your logic:
-    // We assume 'batches' state holds the list. 
-    // If editing a specific batch:
     if (edit && selectedBatch) {
          const currentBatchData = {
             batchCode: selectedBatch,
@@ -194,8 +202,7 @@ const AddProduct = () => {
             batch.batchCode === selectedBatch ? currentBatchData : batch
         );
     } 
-    // If adding new product and inputs are filled, add as first batch
-    else if (!edit && purchasePrice && quantity) {
+    else if (!edit && purchasePrice && quantity !== "") {
         const firstBatch = {
             batchCode: batchCode,
             expirationDate: expirationDate || "",
@@ -221,9 +228,11 @@ const AddProduct = () => {
       name: productName || "",
       nameInUrdu: productNameInUrdu || "",
       companyId: selectedCompany || "",
-      unitId: selectedUnit, // Base Unit
+      unitId: selectedUnit,
       
-      // --- Saving Secondary Unit Data ---
+      // Save Alert Quantity (default to 0 if empty)
+      alertQuantity: alertQuantity ? Number(alertQuantity) : 0,
+
       secondaryUnitId: hasSecondaryUnit ? selectedSecondaryUnit : null,
       conversionRate: hasSecondaryUnit ? Number(conversionRate) : null,
       
@@ -321,12 +330,25 @@ const AddProduct = () => {
                 </div>
             </div>
 
-            <div className="form-control col-span-full">
+            <div className="form-control">
                 <label className="label"><span className="label-text font-semibold text-gray-700">Product Barcode</span></label>
                 <div className="flex items-center gap-2">
                     <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Scan or enter barcode" className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"/>
                     <button type="button" onClick={handleGenerateBarcode} className="btn btn-secondary gap-2"><FaBarcode /> Generate</button>
                 </div>
+            </div>
+
+            {/* --- Alert Quantity Input --- */}
+            <div className="form-control">
+                <label className="label"><span className="label-text font-semibold text-gray-700">Alert Quantity (Optional)</span></label>
+                <input 
+                    type="number" 
+                    min="0"
+                    value={alertQuantity} 
+                    onChange={(e) => setAlertQuantity(e.target.value)} 
+                    placeholder="Low stock warning at..." 
+                    className="input input-bordered w-full bg-gray-50 focus:bg-white focus:border-indigo-500"
+                />
             </div>
         </div>
 
@@ -366,14 +388,22 @@ const AddProduct = () => {
                 </div>
                 <div className="form-control">
                   <label className="label"><span className="label-text font-semibold text-gray-700">Quantity*</span></label>
-                  <input required type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Total Base Units (e.g. Total Pcs)" className="input input-bordered w-full bg-white focus:border-indigo-500"/>
+                  <input 
+                    required 
+                    type="number" 
+                    min="0" 
+                    value={quantity} 
+                    onChange={(e) => setQuantity(e.target.value)} 
+                    placeholder="Total Base Units (e.g. Total Pcs)" 
+                    className="input input-bordered w-full bg-white focus:border-indigo-500"
+                  />
                 </div>
 
              </div>
 
              {!edit && (
                 <div className="mt-4">
-                  <button type="button" onClick={handleAddNewBatch} className="btn btn-primary btn-block gap-2" disabled={!purchasePrice || !sellPrice || !wholeSalePrice || !quantity}><FaPlus /> Add This Batch to List</button>
+                  <button type="button" onClick={handleAddNewBatch} className="btn btn-primary btn-block gap-2" disabled={!purchasePrice || !sellPrice || !wholeSalePrice || quantity === ""}><FaPlus /> Add This Batch to List</button>
                 </div>
               )}
         </div>
@@ -416,4 +446,3 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
-
